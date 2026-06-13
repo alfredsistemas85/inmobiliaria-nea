@@ -1,5 +1,5 @@
 # Build stage
-FROM rust:1.75-slim-buster AS builder
+FROM rust:1.75-slim-bookworm AS builder
 
 WORKDIR /usr/src/app
 COPY . .
@@ -8,7 +8,7 @@ COPY . .
 RUN cargo build --release
 
 # Run stage
-FROM debian:buster-slim
+FROM debian:bookworm-slim
 
 # Install necessary dependencies for Axum/Postgres/Rustls (e.g. ca-certificates)
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*

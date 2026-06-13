@@ -1,0 +1,136 @@
+use axum::{
+    extract::{Path, State, Json},
+    http::StatusCode,
+    Extension,
+};
+use sqlx::PgPool;
+use std::sync::Arc;
+use uuid::Uuid;
+use crate::{
+    api::users::dtos::{CreateUserDto, UpdateUserDto, UserResponseDto},
+    core::security::jwt::Claims,
+    core::security::password::hash_password,
+    models::user::User,
+    infrastructure::database::users::UserRepository,
+};
+
+pub async fn list_users(
+    State(pool): State<Arc<PgPool>>,
+    Extension(claims): Extension<Claims>,
+) -> Result<Json<Vec<UserResponseDto>>, StatusCode> {
+    let users = if let Some(tenant_id) = claims.tenant_id {
+        sqlx::query_as::<_, User>("SELECT * FROM users WHERE tenant_id = $1")
+            .bind(tenant_id)
+            .fetch_all(&*pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+    } else {
+        sqlx::query_as::<_, User>("SELECT * FROM users")
+            .fetch_all(&*pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+    };
+
+    Ok(Json(users.into_iter().map(UserResponseDto::from).collect()))
+}
+
+pub async fn get_user(
+    State(pool): State<Arc<PgPool>>,
+    Path(id): Path<Uuid>,
+    Extension(claims): Extension<Claims>,
+) -> Result<Json<UserResponseDto>, StatusCode> {
+    let repo = UserRepository::new(pool);
+    let user = repo.find_by_id(id, claims.tenant_id).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    match user {
+        Some(u) => Ok(Json(UserResponseDto::from(u))),
+        None => Err(StatusCode::NOT_FOUND),
+    }
+}
+
+pub async fn create_user(
+    State(pool): State<Arc<PgPool>>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<CreateUserDto>,
+) -> Result<Json<UserResponseDto>, StatusCode> {
+    let hashed_pw = hash_password(&payload.password).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    
+    let user = User {
+        id: Uuid::new_v4(),
+        tenant_id: claims.tenant_id,
+        role_id: payload.role_id,
+        email: payload.email,
+        password_hash: hashed_pw,
+        first_name: payload.first_name,
+        last_name: payload.last_name,
+        is_active: Some(true),
+        created_at: None,
+        updated_at: None,
+    };
+
+    let repo = UserRepository::new(pool);
+    let created = repo.create(user).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(UserResponseDto::from(created)))
+}
+
+pub async fn update_user(
+    State(pool): State<Arc<PgPool>>,
+    Path(id): Path<Uuid>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<UpdateUserDto>,
+) -> Result<Json<UserResponseDto>, StatusCode> {
+    let repo = UserRepository::new(pool.clone());
+    let mut user = repo.find_by_id(id, claims.tenant_id).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?.ok_or(StatusCode::NOT_FOUND)?;
+
+    if let Some(email) = payload.email { user.email = email; }
+    if let Some(first_name) = payload.first_name { user.first_name = Some(first_name); }
+    if let Some(last_name) = payload.last_name { user.last_name = Some(last_name); }
+    if let Some(role_id) = payload.role_id { user.role_id = Some(role_id); }
+    if let Some(is_active) = payload.is_active { user.is_active = Some(is_active); }
+
+    let updated = sqlx::query_as::<_, User>(
+        r#"UPDATE users SET email = $1, first_name = $2, last_name = $3, role_id = $4, is_active = $5 
+           WHERE id = $6 RETURNING *"#
+    )
+    .bind(&user.email)
+    .bind(&user.first_name)
+    .bind(&user.last_name)
+    .bind(&user.role_id)
+    .bind(&user.is_active)
+    .bind(user.id)
+    .fetch_one(&*pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(UserResponseDto::from(updated)))
+}
+
+pub async fn delete_user(
+    State(pool): State<Arc<PgPool>>,
+    Path(id): Path<Uuid>,
+    Extension(claims): Extension<Claims>,
+) -> Result<StatusCode, StatusCode> {
+    let rows_affected = if let Some(tenant_id) = claims.tenant_id {
+        sqlx::query("DELETE FROM users WHERE id = $1 AND tenant_id = $2")
+            .bind(id)
+            .bind(tenant_id)
+            .execute(&*pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+            .rows_affected()
+    } else {
+        sqlx::query("DELETE FROM users WHERE id = $1")
+            .bind(id)
+            .execute(&*pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+            .rows_affected()
+    };
+
+    if rows_affected > 0 {
+        Ok(StatusCode::NO_CONTENT)
+    } else {
+        Err(StatusCode::NOT_FOUND)
+    }
+}

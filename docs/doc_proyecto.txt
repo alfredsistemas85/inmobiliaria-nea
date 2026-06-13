@@ -1,0 +1,20 @@
+********************************************************************** Proyecto Inmobiliaria_SaaS *********************************************************************************
+
+- Correo: alfredsistemas85@gmail.com
+
+- Github: https://github.com/alfredsistemas85/inmobiliaria-nea
+
+- Supabase:
+
+	organización: Agentech
+	base de dato: inmonea_data
+	password: xEnEizE41_2498
+	proyect_url: https://nwidmlslkkjyvpldzdry.supabase.co
+	data_url: postgresql://postgres.nwidmlslkkjyvpldzdry:xEnEizE41_2498@aws-1-us-west-2.pooler.supabase.com:5432/postgres
+	service_role_key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53aWRtbHNsa2tqeXZwbGR6ZHJ5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTM3NjA5MCwiZXhwIjoyMDk2OTUyMDkwfQ.tnbBuqzlp--GYyB-C4BEOjt_l0g6dvGyl5HT1G1vjpM
+
+*************************************************************************************************************************************************************************************
+
+- url_backend: apinmonea.agentech.ar
+- url_frontend: inmonea.agentech.ar
+- url_evolution: whatsapp-inmonea.agentech.ar

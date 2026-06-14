@@ -4,6 +4,7 @@ use sqlx::postgres::PgPoolOptions;
 use std::env;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -87,6 +88,11 @@ async fn main() {
     let redis_client = redis::Client::open(redis_url).expect("URL de Redis inválida");
     let rate_limit_state = Arc::new(core::security::rate_limit::RateLimitState { redis_client });
 
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
     let app = Router::new()
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .route("/api/health", get(health_check))
@@ -101,7 +107,8 @@ async fn main() {
         .layer(axum::middleware::from_fn_with_state(
             rate_limit_state.clone(),
             core::security::rate_limit::rate_limit_middleware,
-        ));
+        ))
+        .layer(cors);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
     tracing::info!("Servidor escuchando en http://{}", addr);

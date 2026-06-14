@@ -1,13 +1,58 @@
+import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, MapPin, Bed, Bath, Maximize, Edit, Trash2, CalendarDays, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, MapPin, Bed, Bath, Maximize, Edit, Trash2, CalendarDays, CheckCircle2, Loader2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { MOCK_PROPERTIES } from './Properties'
+import { propertiesService } from '@/services/properties'
 
 export default function PropertyDetail() {
   const { id } = useParams()
-  const property = MOCK_PROPERTIES.find(p => p.id === id) || MOCK_PROPERTIES[0]
+  const [property, setProperty] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (id) {
+      loadProperty()
+    }
+  }, [id])
+
+  const loadProperty = async () => {
+    try {
+      setLoading(true)
+      const data = await propertiesService.getById(id!)
+      setProperty(data)
+    } catch (err: any) {
+      setError(err.message || 'Error al cargar los detalles de la propiedad')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px] text-slate-400">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
+
+  if (error || !property) {
+    return (
+      <div className="space-y-4">
+        <Button variant="ghost" size="sm" asChild>
+          <Link to="/properties" className="inline-flex items-center">
+            <ArrowLeft className="h-4 w-4 mr-2" /> Volver
+          </Link>
+        </Button>
+        <div className="p-4 text-red-600 bg-red-50 border border-red-100 rounded-md flex items-center gap-2">
+          <AlertCircle className="h-5 w-5" />
+          {error || 'Propiedad no encontrada'}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -21,7 +66,7 @@ export default function PropertyDetail() {
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">{property.title}</h1>
           <div className="flex items-center text-slate-500 mt-1">
             <MapPin className="h-4 w-4 mr-1" />
-            <span>{property.location}</span>
+            <span>{property.location || 'Sin ubicación'}</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -38,12 +83,18 @@ export default function PropertyDetail() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
-          <div className="overflow-hidden rounded-xl border border-slate-200">
-            <img 
-              src={property.image} 
-              alt={property.title} 
-              className="w-full h-[400px] object-cover"
-            />
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-100 flex items-center justify-center">
+            {property.images && property.images.length > 0 ? (
+              <img 
+                src={property.images[0].url} 
+                alt={property.title} 
+                className="w-full h-[400px] object-cover"
+              />
+            ) : (
+              <div className="h-[400px] flex items-center justify-center text-slate-400">
+                Sin imagen disponible
+              </div>
+            )}
           </div>
 
           <Card>
@@ -54,22 +105,22 @@ export default function PropertyDetail() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="flex flex-col items-center p-4 bg-slate-50 rounded-lg border border-slate-100">
                   <Bed className="h-6 w-6 text-blue-600 mb-2" />
-                  <span className="text-2xl font-bold text-slate-900">{property.beds}</span>
+                  <span className="text-2xl font-bold text-slate-900">{property.bedrooms || 0}</span>
                   <span className="text-xs text-slate-500">Habitaciones</span>
                 </div>
                 <div className="flex flex-col items-center p-4 bg-slate-50 rounded-lg border border-slate-100">
                   <Bath className="h-6 w-6 text-blue-600 mb-2" />
-                  <span className="text-2xl font-bold text-slate-900">{property.baths}</span>
+                  <span className="text-2xl font-bold text-slate-900">{property.bathrooms || 0}</span>
                   <span className="text-xs text-slate-500">Baños</span>
                 </div>
                 <div className="flex flex-col items-center p-4 bg-slate-50 rounded-lg border border-slate-100">
                   <Maximize className="h-6 w-6 text-blue-600 mb-2" />
-                  <span className="text-2xl font-bold text-slate-900">{property.sqft}</span>
+                  <span className="text-2xl font-bold text-slate-900">{property.area_sqm || 0}</span>
                   <span className="text-xs text-slate-500">Metros²</span>
                 </div>
                 <div className="flex flex-col items-center p-4 bg-slate-50 rounded-lg border border-slate-100">
                   <CheckCircle2 className="h-6 w-6 text-green-500 mb-2" />
-                  <span className="text-lg font-bold text-slate-900 text-center">{property.status}</span>
+                  <span className="text-lg font-bold text-slate-900 text-center">{property.status || 'Disponible'}</span>
                   <span className="text-xs text-slate-500">Estado</span>
                 </div>
               </div>
@@ -81,11 +132,8 @@ export default function PropertyDetail() {
               <CardTitle>Descripción</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-slate-600 leading-relaxed">
-                Excelente propiedad ubicada en una de las mejores zonas. Cuenta con amplios ambientes muy luminosos.
-                Ideal para familias que buscan comodidad y tranquilidad. Cercano a colegios, supermercados y transporte público.
-                <br /><br />
-                La propiedad dispone de un amplio living comedor, cocina integrada totalmente equipada, habitaciones con placares empotrados y un hermoso jardín con piscina.
+              <p className="text-slate-600 leading-relaxed whitespace-pre-line">
+                {property.description || 'Sin descripción detallada.'}
               </p>
             </CardContent>
           </Card>
@@ -95,7 +143,9 @@ export default function PropertyDetail() {
           <Card>
             <CardContent className="p-6">
               <div className="text-sm text-slate-500 mb-1">Precio de Venta</div>
-              <div className="text-3xl font-bold text-blue-600 mb-6">{property.price}</div>
+              <div className="text-3xl font-bold text-blue-600 mb-6">
+                ${property.price?.toLocaleString()}
+              </div>
               
               <div className="space-y-3">
                 <Button className="w-full flex items-center justify-center gap-2">
@@ -117,19 +167,17 @@ export default function PropertyDetail() {
               <div className="space-y-4">
                 <div className="flex justify-between py-2 border-b border-slate-100">
                   <span className="text-slate-500 text-sm">Tipo de Inmueble</span>
-                  <span className="font-medium text-sm text-slate-900">{property.type}</span>
+                  <span className="font-medium text-sm text-slate-900">{property.property_type || 'Casa'}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-slate-100">
                   <span className="text-slate-500 text-sm">Código</span>
-                  <span className="font-medium text-sm text-slate-900">REF-{property.id}A89</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-slate-100">
-                  <span className="text-slate-500 text-sm">Propietario</span>
-                  <span className="font-medium text-sm text-blue-600">Carlos Mendoza</span>
+                  <span className="font-medium text-sm text-slate-900">REF-{property.id?.substring(0, 6).toUpperCase()}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-slate-100">
                   <span className="text-slate-500 text-sm">Fecha de Ingreso</span>
-                  <span className="font-medium text-sm text-slate-900">12 May 2024</span>
+                  <span className="font-medium text-sm text-slate-900">
+                    {property.created_at ? new Date(property.created_at).toLocaleDateString() : 'N/A'}
+                  </span>
                 </div>
               </div>
             </CardContent>

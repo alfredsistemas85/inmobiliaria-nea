@@ -15,6 +15,20 @@ export default function WhatsApp() {
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
+  // Filters
+  const [filterTab, setFilterTab] = useState<'ALL' | 'UNREAD' | 'UNASSIGNED' | 'MINE' | 'CLOSED'>('ALL')
+  const [searchQuery, setSearchQuery] = useState('')
+
+  // Current user from localStorage
+  const currentUser = (() => {
+    try {
+      const userStr = localStorage.getItem('user')
+      return userStr ? JSON.parse(userStr) : null
+    } catch {
+      return null
+    }
+  })()
+
   // Polling variables
   const POLLING_INTERVAL = 5000 // 5 seconds
   const HIDDEN_POLLING_INTERVAL = 30000 // 30 seconds
@@ -116,19 +130,72 @@ export default function WhatsApp() {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
 
+  // Filter conversations
+  const filteredConversations = conversations.filter(conv => {
+    // 1. Search filter
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      const matchName = (`${conv.client_first_name || ''} ${conv.client_last_name || ''}`).toLowerCase().includes(q)
+      const matchPhone = (conv.client_phone || '').toLowerCase().includes(q)
+      const matchText = (conv.last_message_content || '').toLowerCase().includes(q)
+      if (!matchName && !matchPhone && !matchText) return false
+    }
+
+    // 2. Tab filter
+    switch (filterTab) {
+      case 'UNREAD':
+        return (conv.unread_count || 0) > 0
+      case 'UNASSIGNED':
+        return !conv.assigned_user_id
+      case 'MINE':
+        return conv.assigned_user_id === currentUser?.id
+      case 'CLOSED':
+        return conv.status === 'CLOSED'
+      case 'ALL':
+      default:
+        // By default, maybe we want to show everything or hide closed unless specifically requested
+        // Usually 'ALL' means not closed, but we'll include all to be literal
+        return true
+    }
+  })
+
   return (
     <div className="flex h-[calc(100vh-8rem)] gap-4 w-full">
       {/* Left Panel: Conversations */}
       <Card className="w-1/3 flex flex-col overflow-hidden">
-        <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
-          <MessageCircle className="h-5 w-5 text-green-500" />
-          <h2 className="font-semibold text-slate-800">Chats Activos</h2>
+        <div className="p-4 border-b border-slate-100 bg-slate-50">
+          <div className="flex items-center gap-2 mb-3">
+            <MessageCircle className="h-5 w-5 text-green-500" />
+            <h2 className="font-semibold text-slate-800">Chats</h2>
+          </div>
+          
+          <input 
+            type="text" 
+            placeholder="Buscar por cliente, teléfono o mensaje..." 
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-full text-sm border border-slate-200 rounded-md px-3 py-2 mb-3 outline-none focus:ring-1 focus:ring-green-500"
+          />
+
+          <div className="flex gap-1 overflow-x-auto pb-1 hide-scrollbar">
+            {['ALL', 'UNREAD', 'UNASSIGNED', 'MINE', 'CLOSED'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setFilterTab(tab as any)}
+                className={`text-xs px-3 py-1.5 rounded-full whitespace-nowrap transition-colors ${
+                  filterTab === tab ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                }`}
+              >
+                {tab === 'ALL' ? 'Todas' : tab === 'UNREAD' ? 'No Leídas' : tab === 'UNASSIGNED' ? 'Sin Asignar' : tab === 'MINE' ? 'Mías' : 'Cerradas'}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto">
-          {conversations.length === 0 ? (
-            <div className="p-4 text-center text-slate-500 text-sm">No hay conversaciones abiertas</div>
+          {filteredConversations.length === 0 ? (
+            <div className="p-4 text-center text-slate-500 text-sm">No hay conversaciones</div>
           ) : (
-            conversations.map(conv => (
+            filteredConversations.map(conv => (
               <div 
                 key={conv.id}
                 onClick={() => setSelectedConv(conv)}
@@ -141,6 +208,22 @@ export default function WhatsApp() {
                   <span className="text-xs text-slate-400 whitespace-nowrap">
                     {formatTime(conv.last_message_at)}
                   </span>
+                </div>
+                <div className="flex items-center gap-1 mb-1">
+                  {conv.assigned_user_id ? (
+                    <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 flex items-center gap-1">
+                      <User className="h-3 w-3" /> Asignado
+                    </span>
+                  ) : (
+                    <span className="text-[10px] bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded border border-amber-100">
+                      Sin asignar
+                    </span>
+                  )}
+                  {conv.status === 'CLOSED' && (
+                    <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">
+                      Cerrado
+                    </span>
+                  )}
                 </div>
                 <div className="flex justify-between items-center">
                   <p className="text-sm text-slate-500 truncate flex-1 pr-2">

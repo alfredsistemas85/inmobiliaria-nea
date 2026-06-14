@@ -14,8 +14,9 @@ FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY --from=builder /usr/src/app/target/release/backend /usr/local/bin/backend
+COPY --from=builder /usr/src/app/target/release/api /usr/local/bin/api
+COPY --from=builder /usr/src/app/target/release/worker /usr/local/bin/worker
 
 EXPOSE 3000
 
-CMD ["backend"]
+CMD ["api"]

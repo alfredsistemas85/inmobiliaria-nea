@@ -1,7 +1,24 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, Home, CalendarDays, TrendingUp, DollarSign, Activity } from 'lucide-react'
+import { Users, Home, CalendarDays, DollarSign, MessageCircle, BarChart3 } from 'lucide-react'
 import { dashboardService, DashboardStats, DashboardActivity } from '@/services/dashboard'
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+  Legend
+} from 'recharts'
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8']
 
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
@@ -36,6 +53,20 @@ export default function Dashboard() {
     { title: 'Nuevos Leads', value: stats.new_leads, icon: Users, trend: 'Sin contactar' },
     { title: 'Citas Futuras', value: stats.upcoming_appointments, icon: CalendarDays, trend: 'Programadas' },
     { title: 'Total Clientes', value: stats.total_clients, icon: DollarSign, trend: 'Registrados' },
+    { title: 'WhatsApp Activos', value: stats.active_whatsapp_conversations, icon: MessageCircle, trend: 'Abiertas' },
+    { title: 'Leads del Mes', value: stats.leads_this_month, icon: BarChart3, trend: 'En curso' },
+  ]
+
+  // Data mapping for charts
+  const leadsByStatusData = stats.leads_by_status || []
+  const convByAgentData = stats.conversations_by_agent || []
+  const conversionsByMonth = stats.conversions_by_month || []
+
+  // Commercial Funnel approximation
+  const funnelData = [
+    { name: 'Nuevos', value: stats.leads_this_month },
+    { name: 'En Cita', value: stats.upcoming_appointments },
+    { name: 'Cerrados/Ganados', value: stats.conversions_this_month },
   ]
 
   return (
@@ -43,11 +74,11 @@ export default function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Hola!</h1>
-          <p className="text-slate-500">Aquí tienes el resumen de tu actividad de hoy.</p>
+          <p className="text-slate-500">Aquí tienes el resumen de tu actividad.</p>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {STATS_UI.map((stat, i) => (
           <Card key={i}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -64,50 +95,100 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="lg:col-span-4">
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Gráfico 1: Embudo Comercial (BarChart horizontal) */}
+        <Card>
           <CardHeader>
-            <CardTitle>Rendimiento de Ventas</CardTitle>
+            <CardTitle>Embudo Comercial (Mes Actual)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px] flex items-center justify-center bg-slate-50 rounded-md border border-slate-100">
-              <div className="flex flex-col items-center text-slate-400">
-                <TrendingUp className="h-10 w-10 mb-2" />
-                <span>Gráfico de rendimiento (Próximamente)</span>
-              </div>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={funnelData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" />
+                  <YAxis dataKey="name" type="category" />
+                  <Tooltip />
+                  <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-3">
+        {/* Gráfico 2: Conversión Mensual */}
+        <Card>
           <CardHeader>
-            <CardTitle>Actividad Reciente</CardTitle>
+            <CardTitle>Conversiones Mensuales</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
-              {activity.length === 0 ? (
-                <div className="text-sm text-slate-500 text-center py-4">No hay actividad reciente.</div>
-              ) : (
-                activity.map((act) => {
-                  const dateObj = new Date(act.time)
-                  const dateStr = dateObj.toLocaleDateString()
-                  const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={conversionsByMonth} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="count" name="Ganados" stroke="#10b981" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
 
-                  return (
-                    <div key={act.id} className="flex items-start gap-4">
-                      <div className="mt-1 h-2 w-2 rounded-full bg-blue-600 shrink-0" />
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium leading-none text-slate-900">{act.title}</p>
-                        <p className="text-xs text-slate-500">{dateStr} {timeStr} - Entidad: {act.type}</p>
-                      </div>
-                    </div>
-                  )
-                })
-              )}
+        {/* Gráfico 3: Leads por Estado */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Leads por Estado</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={leadsByStatusData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="count"
+                    nameKey="status"
+                    label
+                  >
+                    {leadsByStatusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Gráfico 4: Conversaciones por Agente */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Conversaciones Abiertas por Agente</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={convByAgentData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="agent_name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
       </div>
+
     </div>
   )
 }

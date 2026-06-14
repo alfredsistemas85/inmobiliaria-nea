@@ -10,6 +10,7 @@ import Clients from '@/pages/Clients'
 import Leads from '@/pages/Leads'
 import Appointments from '@/pages/Appointments'
 import WhatsApp from '@/pages/WhatsApp'
+import Reports from '@/pages/Reports'
 import Settings from '@/pages/Settings'
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
           <Route path="leads" element={<Leads />} />
           <Route path="appointments" element={<Appointments />} />
           <Route path="whatsapp" element={<WhatsApp />} />
+          <Route path="reports" element={<Reports />} />
           <Route path="settings" element={<Settings />} />
         </Route>
         

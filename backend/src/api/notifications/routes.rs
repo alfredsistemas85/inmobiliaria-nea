@@ -1,5 +1,5 @@
 use axum::{
-    routing::{get, put},
+    routing::{get, post},
     Router,
     middleware,
 };
@@ -12,7 +12,7 @@ use crate::core::tenant::middleware::tenant_middleware;
 pub fn router(pool: Arc<PgPool>) -> Router {
     Router::new()
         .route("/", get(list_notifications))
-        .route("/:id/read", put(mark_as_read))
+        .route("/:id/read", post(mark_as_read))
         .route_layer(middleware::from_fn(tenant_middleware))
         .with_state(pool)
 }

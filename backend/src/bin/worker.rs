@@ -63,6 +63,16 @@ async fn main() {
             Err(e) => tracing::error!("Error processing lead followups: {}", e),
         }
 
+        // 4. Conversation Followups (scan for unread messages > 2 hours)
+        match process_conversation_followups(shared_pool.clone()).await {
+            Ok(count) => {
+                if count > 0 {
+                    tracing::info!("Processed {} conversation followups", count);
+                }
+            }
+            Err(e) => tracing::error!("Error processing conversation followups: {}", e),
+        }
+
         tokio::time::sleep(Duration::from_secs(10)).await;
     }
 }
@@ -207,6 +217,61 @@ async fn process_lead_followups(pool: Arc<sqlx::PgPool>) -> Result<u64, sqlx::Er
         sqlx::query!(
             "INSERT INTO audit_logs (tenant_id, action, entity_type, entity_id, details) VALUES ($1, 'LEAD_FOLLOWUP_SENT', 'lead', $2, '{\"reason\":\"> 24hs NUEVO\"}')",
             lead.tenant_id, lead.id
+        )
+        .execute(&mut *tx)
+        .await?;
+    }
+
+    tx.commit().await?;
+    Ok(count)
+}
+
+async fn process_conversation_followups(pool: Arc<sqlx::PgPool>) -> Result<u64, sqlx::Error> {
+    let mut tx = pool.begin().await?;
+
+    // Find conversations with unread messages and last message older than 2 hours
+    let conversations = sqlx::query!(
+        r#"
+        SELECT id, tenant_id, client_id, assigned_user_id
+        FROM conversations
+        WHERE status = 'OPEN' 
+          AND unread_count > 0
+          AND last_message_at <= CURRENT_TIMESTAMP - INTERVAL '2 hours'
+          AND deleted_at IS NULL
+        FOR UPDATE SKIP LOCKED
+        LIMIT 20
+        "#
+    )
+    .fetch_all(&mut *tx)
+    .await?;
+
+    let count = conversations.len() as u64;
+    let notif_repo = backend::infrastructure::database::notifications::NotificationRepository::new(pool.clone());
+
+    for conv in conversations {
+        if let Some(user_id) = conv.assigned_user_id {
+            // Notify the assigned agent
+            let _ = notif_repo.create(
+                conv.tenant_id,
+                Some(user_id),
+                "CONVERSATION_FOLLOWUP",
+                "Recordatorio de Conversación",
+                "Tienes mensajes sin leer por más de 2 horas en una conversación. ¡Es hora de responder!",
+            ).await;
+        }
+
+        // Create a generic audit log.
+        sqlx::query!(
+            "INSERT INTO audit_logs (tenant_id, action, entity_type, entity_id, details) VALUES ($1, 'CONVERSATION_FOLLOWUP_SENT', 'conversation', $2, '{\"reason\":\"> 2hs UNREAD\"}')",
+            conv.tenant_id, conv.id
+        )
+        .execute(&mut *tx)
+        .await?;
+        
+        // We will reset unread_count so it doesn't spam
+        sqlx::query!(
+            "UPDATE conversations SET unread_count = 0 WHERE id = $1",
+            conv.id
         )
         .execute(&mut *tx)
         .await?;

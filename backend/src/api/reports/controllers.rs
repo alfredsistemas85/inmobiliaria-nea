@@ -29,9 +29,7 @@ pub async fn generate_leads_report(
 ) -> Result<impl IntoResponse, StatusCode> {
     let tenant_id = claims.tenant_id.ok_or(StatusCode::FORBIDDEN)?;
 
-    let mut query = String::from("SELECT id, status, source, created_at FROM leads WHERE tenant_id = $1 AND deleted_at IS NULL");
-    
-    // We would ideally build this query dynamically or use a view, but for simplicity here's a basic extraction.
+    // Fetch leads with optional filters
     let leads = sqlx::query!(
         r#"
         SELECT id, client_id, property_id, status, source, created_at, assigned_to
@@ -66,7 +64,7 @@ pub async fn generate_leads_report(
     let csv_data = wtr.into_inner().unwrap();
     
     let audit_repo = AuditRepository::new(pool);
-    let _ = audit_repo.log(Some(tenant_id), Some(claims.sub), "REPORT_GENERATED", "reports", None, Some(serde_json::json!({"type": "leads"}))).await;
+    let _ = audit_repo.log(Some(tenant_id), Some(claims.sub), "REPORT_EXPORTED", "reports", None, Some(serde_json::json!({"type": "leads"}))).await;
 
     Ok((
         [(header::CONTENT_TYPE, "text/csv"), (header::CONTENT_DISPOSITION, "attachment; filename=\"leads_report.csv\"")],
@@ -115,7 +113,7 @@ pub async fn generate_appointments_report(
     let csv_data = wtr.into_inner().unwrap();
 
     let audit_repo = AuditRepository::new(pool);
-    let _ = audit_repo.log(Some(tenant_id), Some(claims.sub), "REPORT_GENERATED", "reports", None, Some(serde_json::json!({"type": "appointments"}))).await;
+    let _ = audit_repo.log(Some(tenant_id), Some(claims.sub), "REPORT_EXPORTED", "reports", None, Some(serde_json::json!({"type": "appointments"}))).await;
 
     Ok((
         [(header::CONTENT_TYPE, "text/csv"), (header::CONTENT_DISPOSITION, "attachment; filename=\"appointments_report.csv\"")],
@@ -164,10 +162,106 @@ pub async fn generate_whatsapp_report(
     let csv_data = wtr.into_inner().unwrap();
 
     let audit_repo = AuditRepository::new(pool);
-    let _ = audit_repo.log(Some(tenant_id), Some(claims.sub), "REPORT_GENERATED", "reports", None, Some(serde_json::json!({"type": "whatsapp"}))).await;
+    let _ = audit_repo.log(Some(tenant_id), Some(claims.sub), "REPORT_EXPORTED", "reports", None, Some(serde_json::json!({"type": "whatsapp"}))).await;
 
     Ok((
         [(header::CONTENT_TYPE, "text/csv"), (header::CONTENT_DISPOSITION, "attachment; filename=\"whatsapp_report.csv\"")],
+        csv_data,
+    ))
+}
+
+pub async fn generate_clients_report(
+    State(pool): State<Arc<PgPool>>,
+    Extension(claims): Extension<Claims>,
+    Query(filters): Query<ReportFilters>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let tenant_id = claims.tenant_id.ok_or(StatusCode::FORBIDDEN)?;
+
+    let clients = sqlx::query!(
+        r#"
+        SELECT id, first_name, last_name, email, phone, created_at
+        FROM clients
+        WHERE tenant_id = $1 AND deleted_at IS NULL
+          AND ($2::timestamptz IS NULL OR created_at >= $2)
+          AND ($3::timestamptz IS NULL OR created_at <= $3)
+        ORDER BY created_at DESC
+        "#,
+        tenant_id,
+        filters.date_from,
+        filters.date_to
+    )
+    .fetch_all(&*pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let mut wtr = csv::Writer::from_writer(vec![]);
+    wtr.write_record(&["ID", "Name", "Email", "Phone", "Created At"]).unwrap();
+    for client in clients {
+        let name = format!("{} {}", client.first_name.unwrap_or_default(), client.last_name.unwrap_or_default());
+        wtr.write_record(&[
+            client.id.to_string(),
+            name.trim().to_string(),
+            client.email.unwrap_or_default(),
+            client.phone, // phone is String
+            client.created_at.map(|d: chrono::DateTime<chrono::Utc>| d.to_rfc3339()).unwrap_or_default(),
+        ]).unwrap();
+    }
+    
+    let csv_data = wtr.into_inner().unwrap();
+
+    let audit_repo = AuditRepository::new(pool);
+    let _ = audit_repo.log(Some(tenant_id), Some(claims.sub), "REPORT_EXPORTED", "reports", None, Some(serde_json::json!({"type": "clients"}))).await;
+
+    Ok((
+        [(header::CONTENT_TYPE, "text/csv"), (header::CONTENT_DISPOSITION, "attachment; filename=\"clients_report.csv\"")],
+        csv_data,
+    ))
+}
+
+pub async fn generate_properties_report(
+    State(pool): State<Arc<PgPool>>,
+    Extension(claims): Extension<Claims>,
+    Query(filters): Query<ReportFilters>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let tenant_id = claims.tenant_id.ok_or(StatusCode::FORBIDDEN)?;
+
+    let properties = sqlx::query!(
+        r#"
+        SELECT id, title, property_type, price, status, created_at
+        FROM properties
+        WHERE tenant_id = $1 AND deleted_at IS NULL
+          AND ($2::timestamptz IS NULL OR created_at >= $2)
+          AND ($3::timestamptz IS NULL OR created_at <= $3)
+        ORDER BY created_at DESC
+        "#,
+        tenant_id,
+        filters.date_from,
+        filters.date_to
+    )
+    .fetch_all(&*pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let mut wtr = csv::Writer::from_writer(vec![]);
+    wtr.write_record(&["ID", "Title", "Type", "Price", "Status", "Created At"]).unwrap();
+    for prop in properties {
+        wtr.write_record(&[
+            prop.id.to_string(),
+            prop.title,
+            prop.property_type,
+            prop.price.to_string(), // price is not null
+            prop.status.unwrap_or_default(),
+            prop.created_at.map(|d: chrono::DateTime<chrono::Utc>| d.to_rfc3339()).unwrap_or_default(),
+        ]).unwrap();
+    }
+    
+    let csv_data = wtr.into_inner().unwrap();
+
+    let audit_repo = AuditRepository::new(pool);
+    let _ = audit_repo.log(Some(tenant_id), Some(claims.sub), "REPORT_EXPORTED", "reports", None, Some(serde_json::json!({"type": "properties"}))).await;
+
+    Ok((
+        [(header::CONTENT_TYPE, "text/csv"), (header::CONTENT_DISPOSITION, "attachment; filename=\"properties_report.csv\"")],
         csv_data,
     ))
 }

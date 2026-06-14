@@ -19,6 +19,29 @@ pub struct DashboardStats {
     pub active_whatsapp_conversations: i64,
     pub leads_this_month: i64,
     pub conversions_this_month: i64, // Leads moved to CLOSED or WON
+    
+    // New fields for charts
+    pub leads_by_status: Vec<LeadStatusCount>,
+    pub conversations_by_agent: Vec<AgentConversationCount>,
+    pub conversions_by_month: Vec<MonthlyConversion>,
+}
+
+#[derive(Serialize, sqlx::FromRow)]
+pub struct LeadStatusCount {
+    pub status: String,
+    pub count: i64,
+}
+
+#[derive(Serialize, sqlx::FromRow)]
+pub struct AgentConversationCount {
+    pub agent_name: String,
+    pub count: i64,
+}
+
+#[derive(Serialize, sqlx::FromRow)]
+pub struct MonthlyConversion {
+    pub month: String,
+    pub count: i64,
 }
 
 #[derive(Serialize)]
@@ -77,6 +100,43 @@ pub async fn get_stats(
         .await
         .unwrap_or((0,));
 
+    let leads_by_status: Vec<LeadStatusCount> = sqlx::query_as::<_, LeadStatusCount>(
+        "SELECT status, COUNT(*) as count FROM leads WHERE tenant_id = $1 AND deleted_at IS NULL GROUP BY status"
+    )
+    .bind(tenant_id)
+    .fetch_all(&*pool)
+    .await
+    .unwrap_or_default();
+
+    let conversations_by_agent: Vec<AgentConversationCount> = sqlx::query_as::<_, AgentConversationCount>(
+        r#"
+        SELECT COALESCE(u.first_name, 'Sin Asignar') as agent_name, COUNT(c.id) as count 
+        FROM conversations c 
+        LEFT JOIN users u ON c.assigned_user_id = u.id 
+        WHERE c.tenant_id = $1 AND c.deleted_at IS NULL 
+        GROUP BY u.first_name
+        "#
+    )
+    .bind(tenant_id)
+    .fetch_all(&*pool)
+    .await
+    .unwrap_or_default();
+
+    let conversions_by_month: Vec<MonthlyConversion> = sqlx::query_as::<_, MonthlyConversion>(
+        r#"
+        SELECT TO_CHAR(created_at, 'YYYY-MM') as month, COUNT(*) as count 
+        FROM audit_logs 
+        WHERE tenant_id = $1 AND entity_type = 'lead' AND action = 'UPDATE_LEAD' AND details->>'status' = 'WON'
+        GROUP BY TO_CHAR(created_at, 'YYYY-MM')
+        ORDER BY month ASC
+        LIMIT 6
+        "#
+    )
+    .bind(tenant_id)
+    .fetch_all(&*pool)
+    .await
+    .unwrap_or_default();
+
     Ok(Json(DashboardStats {
         total_clients: total_clients.0,
         total_properties: total_properties.0,
@@ -85,6 +145,9 @@ pub async fn get_stats(
         active_whatsapp_conversations: active_whatsapp_conversations.0,
         leads_this_month: leads_this_month.0,
         conversions_this_month: conversions_this_month.0,
+        leads_by_status,
+        conversations_by_agent,
+        conversions_by_month,
     }))
 }
 

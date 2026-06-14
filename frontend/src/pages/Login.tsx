@@ -8,6 +8,8 @@ import { authService } from '@/services/auth'
 
 export default function Login() {
   const navigate = useNavigate()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -17,11 +19,16 @@ export default function Login() {
     setError('')
     
     try {
-      const email = (document.getElementById('email') as HTMLInputElement).value
-      const password = (document.getElementById('password') as HTMLInputElement).value
-      
       const response = await authService.login({ email, password })
       localStorage.setItem('token', response.access_token)
+      localStorage.setItem('refresh_token', response.refresh_token)
+      if (response.tenant_id) localStorage.setItem('tenant_id', response.tenant_id)
+      localStorage.setItem('user', JSON.stringify({
+        id: response.user_id,
+        role: response.role,
+        first_name: response.first_name,
+        last_name: response.last_name,
+      }))
       navigate('/dashboard')
     } catch (err: any) {
       setError(err.message || 'Error al iniciar sesión')
@@ -64,7 +71,14 @@ export default function Login() {
                 <label className="text-sm font-medium text-slate-900" htmlFor="email">
                   Correo Electrónico
                 </label>
-                <Input id="email" type="email" placeholder="agente@inmobicrm.com" required defaultValue="demo@inmobicrm.com" />
+                <Input 
+                  id="email" 
+                  type="email" 
+                  placeholder="ejemplo@inmobicrm.com" 
+                  required 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -75,7 +89,13 @@ export default function Login() {
                     ¿Olvidaste tu contraseña?
                   </a>
                 </div>
-                <Input id="password" type="password" required defaultValue="password123" />
+                <Input 
+                  id="password" 
+                  type="password" 
+                  required 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
               </div>
             </CardContent>
             <CardFooter>

@@ -1,32 +1,54 @@
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, Home, CalendarDays, TrendingUp, DollarSign } from 'lucide-react'
-
-const STATS = [
-  { title: 'Propiedades Activas', value: '124', icon: Home, trend: '+4% este mes' },
-  { title: 'Nuevos Leads', value: '32', icon: Users, trend: '+12% este mes' },
-  { title: 'Citas Hoy', value: '8', icon: CalendarDays, trend: '2 confirmadas' },
-  { title: 'Ventas (Mes)', value: '$2.4M', icon: DollarSign, trend: '+8% vs anterior' },
-]
-
-const RECENT_ACTIVITY = [
-  { id: 1, text: 'Juan Pérez agendó una visita para Casa en San Isidro', time: 'Hace 10 min' },
-  { id: 2, text: 'Nueva propiedad listada en Palermo', time: 'Hace 2 horas' },
-  { id: 3, text: 'María Gómez confirmó cita de asesoramiento', time: 'Hace 3 horas' },
-  { id: 4, text: 'Lead entrante desde WhatsApp', time: 'Hace 5 horas' },
-]
+import { Users, Home, CalendarDays, TrendingUp, DollarSign, Activity } from 'lucide-react'
+import { dashboardService, DashboardStats, DashboardActivity } from '@/services/dashboard'
 
 export default function Dashboard() {
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [activity, setActivity] = useState<DashboardActivity[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [statsRes, activityRes] = await Promise.all([
+          dashboardService.getStats(),
+          dashboardService.getActivity(),
+        ])
+        setStats(statsRes)
+        setActivity(activityRes)
+      } catch (error) {
+        console.error('Error loading dashboard data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [])
+
+  if (loading || !stats) {
+    return <div className="p-4 text-slate-500">Cargando métricas...</div>
+  }
+
+  const STATS_UI = [
+    { title: 'Propiedades Activas', value: stats.total_properties, icon: Home, trend: 'Activas' },
+    { title: 'Nuevos Leads', value: stats.new_leads, icon: Users, trend: 'Sin contactar' },
+    { title: 'Citas Futuras', value: stats.upcoming_appointments, icon: CalendarDays, trend: 'Programadas' },
+    { title: 'Total Clientes', value: stats.total_clients, icon: DollarSign, trend: 'Registrados' },
+  ]
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Hola, John</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Hola!</h1>
           <p className="text-slate-500">Aquí tienes el resumen de tu actividad de hoy.</p>
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {STATS.map((stat, i) => (
+        {STATS_UI.map((stat, i) => (
           <Card key={i}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-slate-600">
@@ -63,15 +85,25 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              {RECENT_ACTIVITY.map((activity) => (
-                <div key={activity.id} className="flex items-start gap-4">
-                  <div className="mt-1 h-2 w-2 rounded-full bg-blue-600" />
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium leading-none text-slate-900">{activity.text}</p>
-                    <p className="text-xs text-slate-500">{activity.time}</p>
-                  </div>
-                </div>
-              ))}
+              {activity.length === 0 ? (
+                <div className="text-sm text-slate-500 text-center py-4">No hay actividad reciente.</div>
+              ) : (
+                activity.map((act) => {
+                  const dateObj = new Date(act.time)
+                  const dateStr = dateObj.toLocaleDateString()
+                  const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+                  return (
+                    <div key={act.id} className="flex items-start gap-4">
+                      <div className="mt-1 h-2 w-2 rounded-full bg-blue-600 shrink-0" />
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium leading-none text-slate-900">{act.title}</p>
+                        <p className="text-xs text-slate-500">{dateStr} {timeStr} - Entidad: {act.type}</p>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
             </div>
           </CardContent>
         </Card>

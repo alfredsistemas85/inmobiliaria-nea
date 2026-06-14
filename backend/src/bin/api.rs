@@ -9,11 +9,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
-mod api;
-mod core;
-mod infrastructure;
-mod models;
-mod config;
+use backend::{api, core, infrastructure, models, config};
 
 #[derive(OpenApi)]
 #[openapi(
@@ -27,7 +23,6 @@ mod config;
             models::property::Property,
             models::property::PropertyImage,
             models::property::PropertyDocument,
-            models::lead::LeadStatus,
             api::auth::dtos::LoginRequest,
             api::auth::dtos::AuthResponse,
             api::auth::dtos::RefreshRequest,
@@ -103,6 +98,11 @@ async fn main() {
         .nest("/api/roles", api::roles::router(shared_pool.clone()))
         .nest("/api/clients", api::clients::routes::router(shared_pool.clone()))
         .nest("/api/appointments", api::appointments::routes::router(shared_pool.clone()))
+        .nest("/api/leads", api::leads::routes::router(shared_pool.clone()))
+        .nest("/api/dashboard", api::dashboard::routes::router(shared_pool.clone()))
+        .nest("/api/whatsapp", api::whatsapp::routes::router(shared_pool.clone()))
+        .nest("/api/notifications", api::notifications::routes::router(shared_pool.clone()))
+        .nest("/api/reports", api::reports::routes::router(shared_pool.clone()))
         // Rate limiting for the entire API except swagger
         .layer(axum::middleware::from_fn_with_state(
             rate_limit_state.clone(),

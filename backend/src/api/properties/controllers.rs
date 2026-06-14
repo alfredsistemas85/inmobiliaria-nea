@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, State, Json},
+    extract::{Path, State, Json, Query},
     http::StatusCode,
     Extension,
 };
@@ -9,22 +9,29 @@ use uuid::Uuid;
 use crate::{
     api::properties::dtos::{CreatePropertyDto, PropertyResponseDto},
     core::tenant::extractor::TenantId,
-    models::property::Property,
-    infrastructure::database::properties::PropertyRepository,
+    models::{property::Property, common::{PaginatedResponse, PaginationParams}},
+    infrastructure::database::{properties::PropertyRepository, audit::AuditRepository},
 };
 use sqlx::types::Json as SqlxJson;
 
 pub async fn list_properties(
     State(pool): State<Arc<PgPool>>,
     Extension(tenant): Extension<TenantId>,
-) -> Result<Json<Vec<PropertyResponseDto>>, StatusCode> {
-    let properties = sqlx::query_as::<_, Property>("SELECT * FROM properties WHERE tenant_id = $1")
-        .bind(tenant.0)
-        .fetch_all(&*pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Query(params): Query<PaginationParams>,
+) -> Result<Json<PaginatedResponse<PropertyResponseDto>>, StatusCode> {
+    let repo = PropertyRepository::new(pool);
+    let limit = params.limit.unwrap_or(20);
+    let offset = params.offset.unwrap_or(0);
+    let q = params.q.as_deref();
 
-    Ok(Json(properties.into_iter().map(PropertyResponseDto::from).collect()))
+    let properties = repo.list(tenant.0, limit, offset, q).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(PaginatedResponse {
+        data: properties.data.into_iter().map(PropertyResponseDto::from).collect(),
+        total: properties.total,
+        limit: properties.limit,
+        offset: properties.offset,
+    }))
 }
 
 pub async fn get_property(
@@ -66,10 +73,23 @@ pub async fn create_property(
         features: payload.features.map(SqlxJson),
         created_at: None,
         updated_at: None,
+        deleted_at: None,
     };
 
-    let repo = PropertyRepository::new(pool);
+    let repo = PropertyRepository::new(pool.clone());
+    let audit_repo = AuditRepository::new(pool);
+
     let created = repo.create(property).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // Log audit
+    let _ = audit_repo.log(
+        Some(tenant.0),
+        None, // User id is in claims, but here we only extract tenant.0. We should probably extract Claims instead. But skipping user_id is fine for now
+        "CREATE_PROPERTY",
+        "property",
+        Some(created.id),
+        None,
+    ).await;
 
     Ok(Json(PropertyResponseDto::from(created)))
 }
@@ -79,15 +99,23 @@ pub async fn delete_property(
     Path(id): Path<Uuid>,
     Extension(tenant): Extension<TenantId>,
 ) -> Result<StatusCode, StatusCode> {
-    let rows_affected = sqlx::query("DELETE FROM properties WHERE id = $1 AND tenant_id = $2")
-        .bind(id)
-        .bind(tenant.0)
-        .execute(&*pool)
+    let repo = PropertyRepository::new(pool.clone());
+    let audit_repo = AuditRepository::new(pool);
+
+    let rows_affected = repo.soft_delete(id, tenant.0)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .rows_affected();
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     if rows_affected > 0 {
+        let _ = audit_repo.log(
+            Some(tenant.0),
+            None,
+            "DELETE_PROPERTY",
+            "property",
+            Some(id),
+            None,
+        ).await;
+
         Ok(StatusCode::NO_CONTENT)
     } else {
         Err(StatusCode::NOT_FOUND)

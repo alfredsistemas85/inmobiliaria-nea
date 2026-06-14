@@ -19,13 +19,14 @@ pub async fn list_users(
     Extension(claims): Extension<Claims>,
 ) -> Result<Json<Vec<UserResponseDto>>, StatusCode> {
     let users = if let Some(tenant_id) = claims.tenant_id {
-        sqlx::query_as::<_, User>("SELECT * FROM users WHERE tenant_id = $1")
+        sqlx::query_as::<_, User>("SELECT * FROM users WHERE tenant_id = $1 AND deleted_at IS NULL")
             .bind(tenant_id)
             .fetch_all(&*pool)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
     } else {
-        sqlx::query_as::<_, User>("SELECT * FROM users")
+        if claims.role != "super_admin" { return Err(StatusCode::FORBIDDEN); }
+        sqlx::query_as::<_, User>("SELECT * FROM users WHERE deleted_at IS NULL")
             .fetch_all(&*pool)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
@@ -55,9 +56,17 @@ pub async fn create_user(
 ) -> Result<Json<UserResponseDto>, StatusCode> {
     let hashed_pw = hash_password(&payload.password).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     
+    // Safety check: a non-super_admin MUST have a tenant_id to create a user
+    let target_tenant_id = claims.tenant_id.or_else(|| {
+        if claims.role == "super_admin" { None } else { Some(Uuid::nil()) } // This will cause foreign key failure, but better to explicitly reject
+    });
+    if claims.tenant_id.is_none() && claims.role != "super_admin" {
+        return Err(StatusCode::FORBIDDEN);
+    }
+    
     let user = User {
         id: Uuid::new_v4(),
-        tenant_id: claims.tenant_id,
+        tenant_id: target_tenant_id,
         role_id: payload.role_id,
         email: payload.email,
         password_hash: hashed_pw,
@@ -82,6 +91,14 @@ pub async fn update_user(
 ) -> Result<Json<UserResponseDto>, StatusCode> {
     let repo = UserRepository::new(pool.clone());
     let mut user = repo.find_by_id(id, claims.tenant_id).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?.ok_or(StatusCode::NOT_FOUND)?;
+
+    // Only allow updating users within the same tenant
+    if claims.tenant_id.is_some() && user.tenant_id != claims.tenant_id {
+        return Err(StatusCode::FORBIDDEN);
+    }
+    if claims.tenant_id.is_none() && claims.role != "super_admin" {
+        return Err(StatusCode::FORBIDDEN);
+    }
 
     if let Some(email) = payload.email { user.email = email; }
     if let Some(first_name) = payload.first_name { user.first_name = Some(first_name); }
@@ -112,7 +129,7 @@ pub async fn delete_user(
     Extension(claims): Extension<Claims>,
 ) -> Result<StatusCode, StatusCode> {
     let rows_affected = if let Some(tenant_id) = claims.tenant_id {
-        sqlx::query("DELETE FROM users WHERE id = $1 AND tenant_id = $2")
+        sqlx::query("UPDATE users SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2")
             .bind(id)
             .bind(tenant_id)
             .execute(&*pool)
@@ -120,7 +137,8 @@ pub async fn delete_user(
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
             .rows_affected()
     } else {
-        sqlx::query("DELETE FROM users WHERE id = $1")
+        if claims.role != "super_admin" { return Err(StatusCode::FORBIDDEN); }
+        sqlx::query("UPDATE users SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1")
             .bind(id)
             .execute(&*pool)
             .await

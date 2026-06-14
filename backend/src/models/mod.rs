@@ -5,3 +5,6 @@ pub mod property;
 pub mod lead;
 pub mod client;
 pub mod appointment;
+pub mod common;
+pub mod whatsapp;
+pub mod notification;

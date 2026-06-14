@@ -7,9 +7,22 @@ export const authService = {
       body: JSON.stringify(credentials),
     });
   },
+  refresh: async (refresh_token: string) => {
+    return fetchApi('/api/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refresh_token }),
+    });
+  },
+  me: async () => {
+    return fetchApi('/api/auth/me', {
+      method: 'GET',
+    });
+  },
   logout: () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('refresh_token');
     localStorage.removeItem('tenant_id');
     localStorage.removeItem('user');
+    window.location.href = '/';
   }
 };

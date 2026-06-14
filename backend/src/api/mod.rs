@@ -5,3 +5,8 @@ pub mod tenants;
 pub mod roles;
 pub mod clients;
 pub mod appointments;
+pub mod leads;
+pub mod dashboard;
+pub mod whatsapp;
+pub mod notifications;
+pub mod reports;

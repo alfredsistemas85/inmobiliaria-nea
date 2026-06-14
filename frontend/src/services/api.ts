@@ -17,6 +17,11 @@ export const fetchApi = async (endpoint: string, options: RequestInit = {}) => {
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/';
+      return null;
+    }
     const errorData = await response.json().catch(() => null);
     throw new Error(errorData?.error || errorData?.message || 'Error en la petición');
   }

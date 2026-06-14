@@ -6,7 +6,8 @@ import { ThemeProvider } from './context/ThemeContext'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+    {/* defaultTheme="dark" → oscuro predeterminado; storageKey persiste en localStorage */}
+    <ThemeProvider defaultTheme="dark" storageKey="inmobicrm-theme">
       <App />
     </ThemeProvider>
   </React.StrictMode>,

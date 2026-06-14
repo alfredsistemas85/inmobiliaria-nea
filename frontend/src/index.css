@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 @layer base {
+  /* ── Modo Claro ───────────────────────────────────────────────────────── */
   :root {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
@@ -35,6 +36,7 @@
     --radius: 0.5rem;
   }
 
+  /* ── Modo Oscuro ─────────────────────────────────────────────────────── */
   .dark {
     --background: 222 47% 5%;
     --foreground: 210 40% 98%;
@@ -70,6 +72,26 @@
   * {
     @apply border-border;
   }
+
+  /*
+   * Transición suave global al cambiar de tema.
+   * Se aplica a color y background-color en todos los elementos.
+   * duration-300 mantiene la fluidez sin ser lenta.
+   */
+  *,
+  *::before,
+  *::after {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 300ms;
+  }
+
+  /*
+   * Excepción: los elementos interactivos (botones, links, inputs) mantienen
+   * sus transiciones de hover rápidas (no heredan la de 300ms del tema).
+   * Se sobreescriben con Tailwind cuando corresponde (transition-colors).
+   */
+
   body {
     @apply bg-background text-foreground;
   }

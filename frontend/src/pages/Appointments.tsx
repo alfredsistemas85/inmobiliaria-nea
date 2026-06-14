@@ -112,8 +112,8 @@ export default function Appointments() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Citas y Visitas</h1>
-          <p className="text-slate-500">Administra tu agenda y las visitas a propiedades.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Citas y Visitas</h1>
+          <p className="text-muted-foreground">Administra tu agenda y las visitas a propiedades.</p>
         </div>
         <Button onClick={openNewModal} className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
@@ -137,15 +137,15 @@ export default function Appointments() {
         {/* Schedule */}
         <div className="flex-1 space-y-4">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-semibold text-slate-900">Próximas Citas</h2>
+            <h2 className="text-lg font-semibold text-foreground">Próximas Citas</h2>
             <Badge variant="outline">{appointments.length} Citas</Badge>
           </div>
 
           <div className="space-y-3">
             {loading ? (
-              <p className="text-slate-500">Cargando citas...</p>
+              <p className="text-muted-foreground">Cargando citas...</p>
             ) : appointments.length === 0 ? (
-              <p className="text-slate-500">No hay citas programadas.</p>
+              <p className="text-muted-foreground">No hay citas programadas.</p>
             ) : (
               appointments.map((apt) => {
                 const dateObj = new Date(apt.scheduled_at)
@@ -155,12 +155,12 @@ export default function Appointments() {
                 return (
                   <Card key={apt.id} className="overflow-hidden">
                     <div className="flex flex-col sm:flex-row">
-                      <div className="bg-slate-50 p-4 sm:w-48 border-b sm:border-b-0 sm:border-r border-slate-100 flex flex-col justify-center">
-                        <div className="flex items-center text-slate-700 font-medium mb-1">
-                          <Calendar className="h-4 w-4 mr-2 text-slate-400" />
+                      <div className="bg-background p-4 sm:w-48 border-b sm:border-b-0 sm:border-r border-border flex flex-col justify-center">
+                        <div className="flex items-center text-foreground font-medium mb-1">
+                          <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
                           {dateStr}
                         </div>
-                        <div className="flex items-center text-xs text-slate-500 ml-6">
+                        <div className="flex items-center text-xs text-muted-foreground ml-6">
                           <Clock className="h-3 w-3 mr-1" />
                           {timeStr}
                         </div>
@@ -168,26 +168,26 @@ export default function Appointments() {
                       
                       <div className="p-4 flex-1 flex flex-col justify-between">
                         <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-semibold text-slate-900">{getPropertyTitle(apt.property_id)}</h3>
+                          <h3 className="font-semibold text-foreground">{getPropertyTitle(apt.property_id)}</h3>
                           <Badge variant={apt.status === 'Confirmada' ? 'success' : apt.status === 'Cancelada' ? 'destructive' : 'warning'}>
                             {apt.status || 'Pendiente'}
                           </Badge>
                         </div>
                         
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 text-sm text-slate-600 mt-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 text-sm text-muted-foreground mt-2">
                           <div className="flex items-center">
-                            <User className="h-4 w-4 mr-2 text-slate-400" />
+                            <User className="h-4 w-4 mr-2 text-muted-foreground" />
                             {getClientName(apt.client_id)}
                           </div>
                         </div>
                         
                         {apt.notes && (
-                          <div className="mt-2 text-sm text-slate-500 italic">
+                          <div className="mt-2 text-sm text-muted-foreground italic">
                             "{apt.notes}"
                           </div>
                         )}
 
-                        <div className="mt-4 pt-4 border-t border-slate-100 flex gap-2 justify-end">
+                        <div className="mt-4 pt-4 border-t border-border flex gap-2 justify-end">
                           {(!apt.status || apt.status === 'Pendiente') && (
                             <>
                               <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleStatusChange(apt.id, 'Cancelada')}>
@@ -219,7 +219,7 @@ export default function Appointments() {
             <label className="text-sm font-medium">Cliente *</label>
             <select 
               {...register('client_id')}
-              className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="">Seleccione un cliente</option>
               {clients.map(c => (
@@ -233,7 +233,7 @@ export default function Appointments() {
             <label className="text-sm font-medium">Propiedad</label>
             <select 
               {...register('property_id')}
-              className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="">(Ninguna)</option>
               {properties.map(p => (

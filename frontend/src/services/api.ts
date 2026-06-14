@@ -21,13 +21,15 @@ export const fetchApi = async (endpoint: string, options: RequestInit = {}): Pro
     ...options.headers,
   };
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
+  const formattedEndpoint = endpoint.startsWith('/api') ? endpoint : (endpoint.startsWith('/') ? `/api${endpoint}` : `/api/${endpoint}`);
+
+  const response = await fetch(`${API_URL}${formattedEndpoint}`, {
     ...options,
     headers,
   });
 
   if (!response.ok) {
-    if (response.status === 401 && endpoint !== '/api/auth/login' && endpoint !== '/api/auth/refresh') {
+    if (response.status === 401 && formattedEndpoint !== '/api/auth/login' && formattedEndpoint !== '/api/auth/refresh') {
       const refreshToken = localStorage.getItem('refresh_token');
       if (!refreshToken) {
         localStorage.removeItem('token');
@@ -65,7 +67,7 @@ export const fetchApi = async (endpoint: string, options: RequestInit = {}): Pro
       return new Promise((resolve) => {
         subscribeTokenRefresh((newToken) => {
           const newHeaders = { ...headers, Authorization: `Bearer ${newToken}` };
-          resolve(fetch(`${API_URL}${endpoint}`, { ...options, headers: newHeaders }).then(r => r.json().catch(() => null)));
+          resolve(fetch(`${API_URL}${formattedEndpoint}`, { ...options, headers: newHeaders }).then(r => r.json().catch(() => null)));
         });
       });
     }

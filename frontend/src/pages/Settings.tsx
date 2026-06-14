@@ -7,8 +7,8 @@ export default function Settings() {
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Configuración</h1>
-        <p className="text-slate-500">Administra las preferencias de tu cuenta y el sistema.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Configuración</h1>
+        <p className="text-muted-foreground">Administra las preferencias de tu cuenta y el sistema.</p>
       </div>
 
       <div className="flex flex-col md:flex-row gap-6">
@@ -17,19 +17,19 @@ export default function Settings() {
             <a href="#" className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-2.5 rounded-md text-sm font-medium shrink-0">
               <User className="h-4 w-4" /> Perfil
             </a>
-            <a href="#" className="flex items-center gap-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 px-3 py-2.5 rounded-md text-sm font-medium shrink-0 transition-colors">
+            <a href="#" className="flex items-center gap-2 text-muted-foreground hover:bg-background hover:text-foreground px-3 py-2.5 rounded-md text-sm font-medium shrink-0 transition-colors">
               <Bell className="h-4 w-4" /> Notificaciones
             </a>
-            <a href="#" className="flex items-center gap-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 px-3 py-2.5 rounded-md text-sm font-medium shrink-0 transition-colors">
+            <a href="#" className="flex items-center gap-2 text-muted-foreground hover:bg-background hover:text-foreground px-3 py-2.5 rounded-md text-sm font-medium shrink-0 transition-colors">
               <Shield className="h-4 w-4" /> Seguridad
             </a>
-            <a href="#" className="flex items-center gap-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 px-3 py-2.5 rounded-md text-sm font-medium shrink-0 transition-colors">
+            <a href="#" className="flex items-center gap-2 text-muted-foreground hover:bg-background hover:text-foreground px-3 py-2.5 rounded-md text-sm font-medium shrink-0 transition-colors">
               <Smartphone className="h-4 w-4" /> Integración WhatsApp
             </a>
-            <a href="#" className="flex items-center gap-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 px-3 py-2.5 rounded-md text-sm font-medium shrink-0 transition-colors">
+            <a href="#" className="flex items-center gap-2 text-muted-foreground hover:bg-background hover:text-foreground px-3 py-2.5 rounded-md text-sm font-medium shrink-0 transition-colors">
               <Globe className="h-4 w-4" /> Sitio Web
             </a>
-            <a href="#" className="flex items-center gap-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 px-3 py-2.5 rounded-md text-sm font-medium shrink-0 transition-colors">
+            <a href="#" className="flex items-center gap-2 text-muted-foreground hover:bg-background hover:text-foreground px-3 py-2.5 rounded-md text-sm font-medium shrink-0 transition-colors">
               <CreditCard className="h-4 w-4" /> Facturación
             </a>
           </nav>
@@ -53,19 +53,19 @@ export default function Settings() {
               
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-900">Nombre</label>
+                  <label className="text-sm font-medium text-foreground">Nombre</label>
                   <Input defaultValue="John" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-900">Apellido</label>
+                  <label className="text-sm font-medium text-foreground">Apellido</label>
                   <Input defaultValue="Doe" />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
-                  <label className="text-sm font-medium text-slate-900">Correo Electrónico</label>
+                  <label className="text-sm font-medium text-foreground">Correo Electrónico</label>
                   <Input defaultValue="john.doe@inmobicrm.com" type="email" />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
-                  <label className="text-sm font-medium text-slate-900">Teléfono (WhatsApp)</label>
+                  <label className="text-sm font-medium text-foreground">Teléfono (WhatsApp)</label>
                   <Input defaultValue="+54 9 11 1234-5678" />
                 </div>
               </div>
@@ -85,7 +85,7 @@ export default function Settings() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-900">Nombre de la Agencia</label>
+                <label className="text-sm font-medium text-foreground">Nombre de la Agencia</label>
                 <Input defaultValue="Inmobiliaria Norte" />
               </div>
               <div className="pt-4 flex justify-end">

@@ -30,8 +30,8 @@ export default function Reports() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Reportes y Exportaciones</h1>
-        <p className="text-slate-500">Descarga la información de tu cuenta en formato CSV.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Reportes y Exportaciones</h1>
+        <p className="text-muted-foreground">Descarga la información de tu cuenta en formato CSV.</p>
       </div>
 
       <Card>
@@ -44,7 +44,7 @@ export default function Reports() {
               <label className="text-sm font-medium">Fecha Desde</label>
               <input 
                 type="date" 
-                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-border px-3 py-2 text-sm"
                 onChange={(e) => setFilters(f => ({ ...f, date_from: e.target.value ? new Date(e.target.value).toISOString() : undefined }))}
               />
             </div>
@@ -52,7 +52,7 @@ export default function Reports() {
               <label className="text-sm font-medium">Fecha Hasta</label>
               <input 
                 type="date" 
-                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-border px-3 py-2 text-sm"
                 onChange={(e) => setFilters(f => ({ ...f, date_to: e.target.value ? new Date(e.target.value).toISOString() : undefined }))}
               />
             </div>
@@ -72,7 +72,7 @@ export default function Reports() {
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-slate-500 mb-4 h-10">
+              <p className="text-sm text-muted-foreground mb-4 h-10">
                 {report.description}
               </p>
               <button

@@ -161,8 +161,8 @@ export default function Leads() {
     <div className="flex flex-col h-full space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Leads (Pipeline)</h1>
-          <p className="text-slate-500">Haz seguimiento de tus oportunidades comerciales.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Leads (Pipeline)</h1>
+          <p className="text-muted-foreground">Haz seguimiento de tus oportunidades comerciales.</p>
         </div>
         <Button onClick={openNewModal} className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
@@ -172,7 +172,7 @@ export default function Leads() {
 
       <div className="flex-1 overflow-x-auto pb-4">
         {loading ? (
-          <p className="text-slate-500">Cargando pipeline...</p>
+          <p className="text-muted-foreground">Cargando pipeline...</p>
         ) : (
           <div className="flex gap-4 h-full min-w-max">
             {PIPELINE_STAGES.map((column) => {
@@ -181,12 +181,12 @@ export default function Leads() {
               return (
                 <div 
                   key={column.id} 
-                  className="w-[300px] flex flex-col bg-slate-100/50 rounded-xl p-3 border border-slate-200 h-full"
+                  className="w-[300px] flex flex-col bg-muted/50 rounded-xl p-3 border border-border h-full"
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, column.id)}
                 >
                   <div className="flex items-center justify-between mb-4 px-1">
-                    <h3 className="font-semibold text-slate-700">{column.title}</h3>
+                    <h3 className="font-semibold text-foreground">{column.title}</h3>
                     <Badge variant="secondary">{columnLeads.length}</Badge>
                   </div>
                   
@@ -196,21 +196,21 @@ export default function Leads() {
                       return (
                         <Card 
                           key={lead.id} 
-                          className="p-3 cursor-grab active:cursor-grabbing hover:border-blue-300 transition-colors bg-white shadow-sm"
+                          className="p-3 cursor-grab active:cursor-grabbing hover:border-blue-300 transition-colors bg-card shadow-sm"
                           draggable
                           onDragStart={(e) => handleDragStart(e, lead.id)}
                           onDragEnd={handleDragEnd}
                         >
                           <div className="flex justify-between items-start mb-2">
-                            <h4 className="font-medium text-slate-900 text-sm">{getClientName(lead.client_id)}</h4>
-                            <button className="text-slate-400 hover:text-slate-700">
+                            <h4 className="font-medium text-foreground text-sm">{getClientName(lead.client_id)}</h4>
+                            <button className="text-muted-foreground hover:text-foreground">
                               <MoreHorizontal className="h-4 w-4" />
                             </button>
                           </div>
-                          <p className="text-xs text-slate-600 mb-3">{getPropertyTitle(lead.property_id)}</p>
+                          <p className="text-xs text-muted-foreground mb-3">{getPropertyTitle(lead.property_id)}</p>
                           
-                          <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
-                            <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-1 rounded-md">
+                          <div className="flex items-center justify-between mt-2 pt-2 border-t border-border">
+                            <span className="text-[10px] bg-muted text-muted-foreground px-2 py-1 rounded-md">
                               {lead.source || 'MANUAL'}
                             </span>
                             <div className="flex items-center gap-2">
@@ -223,7 +223,7 @@ export default function Leads() {
                                   Convertir
                                 </button>
                               )}
-                              <span className="text-[10px] text-slate-500">
+                              <span className="text-[10px] text-muted-foreground">
                                 {dateObj.toLocaleDateString()}
                               </span>
                             </div>
@@ -233,7 +233,7 @@ export default function Leads() {
                     })}
                     
                     {columnLeads.length === 0 && (
-                      <div className="text-center p-4 border-2 border-dashed border-slate-200 rounded-lg text-slate-400 text-sm bg-transparent pointer-events-none">
+                      <div className="text-center p-4 border-2 border-dashed border-border rounded-lg text-muted-foreground text-sm bg-transparent pointer-events-none">
                         Arrastra un lead aquí
                       </div>
                     )}
@@ -255,7 +255,7 @@ export default function Leads() {
             <label className="text-sm font-medium">Cliente *</label>
             <select 
               {...register('client_id')}
-              className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950"
+              className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <option value="">Seleccione un cliente</option>
               {clients.map(c => (
@@ -269,7 +269,7 @@ export default function Leads() {
             <label className="text-sm font-medium">Propiedad de Interés</label>
             <select 
               {...register('property_id')}
-              className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950"
+              className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <option value="">(Ninguna)</option>
               {properties.map(p => (

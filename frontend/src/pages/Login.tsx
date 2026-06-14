@@ -38,16 +38,16 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12 sm:px-6 lg:px-8">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8">
         <div className="flex flex-col items-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg">
             <Home className="h-6 w-6" />
           </div>
-          <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-slate-900">
+          <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-foreground">
             InmobiCRM
           </h2>
-          <p className="mt-2 text-center text-sm text-slate-600">
+          <p className="mt-2 text-center text-sm text-muted-foreground">
             Sistema de Gestión Inmobiliaria
           </p>
         </div>
@@ -68,7 +68,7 @@ export default function Login() {
                 </div>
               )}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-900" htmlFor="email">
+                <label className="text-sm font-medium text-foreground" htmlFor="email">
                   Correo Electrónico
                 </label>
                 <Input 
@@ -82,7 +82,7 @@ export default function Login() {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-slate-900" htmlFor="password">
+                  <label className="text-sm font-medium text-foreground" htmlFor="password">
                     Contraseña
                   </label>
                   <a href="#" className="text-xs text-blue-600 hover:underline">

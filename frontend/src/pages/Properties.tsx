@@ -37,8 +37,8 @@ export default function Properties() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Propiedades</h1>
-          <p className="text-slate-500">Gestiona el inventario de inmuebles.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Propiedades</h1>
+          <p className="text-muted-foreground">Gestiona el inventario de inmuebles.</p>
         </div>
         <Button className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
@@ -48,7 +48,7 @@ export default function Properties() {
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input 
             type="text" 
             placeholder="Buscar por título, ubicación..." 
@@ -64,7 +64,7 @@ export default function Properties() {
       </div>
 
       {loading && (
-        <div className="flex items-center justify-center p-12 text-slate-400">
+        <div className="flex items-center justify-center p-12 text-muted-foreground">
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
       )}
@@ -77,7 +77,7 @@ export default function Properties() {
       )}
 
       {!loading && !error && filteredProperties.length === 0 && (
-        <div className="text-center p-12 text-slate-500 border border-slate-200 rounded-xl bg-slate-50 border-dashed">
+        <div className="text-center p-12 text-muted-foreground border border-border rounded-xl bg-background border-dashed">
           No se encontraron propiedades.
         </div>
       )}
@@ -85,8 +85,8 @@ export default function Properties() {
       {!loading && !error && filteredProperties.length > 0 && (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filteredProperties.map((property) => (
-            <Link key={property.id} to={`/properties/${property.id}`} className="group flex flex-col rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm hover:shadow-md transition-all">
-              <div className="relative h-48 w-full overflow-hidden bg-slate-100">
+            <Link key={property.id} to={`/properties/${property.id}`} className="group flex flex-col rounded-xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-all">
+              <div className="relative h-48 w-full overflow-hidden bg-muted">
                 {property.images && property.images.length > 0 ? (
                   <img 
                     src={property.images[0].url} 
@@ -94,7 +94,7 @@ export default function Properties() {
                     className="h-full w-full object-cover transition-transform group-hover:scale-105"
                   />
                 ) : (
-                  <div className="h-full w-full flex items-center justify-center text-slate-400">
+                  <div className="h-full w-full flex items-center justify-center text-muted-foreground">
                     Sin imagen
                   </div>
                 )}
@@ -104,7 +104,7 @@ export default function Properties() {
                   </Badge>
                 </div>
                 <div className="absolute top-3 right-3">
-                  <Badge variant="secondary" className="bg-white/90 text-slate-900 backdrop-blur-sm">
+                  <Badge variant="secondary" className="bg-card/90 text-foreground backdrop-blur-sm">
                     {property.property_type || 'Casa'}
                   </Badge>
                 </div>
@@ -112,14 +112,14 @@ export default function Properties() {
               
               <div className="flex flex-col flex-1 p-5">
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-semibold text-lg text-slate-900 line-clamp-1">{property.title}</h3>
+                  <h3 className="font-semibold text-lg text-foreground line-clamp-1">{property.title}</h3>
                 </div>
-                <div className="flex items-center text-slate-500 text-sm mb-4">
+                <div className="flex items-center text-muted-foreground text-sm mb-4">
                   <MapPin className="h-4 w-4 mr-1 shrink-0" />
                   <span className="truncate">{property.location || 'Sin ubicación'}</span>
                 </div>
                 
-                <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between text-slate-600 text-sm">
+                <div className="mt-auto pt-4 border-t border-border flex items-center justify-between text-muted-foreground text-sm">
                   <div className="flex gap-4">
                     <div className="flex items-center gap-1" title="Habitaciones">
                       <Bed className="h-4 w-4" />

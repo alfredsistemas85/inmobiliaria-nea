@@ -24,14 +24,14 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div 
-        className="bg-white rounded-lg shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto"
+        className="bg-card rounded-lg shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto"
         role="dialog"
       >
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-slate-900">{title}</h2>
+          <h2 className="text-xl font-bold text-foreground">{title}</h2>
           <button 
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 transition-colors"
+            className="text-muted-foreground hover:text-muted-foreground transition-colors"
           >
             ✕
           </button>

@@ -107,8 +107,8 @@ export default function Clients() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Clientes</h1>
-          <p className="text-slate-500">Gestiona tu cartera de clientes y leads.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Clientes</h1>
+          <p className="text-muted-foreground">Gestiona tu cartera de clientes y leads.</p>
         </div>
         <Button onClick={openNewClientModal} className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
@@ -118,7 +118,7 @@ export default function Clients() {
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input 
             type="text" 
             placeholder="Buscar por nombre, email, teléfono..." 
@@ -132,7 +132,7 @@ export default function Clients() {
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
+            <thead className="text-xs text-muted-foreground uppercase bg-background border-b border-border">
               <tr>
                 <th className="px-6 py-4 font-medium">Nombre</th>
                 <th className="px-6 py-4 font-medium">Contacto</th>
@@ -142,30 +142,30 @@ export default function Clients() {
             </thead>
             <tbody className="divide-y divide-slate-200">
               {loading ? (
-                <tr><td colSpan={4} className="text-center py-4 text-slate-500">Cargando...</td></tr>
+                <tr><td colSpan={4} className="text-center py-4 text-muted-foreground">Cargando...</td></tr>
               ) : clients.length === 0 ? (
-                <tr><td colSpan={4} className="text-center py-4 text-slate-500">No se encontraron clientes.</td></tr>
+                <tr><td colSpan={4} className="text-center py-4 text-muted-foreground">No se encontraron clientes.</td></tr>
               ) : (
                 clients.map((client) => (
-                  <tr key={client.id} className="bg-white hover:bg-slate-50 transition-colors">
+                  <tr key={client.id} className="bg-card hover:bg-background transition-colors">
                     <td className="px-6 py-4">
-                      <div className="font-medium text-slate-900">{client.first_name} {client.last_name}</div>
+                      <div className="font-medium text-foreground">{client.first_name} {client.last_name}</div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col space-y-1">
                         {client.email && (
-                          <div className="flex items-center text-slate-600">
+                          <div className="flex items-center text-muted-foreground">
                             <Mail className="h-3 w-3 mr-2" />
                             {client.email}
                           </div>
                         )}
-                        <div className="flex items-center text-slate-600">
+                        <div className="flex items-center text-muted-foreground">
                           <Phone className="h-3 w-3 mr-2" />
                           {client.phone}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 max-w-[200px] truncate text-slate-500">
+                    <td className="px-6 py-4 max-w-[200px] truncate text-muted-foreground">
                       {client.notes || '-'}
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -185,8 +185,8 @@ export default function Clients() {
           </table>
         </div>
         {/* Paginación */}
-        <div className="p-4 border-t border-slate-200 flex justify-between items-center bg-slate-50">
-          <span className="text-sm text-slate-500">
+        <div className="p-4 border-t border-border flex justify-between items-center bg-background">
+          <span className="text-sm text-muted-foreground">
             Mostrando {clients.length} de {total} resultados
           </span>
           <div className="flex gap-2">
@@ -228,7 +228,7 @@ export default function Clients() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-900">Teléfono *</label>
+            <label className="text-sm font-medium text-foreground">Teléfono *</label>
             <Input {...register('phone')} placeholder="+54 11 1234-5678" />
             {errors.phone && <span className="text-xs text-red-500">{errors.phone.message}</span>}
           </div>

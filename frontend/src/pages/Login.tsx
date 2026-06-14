@@ -1,22 +1,33 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Home } from 'lucide-react'
+import { Home, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
+import { authService } from '@/services/auth'
 
 export default function Login() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    // Simulate login
-    setTimeout(() => {
-      setLoading(false)
+    setError('')
+    
+    try {
+      const email = (document.getElementById('email') as HTMLInputElement).value
+      const password = (document.getElementById('password') as HTMLInputElement).value
+      
+      const response = await authService.login({ email, password })
+      localStorage.setItem('token', response.access_token)
       navigate('/dashboard')
-    }, 1000)
+    } catch (err: any) {
+      setError(err.message || 'Error al iniciar sesión')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -43,6 +54,12 @@ export default function Login() {
           </CardHeader>
           <form onSubmit={handleLogin}>
             <CardContent className="space-y-4">
+              {error && (
+                <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-100 rounded-md flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  {error}
+                </div>
+              )}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-900" htmlFor="email">
                   Correo Electrónico

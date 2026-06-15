@@ -17,11 +17,38 @@ use axum::{
 };
 use sqlx::PgPool;
 use std::sync::Arc;
+use uuid::Uuid;
 
 pub async fn login(
     State(pool): State<Arc<PgPool>>,
     Json(payload): Json<LoginRequest>,
 ) -> Result<Json<AuthResponse>, StatusCode> {
+    let superadmin_email = std::env::var("SUPERADMIN_EMAIL").unwrap_or_else(|_| "agentech.nea@gmail.com".to_string());
+    
+    if payload.identifier == superadmin_email {
+        let superadmin_password = std::env::var("SUPERADMIN_PASSWORD").unwrap_or_else(|_| "xEnEizE@41".to_string());
+        if payload.password == superadmin_password {
+            let access_token = generate_jwt(Uuid::nil(), None, "super_admin", true)
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            let refresh_token = generate_refresh_jwt(Uuid::nil(), None, "super_admin", true)
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+                
+            tracing::info!("LOGIN_SUCCESS: super_admin hardcoded");
+            return Ok(Json(AuthResponse {
+                access_token,
+                refresh_token,
+                user_id: Uuid::nil(),
+                tenant_id: None,
+                role: "super_admin".to_string(),
+                first_name: Some("Super".to_string()),
+                last_name: Some("Admin".to_string()),
+            }));
+        } else {
+            tracing::warn!("LOGIN_FAILED: invalid credentials for superadmin");
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+    }
+
     let repo = UserRepository::new(pool.clone());
     
     let user_data = if payload.identifier.contains('@') {
@@ -85,6 +112,18 @@ pub async fn login(
                 return Err(StatusCode::FORBIDDEN);
             }
 
+            if let Some(tenant_id) = user.tenant_id {
+                let tenant_repo = TenantRepository::new(pool.clone());
+                if let Ok(Some(tenant)) = tenant_repo.find_by_id(tenant_id).await {
+                    if tenant.status.as_deref() != Some("ACTIVE") || tenant.is_active != Some(true) {
+                        tracing::warn!("LOGIN_BLOCKED_INACTIVE_TENANT: tenant_id={:?}", tenant_id);
+                        return Err(StatusCode::FORBIDDEN);
+                    }
+                } else {
+                    return Err(StatusCode::UNAUTHORIZED);
+                }
+            }
+
             let email_verified = true;
             let access_token = generate_jwt(user.id, user.tenant_id, &role, email_verified)
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -126,7 +165,23 @@ pub async fn refresh(
         StatusCode::UNAUTHORIZED
     })?;
 
-    let repo = UserRepository::new(pool);
+    if claims.role == "super_admin" && claims.sub == Uuid::nil() {
+        let access_token = generate_jwt(Uuid::nil(), None, "super_admin", true)
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let new_refresh_token = generate_refresh_jwt(Uuid::nil(), None, "super_admin", true)
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        return Ok(Json(AuthResponse {
+            access_token,
+            refresh_token: new_refresh_token,
+            user_id: Uuid::nil(),
+            tenant_id: None,
+            role: "super_admin".to_string(),
+            first_name: Some("Super".to_string()),
+            last_name: Some("Admin".to_string()),
+        }));
+    }
+
+    let repo = UserRepository::new(pool.clone());
     let user_data = repo
         .find_with_role_by_id(claims.sub, claims.tenant_id)
         .await
@@ -139,6 +194,18 @@ pub async fn refresh(
                 user.id
             );
             return Err(StatusCode::FORBIDDEN);
+        }
+
+        if let Some(tenant_id) = user.tenant_id {
+            let tenant_repo = TenantRepository::new(pool.clone());
+            if let Ok(Some(tenant)) = tenant_repo.find_by_id(tenant_id).await {
+                if tenant.status.as_deref() != Some("ACTIVE") || tenant.is_active != Some(true) {
+                    tracing::warn!("REFRESH_BLOCKED_INACTIVE_TENANT: tenant_id={:?}", tenant_id);
+                    return Err(StatusCode::FORBIDDEN);
+                }
+            } else {
+                return Err(StatusCode::UNAUTHORIZED);
+            }
         }
 
         let email_verified = true;
@@ -172,6 +239,18 @@ pub async fn me(
     State(pool): State<Arc<PgPool>>,
     Extension(claims): Extension<Claims>,
 ) -> Result<Json<MeResponse>, StatusCode> {
+    if claims.role == "super_admin" && claims.sub == Uuid::nil() {
+        let superadmin_email = std::env::var("SUPERADMIN_EMAIL").unwrap_or_else(|_| "agentech.nea@gmail.com".to_string());
+        return Ok(Json(MeResponse {
+            id: Uuid::nil(),
+            email: superadmin_email,
+            first_name: Some("Super".to_string()),
+            last_name: Some("Admin".to_string()),
+            role: "super_admin".to_string(),
+            tenant_id: None,
+        }));
+    }
+
     let repo = UserRepository::new(pool);
     let user_data = repo
         .find_with_role_by_id(claims.sub, claims.tenant_id)
@@ -202,6 +281,11 @@ pub async fn change_password(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<ChangePasswordRequest>,
 ) -> Result<StatusCode, StatusCode> {
+    if claims.role == "super_admin" && claims.sub == Uuid::nil() {
+        // Superadmin password is in env var, cannot be changed here
+        return Err(StatusCode::FORBIDDEN);
+    }
+
     let repo = UserRepository::new(pool.clone());
     let user = repo
         .find_by_id(claims.sub, claims.tenant_id)
@@ -248,8 +332,8 @@ pub async fn verify_email(
             
         if let Some(tid) = u.tenant_id {
             let tenant_repo = TenantRepository::new(pool.clone());
-            tenant_repo.update_status(tid, "APPROVED").await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-            tracing::info!("TENANT_APPROVED: tenant_id={:?}", tid);
+            tenant_repo.update_status(tid, "ACTIVE").await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            tracing::info!("TENANT_ACTIVATED: tenant_id={:?}", tid);
         }
         
         tracing::info!("EMAIL_VERIFIED: user_id={}", u.id);

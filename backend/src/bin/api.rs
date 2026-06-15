@@ -193,6 +193,7 @@ async fn main() {
             api::properties::router(shared_pool.clone(), rate_limit_state.clone()),
         )
         .nest("/api/tenants", api::tenants::router(shared_pool.clone()))
+        .nest("/api/admin/system", api::system::routes::router(shared_pool.clone()))
         .nest("/api/roles", api::roles::router(shared_pool.clone()))
         .nest(
             "/api/clients",

@@ -62,6 +62,19 @@ pub async fn create_user(
     let hashed_pw =
         hash_password(&payload.password).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
+    if let Some(role_id) = payload.role_id {
+        let role_name: Option<String> = sqlx::query_scalar("SELECT name FROM roles WHERE id = $1")
+            .bind(role_id)
+            .fetch_optional(&*pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        if role_name.as_deref() == Some("super_admin") {
+            tracing::warn!("SECURITY_VIOLATION: Attempt to assign super_admin role on creation");
+            return Err(StatusCode::FORBIDDEN);
+        }
+    }
+
     // Safety check: a non-super_admin MUST have a tenant_id to create a user
     let target_tenant_id = claims.tenant_id.or_else(|| {
         if claims.role == "super_admin" {
@@ -106,6 +119,15 @@ pub async fn create_user(
 
     tracing::info!("EMAIL_SENT: to={} token={}", created.email, v_token);
 
+    let frontend_url = std::env::var("FRONTEND_URL").unwrap_or_else(|_| "https://inmonea.agentech.ar".to_string());
+    let verify_url = format!("{}/verify-email?token={}", frontend_url, v_token);
+    let body = format!(
+        "Bienvenido a Inmobiliarias NEA.\n\nPor favor, verifica tu correo y activa tu cuenta haciendo clic en el siguiente enlace:\n{}",
+        verify_url
+    );
+    
+    let _ = crate::core::utils::email_sender::send_email(&created.email, "Verifica tu cuenta - Inmobiliarias NEA", &body).await;
+
     Ok(Json(UserResponseDto::from(created)))
 }
 
@@ -140,6 +162,17 @@ pub async fn update_user(
         user.last_name = Some(last_name);
     }
     if let Some(role_id) = payload.role_id {
+        // Prevent assigning super_admin role
+        let role_name: Option<String> = sqlx::query_scalar("SELECT name FROM roles WHERE id = $1")
+            .bind(role_id)
+            .fetch_optional(&*pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        if role_name.as_deref() == Some("super_admin") {
+            tracing::warn!("SECURITY_VIOLATION: Attempt to assign super_admin role");
+            return Err(StatusCode::FORBIDDEN);
+        }
         user.role_id = Some(role_id);
     }
     if let Some(is_active) = payload.is_active {

@@ -69,7 +69,7 @@ impl TenantRepository {
     pub async fn find_by_slug(&self, slug: &str) -> Result<Option<Tenant>, sqlx::Error> {
         sqlx::query_as::<_, Tenant>(
             r#"SELECT id, cuit, dni_responsable, first_name, last_name, business_name, address, phone, city, province, is_active, status, slug, created_at, updated_at 
-               FROM tenants WHERE slug = $1 AND is_active = true AND status = 'APPROVED'"#
+               FROM tenants WHERE slug = $1 AND is_active = true AND status = 'ACTIVE'"#
         )
         .bind(slug)
         .fetch_optional(&*self.pool)

@@ -1,19 +1,21 @@
 use axum::{
-    extract::{Path, State, Query},
+    extract::{Path, Query, State},
     http::StatusCode,
-    Extension,
-    Json,
+    Extension, Json,
 };
+use serde_json::json;
 use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
-use serde_json::json;
 
 use crate::{
     api::clients::dtos::{CreateClientDto, UpdateClientDto},
     core::security::jwt::Claims,
-    infrastructure::database::{clients::ClientRepository, audit::AuditRepository},
-    models::{client::Client, common::{PaginatedResponse, PaginationParams}},
+    infrastructure::database::{audit::AuditRepository, clients::ClientRepository},
+    models::{
+        client::Client,
+        common::{PaginatedResponse, PaginationParams},
+    },
 };
 
 pub async fn list_clients(
@@ -23,12 +25,13 @@ pub async fn list_clients(
 ) -> Result<Json<PaginatedResponse<Client>>, StatusCode> {
     let tenant_id = claims.tenant_id.ok_or(StatusCode::FORBIDDEN)?;
     let repo = ClientRepository::new(pool);
-    
+
     let limit = params.limit.unwrap_or(20);
     let offset = params.offset.unwrap_or(0);
     let q = params.q.as_deref();
 
-    let clients = repo.list(tenant_id, limit, offset, q)
+    let clients = repo
+        .list(tenant_id, limit, offset, q)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -42,8 +45,9 @@ pub async fn get_client(
 ) -> Result<Json<Client>, StatusCode> {
     let tenant_id = claims.tenant_id.ok_or(StatusCode::FORBIDDEN)?;
     let repo = ClientRepository::new(pool);
-    
-    let client = repo.get_by_id(id, tenant_id)
+
+    let client = repo
+        .get_by_id(id, tenant_id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .ok_or(StatusCode::NOT_FOUND)?;
@@ -60,26 +64,29 @@ pub async fn create_client(
     let repo = ClientRepository::new(pool.clone());
     let audit_repo = AuditRepository::new(pool);
 
-    let client = repo.create(
-        tenant_id,
-        payload.first_name.as_deref(),
-        payload.last_name.as_deref(),
-        &payload.phone,
-        payload.email.as_deref(),
-        payload.notes.as_deref(),
-    )
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let client = repo
+        .create(
+            tenant_id,
+            payload.first_name.as_deref(),
+            payload.last_name.as_deref(),
+            &payload.phone,
+            payload.email.as_deref(),
+            payload.notes.as_deref(),
+        )
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     // Log audit
-    let _ = audit_repo.log(
-        Some(tenant_id),
-        Some(claims.sub),
-        "CREATE_CLIENT",
-        "client",
-        Some(client.id),
-        Some(json!({ "phone": client.phone })),
-    ).await;
+    let _ = audit_repo
+        .log(
+            Some(tenant_id),
+            Some(claims.sub),
+            "CREATE_CLIENT",
+            "client",
+            Some(client.id),
+            Some(json!({ "phone": client.phone })),
+        )
+        .await;
 
     Ok(Json(client))
 }
@@ -94,32 +101,33 @@ pub async fn update_client(
     let repo = ClientRepository::new(pool.clone());
     let audit_repo = AuditRepository::new(pool);
 
-    let client = repo.update(
-        id,
-        tenant_id,
-        payload.first_name.as_deref(),
-        payload.last_name.as_deref(),
-        payload.phone.as_deref(),
-        payload.email.as_deref(),
-        payload.notes.as_deref(),
-    )
-    .await
-    .map_err(|e| {
-        match e {
+    let client = repo
+        .update(
+            id,
+            tenant_id,
+            payload.first_name.as_deref(),
+            payload.last_name.as_deref(),
+            payload.phone.as_deref(),
+            payload.email.as_deref(),
+            payload.notes.as_deref(),
+        )
+        .await
+        .map_err(|e| match e {
             sqlx::Error::RowNotFound => StatusCode::NOT_FOUND,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
-        }
-    })?;
+        })?;
 
     // Log audit
-    let _ = audit_repo.log(
-        Some(tenant_id),
-        Some(claims.sub),
-        "UPDATE_CLIENT",
-        "client",
-        Some(client.id),
-        None,
-    ).await;
+    let _ = audit_repo
+        .log(
+            Some(tenant_id),
+            Some(claims.sub),
+            "UPDATE_CLIENT",
+            "client",
+            Some(client.id),
+            None,
+        )
+        .await;
 
     Ok(Json(client))
 }
@@ -133,20 +141,23 @@ pub async fn delete_client(
     let repo = ClientRepository::new(pool.clone());
     let audit_repo = AuditRepository::new(pool);
 
-    let rows_affected = repo.soft_delete(id, tenant_id)
+    let rows_affected = repo
+        .soft_delete(id, tenant_id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     if rows_affected > 0 {
         // Log audit
-        let _ = audit_repo.log(
-            Some(tenant_id),
-            Some(claims.sub),
-            "DELETE_CLIENT",
-            "client",
-            Some(id),
-            None,
-        ).await;
+        let _ = audit_repo
+            .log(
+                Some(tenant_id),
+                Some(claims.sub),
+                "DELETE_CLIENT",
+                "client",
+                Some(id),
+                None,
+            )
+            .await;
 
         Ok(StatusCode::NO_CONTENT)
     } else {

@@ -1,12 +1,8 @@
-use axum::{
-    routing::get,
-    Router,
-    middleware,
-};
+use axum::{middleware, routing::get, Router};
 use sqlx::PgPool;
 use std::sync::Arc;
 
-use crate::api::dashboard::controllers::{get_stats, get_activity};
+use crate::api::dashboard::controllers::{get_activity, get_stats};
 use crate::core::tenant::middleware::tenant_middleware;
 
 pub fn router(pool: Arc<PgPool>) -> Router {

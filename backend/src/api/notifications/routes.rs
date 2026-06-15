@@ -1,7 +1,7 @@
 use axum::{
+    middleware,
     routing::{get, post},
     Router,
-    middleware,
 };
 use sqlx::PgPool;
 use std::sync::Arc;

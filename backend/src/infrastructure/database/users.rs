@@ -1,7 +1,7 @@
-use sqlx::PgPool;
-use uuid::Uuid;
 use crate::models::user::User;
+use sqlx::PgPool;
 use std::sync::Arc;
+use uuid::Uuid;
 
 pub struct UserRepository {
     pool: Arc<PgPool>,
@@ -22,7 +22,11 @@ impl UserRepository {
         .await
     }
 
-    pub async fn find_by_id(&self, id: Uuid, tenant_id: Option<Uuid>) -> Result<Option<User>, sqlx::Error> {
+    pub async fn find_by_id(
+        &self,
+        id: Uuid,
+        tenant_id: Option<Uuid>,
+    ) -> Result<Option<User>, sqlx::Error> {
         if let Some(t_id) = tenant_id {
             sqlx::query_as::<_, User>(
                 r#"SELECT id, tenant_id, role_id, email, password_hash, first_name, last_name, is_active, created_at, updated_at 
@@ -61,7 +65,10 @@ impl UserRepository {
         .await
     }
 
-    pub async fn find_with_role_by_email(&self, email: &str) -> Result<Option<(User, String)>, sqlx::Error> {
+    pub async fn find_with_role_by_email(
+        &self,
+        email: &str,
+    ) -> Result<Option<(User, String)>, sqlx::Error> {
         let row = sqlx::query(
             r#"SELECT u.id, u.tenant_id, u.role_id, u.email, u.password_hash, u.first_name, u.last_name, u.is_active, u.created_at, u.updated_at, r.name as role_name
                FROM users u LEFT JOIN roles r ON u.role_id = r.id WHERE u.email = $1 AND u.deleted_at IS NULL"#
@@ -85,13 +92,20 @@ impl UserRepository {
                 updated_at: r.try_get("updated_at")?,
             };
             let role_name: Option<String> = r.try_get("role_name")?;
-            Ok(Some((user, role_name.unwrap_or_else(|| "tenant_agent".to_string()))))
+            Ok(Some((
+                user,
+                role_name.unwrap_or_else(|| "tenant_agent".to_string()),
+            )))
         } else {
             Ok(None)
         }
     }
 
-    pub async fn find_with_role_by_id(&self, id: Uuid, tenant_id: Option<Uuid>) -> Result<Option<(User, String)>, sqlx::Error> {
+    pub async fn find_with_role_by_id(
+        &self,
+        id: Uuid,
+        tenant_id: Option<Uuid>,
+    ) -> Result<Option<(User, String)>, sqlx::Error> {
         let query_str = if tenant_id.is_some() {
             r#"SELECT u.id, u.tenant_id, u.role_id, u.email, u.password_hash, u.first_name, u.last_name, u.is_active, u.created_at, u.updated_at, r.name as role_name
                FROM users u LEFT JOIN roles r ON u.role_id = r.id WHERE u.id = $1 AND u.tenant_id = $2 AND u.deleted_at IS NULL"#
@@ -122,7 +136,10 @@ impl UserRepository {
                 updated_at: r.try_get("updated_at")?,
             };
             let role_name: Option<String> = r.try_get("role_name")?;
-            Ok(Some((user, role_name.unwrap_or_else(|| "tenant_agent".to_string()))))
+            Ok(Some((
+                user,
+                role_name.unwrap_or_else(|| "tenant_agent".to_string()),
+            )))
         } else {
             Ok(None)
         }

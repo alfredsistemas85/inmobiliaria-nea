@@ -1,2 +1,2 @@
-pub mod middleware;
 pub mod guards;
+pub mod middleware;

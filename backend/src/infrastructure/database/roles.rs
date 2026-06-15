@@ -1,7 +1,7 @@
-use sqlx::PgPool;
-use uuid::Uuid;
 use crate::models::role::Role;
+use sqlx::PgPool;
 use std::sync::Arc;
+use uuid::Uuid;
 
 pub struct RoleRepository {
     pool: Arc<PgPool>,

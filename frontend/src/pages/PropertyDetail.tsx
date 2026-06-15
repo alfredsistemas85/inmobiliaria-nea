@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, MapPin, Bed, Bath, Maximize, Edit, Trash2, CalendarDays, CheckCircle2, Loader2, AlertCircle } from 'lucide-react'
+import { ArrowLeft, MapPin, Bed, Bath, Maximize, Edit, Trash2, CalendarDays, CheckCircle2, Loader2, AlertCircle, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -70,9 +70,11 @@ export default function PropertyDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="hidden sm:flex items-center gap-2">
-            <Edit className="h-4 w-4" />
-            Editar
+          <Button variant="outline" size="sm" className="hidden sm:flex items-center gap-2" asChild>
+            <Link to={`/properties/${property.id}/edit`}>
+              <Edit className="h-4 w-4" />
+              Editar
+            </Link>
           </Button>
           <Button variant="destructive" size="sm" className="hidden sm:flex items-center gap-2">
             <Trash2 className="h-4 w-4" />
@@ -178,6 +180,10 @@ export default function PropertyDetail() {
                   <span className="font-medium text-sm text-foreground">
                     {property.created_at ? new Date(property.created_at).toLocaleDateString() : 'N/A'}
                   </span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-border">
+                  <span className="text-muted-foreground text-sm flex items-center gap-1"><Eye className="h-4 w-4" /> Vistas en Portal</span>
+                  <span className="font-bold text-sm text-blue-600">{property.views || 0}</span>
                 </div>
               </div>
             </CardContent>

@@ -1,16 +1,16 @@
 use axum::{
-    routing::{get, post, put, delete},
-    Router,
     middleware,
+    routing::{delete, get, post, put},
+    Router,
 };
 use sqlx::PgPool;
 use std::sync::Arc;
 
 use crate::api::leads::controllers::{
-    list_leads, get_lead, create_lead, update_lead, convert_lead, delete_lead,
+    convert_lead, create_lead, delete_lead, get_lead, list_leads, update_lead,
 };
-use crate::core::tenant::middleware::tenant_middleware;
 use crate::core::rbac::middleware::require_tenant_admin;
+use crate::core::tenant::middleware::tenant_middleware;
 
 pub fn router(pool: Arc<PgPool>) -> Router {
     let agent_routes = Router::new()

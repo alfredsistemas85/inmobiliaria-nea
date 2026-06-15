@@ -1,16 +1,14 @@
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    Extension,
-    Json,
+    Extension, Json,
 };
 use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::{
-    core::security::jwt::Claims,
-    infrastructure::database::notifications::NotificationRepository,
+    core::security::jwt::Claims, infrastructure::database::notifications::NotificationRepository,
     models::notification::NotificationListResponse,
 };
 
@@ -22,8 +20,14 @@ pub async fn list_notifications(
     let user_id = claims.sub;
 
     let repo = NotificationRepository::new(pool);
-    let notifications = repo.list(tenant_id, user_id, 20).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let unread_count = repo.count_unread(tenant_id, user_id).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let notifications = repo
+        .list(tenant_id, user_id, 20)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let unread_count = repo
+        .count_unread(tenant_id, user_id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(NotificationListResponse {
         unread_count,
@@ -40,7 +44,9 @@ pub async fn mark_as_read(
     let user_id = claims.sub;
 
     let repo = NotificationRepository::new(pool);
-    repo.mark_as_read(tenant_id, id, user_id).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    repo.mark_as_read(tenant_id, id, user_id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(StatusCode::OK)
 }

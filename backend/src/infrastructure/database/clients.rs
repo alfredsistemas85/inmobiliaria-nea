@@ -13,7 +13,15 @@ impl ClientRepository {
         Self { pool }
     }
 
-    pub async fn create(&self, tenant_id: Uuid, first_name: Option<&str>, last_name: Option<&str>, phone: &str, email: Option<&str>, notes: Option<&str>) -> Result<Client, sqlx::Error> {
+    pub async fn create(
+        &self,
+        tenant_id: Uuid,
+        first_name: Option<&str>,
+        last_name: Option<&str>,
+        phone: &str,
+        email: Option<&str>,
+        notes: Option<&str>,
+    ) -> Result<Client, sqlx::Error> {
         let client = sqlx::query_as!(
             Client,
             r#"
@@ -34,9 +42,15 @@ impl ClientRepository {
         Ok(client)
     }
 
-    pub async fn list(&self, tenant_id: Uuid, limit: i64, offset: i64, q: Option<&str>) -> Result<PaginatedResponse<Client>, sqlx::Error> {
+    pub async fn list(
+        &self,
+        tenant_id: Uuid,
+        limit: i64,
+        offset: i64,
+        q: Option<&str>,
+    ) -> Result<PaginatedResponse<Client>, sqlx::Error> {
         let q_pattern = q.map(|s| format!("%{}%", s));
-        
+
         let total: (i64,) = if let Some(ref q) = q_pattern {
             sqlx::query_as(
                 "SELECT COUNT(*) FROM clients WHERE tenant_id = $1 AND deleted_at IS NULL AND (first_name ILIKE $2 OR last_name ILIKE $2 OR phone ILIKE $2)"
@@ -47,7 +61,7 @@ impl ClientRepository {
             .await?
         } else {
             sqlx::query_as(
-                "SELECT COUNT(*) FROM clients WHERE tenant_id = $1 AND deleted_at IS NULL"
+                "SELECT COUNT(*) FROM clients WHERE tenant_id = $1 AND deleted_at IS NULL",
             )
             .bind(tenant_id)
             .fetch_one(&*self.pool)
@@ -93,7 +107,11 @@ impl ClientRepository {
         })
     }
 
-    pub async fn get_by_id(&self, id: Uuid, tenant_id: Uuid) -> Result<Option<Client>, sqlx::Error> {
+    pub async fn get_by_id(
+        &self,
+        id: Uuid,
+        tenant_id: Uuid,
+    ) -> Result<Option<Client>, sqlx::Error> {
         let client = sqlx::query_as!(
             Client,
             "SELECT * FROM clients WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL",
@@ -106,7 +124,16 @@ impl ClientRepository {
         Ok(client)
     }
 
-    pub async fn update(&self, id: Uuid, tenant_id: Uuid, first_name: Option<&str>, last_name: Option<&str>, phone: Option<&str>, email: Option<&str>, notes: Option<&str>) -> Result<Client, sqlx::Error> {
+    pub async fn update(
+        &self,
+        id: Uuid,
+        tenant_id: Uuid,
+        first_name: Option<&str>,
+        last_name: Option<&str>,
+        phone: Option<&str>,
+        email: Option<&str>,
+        notes: Option<&str>,
+    ) -> Result<Client, sqlx::Error> {
         let client = sqlx::query_as!(
             Client,
             r#"

@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use sqlx::types::Json;
 use utoipa::ToSchema;
 use uuid::Uuid;
-use sqlx::types::Json;
-use serde_json::Value;
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreatePropertyDto {
@@ -39,6 +39,7 @@ pub struct PropertyResponseDto {
     pub bathrooms: Option<i32>,
     pub status: Option<String>,
     pub features: Option<Value>,
+    pub views: Option<i64>,
 }
 
 impl From<crate::models::property::Property> for PropertyResponseDto {
@@ -59,6 +60,7 @@ impl From<crate::models::property::Property> for PropertyResponseDto {
             bathrooms: prop.bathrooms,
             status: prop.status,
             features: prop.features.map(|j| j.0),
+            views: None,
         }
     }
 }

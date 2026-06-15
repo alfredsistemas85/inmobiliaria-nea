@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Home, Users, UserPlus, CalendarDays,
-  MessageCircle, Settings, Bell, LogOut, Search, BarChart3, Check, Moon, Sun,
+  MessageCircle, Settings, Bell, LogOut, Search, BarChart3, Check, Moon, Sun, UserCog
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/context/ThemeContext'
@@ -16,12 +16,18 @@ const NAV_ITEMS = [
   { name: 'Citas',        path: '/appointments', icon: CalendarDays },
   { name: 'WhatsApp',     path: '/whatsapp',     icon: MessageCircle },
   { name: 'Reportes',     path: '/reports',      icon: BarChart3 },
+  { name: 'Usuarios',     path: '/users',        icon: UserCog, adminOnly: true },
   { name: 'Ajustes',      path: '/settings',     icon: Settings },
 ]
 
 export function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
+
+  // ── Usuario actual ─────────────────────────────────────────────────────────
+  const userStr = localStorage.getItem('user')
+  const user = userStr ? JSON.parse(userStr) : null
+  const isTenantAdmin = user?.role === 'tenant_admin'
 
   // ── Notificaciones ─────────────────────────────────────────────────────────
   const [notifications, setNotifications]   = useState<Notification[]>([])
@@ -94,6 +100,7 @@ export function DashboardLayout() {
         <div className="flex-1 overflow-y-auto py-4">
           <nav className="space-y-1 px-3">
             {NAV_ITEMS.map((item) => {
+              if (item.adminOnly && !isTenantAdmin) return null;
               const isActive = location.pathname.startsWith(item.path)
               return (
                 <Link
@@ -119,15 +126,19 @@ export function DashboardLayout() {
         <div className="p-4 border-t border-border">
           <div className="flex items-center gap-3">
             <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-              JD
+              {user?.first_name?.[0]}{user?.last_name?.[0]}
             </div>
             <div className="flex-1 overflow-hidden">
-              <p className="truncate text-sm font-medium text-foreground">John Doe</p>
-              <p className="truncate text-xs text-muted-foreground">Agente Inmobiliario</p>
+              <p className="truncate text-sm font-medium text-foreground">{user?.first_name} {user?.last_name}</p>
+              <p className="truncate text-xs text-muted-foreground">{user?.role === 'tenant_admin' ? 'Administrador' : 'Agente'}</p>
             </div>
             <button
               className="text-muted-foreground hover:text-foreground transition-colors"
               title="Cerrar sesión"
+              onClick={() => {
+                localStorage.clear()
+                window.location.replace('/login')
+              }}
             >
               <LogOut className="h-5 w-5" />
             </button>

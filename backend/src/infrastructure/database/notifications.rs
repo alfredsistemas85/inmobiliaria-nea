@@ -1,7 +1,7 @@
+use crate::models::notification::Notification;
 use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
-use crate::models::notification::Notification;
 
 #[derive(Clone)]
 pub struct NotificationRepository {
@@ -61,17 +61,13 @@ impl NotificationRepository {
         .await
     }
 
-    pub async fn count_unread(
-        &self,
-        tenant_id: Uuid,
-        user_id: Uuid,
-    ) -> Result<i64, sqlx::Error> {
+    pub async fn count_unread(&self, tenant_id: Uuid, user_id: Uuid) -> Result<i64, sqlx::Error> {
         let result: (i64,) = sqlx::query_as(
             r#"
             SELECT COUNT(*)
             FROM notifications
             WHERE tenant_id = $1 AND (user_id = $2 OR user_id IS NULL) AND read_at IS NULL
-            "#
+            "#,
         )
         .bind(tenant_id)
         .bind(user_id)

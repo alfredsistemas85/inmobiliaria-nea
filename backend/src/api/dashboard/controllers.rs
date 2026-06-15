@@ -1,9 +1,4 @@
-use axum::{
-    extract::State,
-    http::StatusCode,
-    Extension,
-    Json,
-};
+use axum::{extract::State, http::StatusCode, Extension, Json};
 use serde::Serialize;
 use sqlx::PgPool;
 use std::sync::Arc;
@@ -19,7 +14,7 @@ pub struct DashboardStats {
     pub active_whatsapp_conversations: i64,
     pub leads_this_month: i64,
     pub conversions_this_month: i64, // Leads moved to CLOSED or WON
-    
+
     // New fields for charts
     pub leads_by_status: Vec<LeadStatusCount>,
     pub conversations_by_agent: Vec<AgentConversationCount>,
@@ -57,18 +52,21 @@ pub async fn get_stats(
     Extension(claims): Extension<Claims>,
 ) -> Result<Json<DashboardStats>, StatusCode> {
     let tenant_id = claims.tenant_id.ok_or(StatusCode::FORBIDDEN)?;
-    
-    let total_clients: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM clients WHERE tenant_id = $1 AND deleted_at IS NULL")
-        .bind(tenant_id)
-        .fetch_one(&*pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    let total_properties: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM properties WHERE tenant_id = $1 AND deleted_at IS NULL")
-        .bind(tenant_id)
-        .fetch_one(&*pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let total_clients: (i64,) =
+        sqlx::query_as("SELECT COUNT(*) FROM clients WHERE tenant_id = $1 AND deleted_at IS NULL")
+            .bind(tenant_id)
+            .fetch_one(&*pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let total_properties: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM properties WHERE tenant_id = $1 AND deleted_at IS NULL",
+    )
+    .bind(tenant_id)
+    .fetch_one(&*pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let new_leads: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM leads WHERE tenant_id = $1 AND status = 'NUEVO' AND deleted_at IS NULL")
         .bind(tenant_id)
@@ -108,19 +106,20 @@ pub async fn get_stats(
     .await
     .unwrap_or_default();
 
-    let conversations_by_agent: Vec<AgentConversationCount> = sqlx::query_as::<_, AgentConversationCount>(
-        r#"
+    let conversations_by_agent: Vec<AgentConversationCount> =
+        sqlx::query_as::<_, AgentConversationCount>(
+            r#"
         SELECT COALESCE(u.first_name, 'Sin Asignar') as agent_name, COUNT(c.id) as count 
         FROM conversations c 
         LEFT JOIN users u ON c.assigned_user_id = u.id 
         WHERE c.tenant_id = $1 AND c.deleted_at IS NULL 
         GROUP BY u.first_name
-        "#
-    )
-    .bind(tenant_id)
-    .fetch_all(&*pool)
-    .await
-    .unwrap_or_default();
+        "#,
+        )
+        .bind(tenant_id)
+        .fetch_all(&*pool)
+        .await
+        .unwrap_or_default();
 
     let conversions_by_month: Vec<MonthlyConversion> = sqlx::query_as::<_, MonthlyConversion>(
         r#"
@@ -174,30 +173,33 @@ pub async fn get_activity(
         WHERE tenant_id = $1
         ORDER BY created_at DESC
         LIMIT 10
-        "#
+        "#,
     )
     .bind(tenant_id)
     .fetch_all(&*pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    let activity = logs.into_iter().map(|log| {
-        let title = match (log.entity_type.as_str(), log.action.as_str()) {
-            ("client", "CREATE_CLIENT") => "Nuevo cliente registrado".to_string(),
-            ("client", "UPDATE_CLIENT") => "Cliente actualizado".to_string(),
-            ("lead", "CREATE_LEAD") => "Nuevo lead recibido".to_string(),
-            ("appointment", "CREATE_APPOINTMENT") => "Nueva cita agendada".to_string(),
-            ("property", "CREATE_PROPERTY") => "Nueva propiedad publicada".to_string(),
-            (ent, act) => format!("Acción {} en {}", act, ent),
-        };
+    let activity = logs
+        .into_iter()
+        .map(|log| {
+            let title = match (log.entity_type.as_str(), log.action.as_str()) {
+                ("client", "CREATE_CLIENT") => "Nuevo cliente registrado".to_string(),
+                ("client", "UPDATE_CLIENT") => "Cliente actualizado".to_string(),
+                ("lead", "CREATE_LEAD") => "Nuevo lead recibido".to_string(),
+                ("appointment", "CREATE_APPOINTMENT") => "Nueva cita agendada".to_string(),
+                ("property", "CREATE_PROPERTY") => "Nueva propiedad publicada".to_string(),
+                (ent, act) => format!("Acción {} en {}", act, ent),
+            };
 
-        DashboardActivity {
-            id: log.id.to_string(),
-            title,
-            time: log.created_at.to_rfc3339(),
-            r#type: log.entity_type,
-        }
-    }).collect();
+            DashboardActivity {
+                id: log.id.to_string(),
+                title,
+                time: log.created_at.to_rfc3339(),
+                r#type: log.entity_type,
+            }
+        })
+        .collect();
 
     Ok(Json(activity))
 }

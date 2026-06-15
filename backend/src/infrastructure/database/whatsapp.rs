@@ -2,8 +2,8 @@ use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::models::whatsapp::{Conversation, ConversationListItem, Message};
 use crate::models::common::PaginatedResponse;
+use crate::models::whatsapp::{Conversation, ConversationListItem, Message};
 
 #[derive(Clone)]
 pub struct WhatsAppRepository {
@@ -71,7 +71,7 @@ impl WhatsAppRepository {
             SELECT COUNT(*)
             FROM conversations
             WHERE tenant_id = $1 AND deleted_at IS NULL
-            "#
+            "#,
         )
         .bind(tenant_id)
         .fetch_one(&*self.pool)
@@ -173,14 +173,14 @@ impl WhatsAppRepository {
         tenant_id: Uuid,
         conversation_id: Uuid,
         external_id: Option<String>,
-        direction: &str, // 'inbound' or 'outbound'
+        direction: &str,   // 'inbound' or 'outbound'
         sender_type: &str, // 'client', 'agent', 'bot'
         content: &str,
     ) -> Result<Option<Message>, sqlx::Error> {
         // If external_id is provided, check if it already exists
         if let Some(ref ext_id) = external_id {
             let exists: (i64,) = sqlx::query_as(
-                "SELECT COUNT(*) FROM messages WHERE tenant_id = $1 AND external_id = $2"
+                "SELECT COUNT(*) FROM messages WHERE tenant_id = $1 AND external_id = $2",
             )
             .bind(tenant_id)
             .bind(ext_id)
@@ -213,7 +213,8 @@ impl WhatsAppRepository {
         .await?;
 
         // Update conversation last_message_at and unread_count
-        self.update_conversation_status(tenant_id, conversation_id, direction == "inbound").await?;
+        self.update_conversation_status(tenant_id, conversation_id, direction == "inbound")
+            .await?;
 
         Ok(Some(msg))
     }
@@ -230,7 +231,7 @@ impl WhatsAppRepository {
             SELECT COUNT(*)
             FROM messages
             WHERE tenant_id = $1 AND conversation_id = $2 AND deleted_at IS NULL
-            "#
+            "#,
         )
         .bind(tenant_id)
         .bind(conversation_id)
@@ -303,10 +304,69 @@ impl WhatsAppRepository {
     ) -> Result<(), sqlx::Error> {
         sqlx::query!(
             "UPDATE conversations SET status = $1 WHERE id = $2 AND tenant_id = $3",
-            status, conversation_id, tenant_id
+            status,
+            conversation_id,
+            tenant_id
         )
         .execute(&*self.pool)
         .await?;
+        Ok(())
+    }
+
+    pub async fn get_instance(
+        &self,
+        tenant_id: Uuid,
+    ) -> Result<Option<serde_json::Value>, sqlx::Error> {
+        let instance = sqlx::query!(
+            "SELECT id, tenant_id, instance_name, status, qr_code, phone_connected FROM whatsapp_instances WHERE tenant_id = $1 LIMIT 1",
+            tenant_id
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        if let Some(inst) = instance {
+            Ok(Some(serde_json::json!({
+                "id": inst.id,
+                "tenant_id": inst.tenant_id,
+                "instance_name": inst.instance_name,
+                "status": inst.status,
+                "qr_code": inst.qr_code,
+                "phone_connected": inst.phone_connected
+            })))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub async fn upsert_instance(
+        &self,
+        tenant_id: Uuid,
+        instance_name: &str,
+        status: &str,
+        qr_code: Option<&str>,
+        phone_connected: Option<&str>,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            r#"
+            INSERT INTO whatsapp_instances (id, tenant_id, instance_name, status, qr_code, phone_connected)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            ON CONFLICT (tenant_id) DO UPDATE 
+            SET instance_name = EXCLUDED.instance_name,
+                status = EXCLUDED.status,
+                qr_code = COALESCE(EXCLUDED.qr_code, whatsapp_instances.qr_code),
+                phone_connected = COALESCE(EXCLUDED.phone_connected, whatsapp_instances.phone_connected),
+                updated_at = CURRENT_TIMESTAMP
+            "#,
+            Uuid::new_v4(),
+            tenant_id,
+            instance_name,
+            status,
+            qr_code,
+            phone_connected
+        )
+        .execute(&*self.pool)
+        .await?;
+
         Ok(())
     }
 }

@@ -1,17 +1,17 @@
+use crate::{
+    api::tenants::dtos::{CreateTenantDto, TenantResponseDto},
+    core::security::jwt::Claims,
+    infrastructure::database::tenants::TenantRepository,
+    models::tenant::Tenant,
+};
 use axum::{
-    extract::{Path, State, Json},
+    extract::{Json, Path, State},
     http::StatusCode,
     Extension,
 };
 use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
-use crate::{
-    api::tenants::dtos::{CreateTenantDto, TenantResponseDto},
-    models::tenant::Tenant,
-    infrastructure::database::tenants::TenantRepository,
-    core::security::jwt::Claims,
-};
 
 pub async fn list_tenants(
     State(pool): State<Arc<PgPool>>,
@@ -26,7 +26,9 @@ pub async fn list_tenants(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Ok(Json(tenants.into_iter().map(TenantResponseDto::from).collect()))
+    Ok(Json(
+        tenants.into_iter().map(TenantResponseDto::from).collect(),
+    ))
 }
 
 pub async fn get_tenant(
@@ -39,7 +41,10 @@ pub async fn get_tenant(
     }
 
     let repo = TenantRepository::new(pool);
-    let tenant = repo.find_by_id(id).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let tenant = repo
+        .find_by_id(id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     match tenant {
         Some(t) => Ok(Json(TenantResponseDto::from(t))),
@@ -68,12 +73,16 @@ pub async fn create_tenant(
         city: payload.city,
         province: payload.province,
         is_active: Some(true),
+        slug: None,
         created_at: None,
         updated_at: None,
     };
 
     let repo = TenantRepository::new(pool);
-    let created = repo.create(tenant).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let created = repo
+        .create(tenant)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(TenantResponseDto::from(created)))
 }

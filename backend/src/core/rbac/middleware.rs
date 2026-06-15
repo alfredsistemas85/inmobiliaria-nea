@@ -1,10 +1,5 @@
-use axum::{
-    extract::Request,
-    http::StatusCode,
-    middleware::Next,
-    response::Response,
-};
 use crate::core::security::jwt::Claims;
+use axum::{extract::Request, http::StatusCode, middleware::Next, response::Response};
 
 fn check_role(req: &Request, allowed_roles: &[&str]) -> Result<(), StatusCode> {
     if let Some(claims) = req.extensions().get::<Claims>() {
@@ -36,8 +31,8 @@ pub async fn require_tenant_manager(req: Request, next: Next) -> Result<Response
 #[cfg(test)]
 mod tests {
     use super::*;
-    use uuid::Uuid;
     use axum::body::Body;
+    use uuid::Uuid;
 
     fn create_req(role: &str, tenant_id: Option<Uuid>) -> Request {
         let mut req = Request::new(Body::empty());
@@ -54,7 +49,10 @@ mod tests {
     #[test]
     fn test_tenant_agent_access_denied() {
         let req = create_req("tenant_agent", Some(Uuid::new_v4()));
-        assert_eq!(check_role(&req, &["tenant_admin"]), Err(StatusCode::FORBIDDEN));
+        assert_eq!(
+            check_role(&req, &["tenant_admin"]),
+            Err(StatusCode::FORBIDDEN)
+        );
         assert_eq!(check_role(&req, &[]), Err(StatusCode::FORBIDDEN));
     }
 

@@ -1,11 +1,6 @@
-use axum::{
-    extract::Request,
-    http::StatusCode,
-    middleware::Next,
-    response::Response,
-};
-use crate::core::security::jwt::verify_jwt;
 use super::extractor::TenantId;
+use crate::core::security::jwt::verify_jwt;
+use axum::{extract::Request, http::StatusCode, middleware::Next, response::Response};
 
 pub async fn tenant_middleware(mut req: Request, next: Next) -> Result<Response, StatusCode> {
     let auth_header = req

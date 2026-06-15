@@ -1,7 +1,7 @@
+use serde_json::Value;
 use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
-use serde_json::Value;
 
 pub struct AuditRepository {
     pool: Arc<PgPool>,
@@ -23,7 +23,7 @@ impl AuditRepository {
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"INSERT INTO audit_logs (tenant_id, user_id, action, entity_type, entity_id, details)
-               VALUES ($1, $2, $3, $4, $5, $6)"#
+               VALUES ($1, $2, $3, $4, $5, $6)"#,
         )
         .bind(tenant_id)
         .bind(user_id)

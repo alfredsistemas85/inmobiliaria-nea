@@ -1,10 +1,10 @@
+pub mod appointment;
+pub mod client;
+pub mod common;
+pub mod lead;
+pub mod notification;
+pub mod property;
+pub mod role;
 pub mod tenant;
 pub mod user;
-pub mod role;
-pub mod property;
-pub mod lead;
-pub mod client;
-pub mod appointment;
-pub mod common;
 pub mod whatsapp;
-pub mod notification;

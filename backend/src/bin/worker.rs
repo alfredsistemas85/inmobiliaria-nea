@@ -1,10 +1,10 @@
+use backend::{core, models};
 use dotenvy::dotenv;
 use sqlx::postgres::PgPoolOptions;
 use std::env;
 use std::sync::Arc;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-use backend::{core, models};
 use std::time::Duration;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
 async fn main() {
@@ -26,7 +26,7 @@ async fn main() {
         .connect(&db_url)
         .await
         .expect("Error al conectar a PostgreSQL");
-    
+
     let shared_pool = Arc::new(pool);
     tracing::info!("Worker conectado a PostgreSQL Exitosamente.");
 
@@ -103,7 +103,7 @@ async fn process_scheduled_tasks(pool: Arc<sqlx::PgPool>) -> Result<u64, sqlx::E
         )
         .execute(&mut *tx)
         .await?;
-        
+
         // --- Execute Task Logic Here based on task.task_type ---
 
         // Mark as completed
@@ -122,7 +122,7 @@ async fn process_scheduled_tasks(pool: Arc<sqlx::PgPool>) -> Result<u64, sqlx::E
 
 async fn process_appointment_reminders(pool: Arc<sqlx::PgPool>) -> Result<u64, sqlx::Error> {
     let mut tx = pool.begin().await?;
-    
+
     // Find appointments in the next 24 hours that haven't sent a confirmation
     // Note: in a real environment this uses SKIP LOCKED
     let appointments = sqlx::query!(
@@ -142,18 +142,26 @@ async fn process_appointment_reminders(pool: Arc<sqlx::PgPool>) -> Result<u64, s
 
     let count = appointments.len() as u64;
     let evo_client = backend::infrastructure::evolution::client::EvolutionClient::new();
-    let wa_repo = backend::infrastructure::database::whatsapp::WhatsAppRepository::new(pool.clone());
+    let wa_repo =
+        backend::infrastructure::database::whatsapp::WhatsAppRepository::new(pool.clone());
 
     for appt in appointments {
         // Fetch client details
-        let client = sqlx::query!("SELECT first_name, phone FROM clients WHERE id = $1", appt.client_id)
-            .fetch_one(&mut *tx)
-            .await?;
+        let client = sqlx::query!(
+            "SELECT first_name, phone FROM clients WHERE id = $1",
+            appt.client_id
+        )
+        .fetch_one(&mut *tx)
+        .await?;
 
         // Send WhatsApp
         let phone = client.phone;
         let name = client.first_name.unwrap_or_else(|| "Cliente".to_string());
-        let message = format!("Hola {}, te recordamos tu cita programada para el {}. Por favor confirmar.", name, appt.scheduled_at.format("%Y-%m-%d %H:%M"));
+        let message = format!(
+            "Hola {}, te recordamos tu cita programada para el {}. Por favor confirmar.",
+            name,
+            appt.scheduled_at.format("%Y-%m-%d %H:%M")
+        );
 
         if evo_client.send_message(&phone, &message).await.is_ok() {
             sqlx::query!(
@@ -162,10 +170,15 @@ async fn process_appointment_reminders(pool: Arc<sqlx::PgPool>) -> Result<u64, s
             )
             .execute(&mut *tx)
             .await?;
-            
+
             // Insert into history
-            if let Ok(conv) = wa_repo.find_or_create_conversation(appt.tenant_id, appt.client_id).await {
-                let _ = wa_repo.insert_message(appt.tenant_id, conv.id, None, "outbound", "bot", &message).await;
+            if let Ok(conv) = wa_repo
+                .find_or_create_conversation(appt.tenant_id, appt.client_id)
+                .await
+            {
+                let _ = wa_repo
+                    .insert_message(appt.tenant_id, conv.id, None, "outbound", "bot", &message)
+                    .await;
             }
         }
     }
@@ -192,7 +205,8 @@ async fn process_lead_followups(pool: Arc<sqlx::PgPool>) -> Result<u64, sqlx::Er
     .await?;
 
     let count = leads.len() as u64;
-    let notif_repo = backend::infrastructure::database::notifications::NotificationRepository::new(pool.clone());
+    let notif_repo =
+        backend::infrastructure::database::notifications::NotificationRepository::new(pool.clone());
 
     for lead in leads {
         // Notify the assigned agent or admin
@@ -246,7 +260,8 @@ async fn process_conversation_followups(pool: Arc<sqlx::PgPool>) -> Result<u64, 
     .await?;
 
     let count = conversations.len() as u64;
-    let notif_repo = backend::infrastructure::database::notifications::NotificationRepository::new(pool.clone());
+    let notif_repo =
+        backend::infrastructure::database::notifications::NotificationRepository::new(pool.clone());
 
     for conv in conversations {
         if let Some(user_id) = conv.assigned_user_id {
@@ -267,7 +282,7 @@ async fn process_conversation_followups(pool: Arc<sqlx::PgPool>) -> Result<u64, 
         )
         .execute(&mut *tx)
         .await?;
-        
+
         // We will reset unread_count so it doesn't spam
         sqlx::query!(
             "UPDATE conversations SET unread_count = 0 WHERE id = $1",

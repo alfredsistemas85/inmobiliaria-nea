@@ -1,22 +1,26 @@
 use axum::{
+    middleware,
     routing::{get, post},
     Router,
-    middleware,
 };
 use sqlx::PgPool;
 use std::sync::Arc;
 
 use crate::api::whatsapp::controllers::{
-    list_conversations, list_messages, send_chat_message, webhook, run_reminders,
-    take_conversation, assign_conversation, unassign_conversation, close_conversation, reopen_conversation
+    assign_conversation, close_conversation, create_instance, get_instance_status, get_qr,
+    list_conversations, list_messages, logout_instance, reopen_conversation, run_reminders,
+    send_chat_message, take_conversation, unassign_conversation, webhook,
 };
-use crate::core::tenant::middleware::tenant_middleware;
 use crate::core::rbac::middleware::require_tenant_admin;
+use crate::core::tenant::middleware::tenant_middleware;
 
 pub fn router(pool: Arc<PgPool>) -> Router {
     let agent_routes = Router::new()
         .route("/conversations", get(list_conversations))
-        .route("/conversations/:id/messages", get(list_messages).post(send_chat_message))
+        .route(
+            "/conversations/:id/messages",
+            get(list_messages).post(send_chat_message),
+        )
         .route("/conversations/:id/take", post(take_conversation))
         .route_layer(middleware::from_fn(tenant_middleware))
         .with_state(pool.clone());
@@ -26,6 +30,12 @@ pub fn router(pool: Arc<PgPool>) -> Router {
         .route("/conversations/:id/unassign", post(unassign_conversation))
         .route("/conversations/:id/close", post(close_conversation))
         .route("/conversations/:id/reopen", post(reopen_conversation))
+        .route("/instance", get(get_instance_status).post(create_instance))
+        .route("/instance/status", get(get_instance_status))
+        .route("/instance/qr", get(get_qr))
+        .route("/instance/connect", post(get_qr))
+        .route("/instance/logout", post(logout_instance))
+        .route("/instance/disconnect", post(logout_instance))
         .route_layer(middleware::from_fn(require_tenant_admin))
         .route_layer(middleware::from_fn(tenant_middleware))
         .with_state(pool.clone());

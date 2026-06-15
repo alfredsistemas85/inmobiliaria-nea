@@ -5,9 +5,9 @@ edition = "2021"
 
 [dependencies]
 # Web Framework
-axum = "0.7.5"
+axum = { version = "0.7.5", features = ["multipart", "macros"] }
 tokio = { version = "1.37.0", features = ["full"] }
-tower-http = { version = "0.5.2", features = ["cors"] }
+tower-http = { version = "0.5.2", features = ["cors", "fs"] }
 
 # Database
 sqlx = { version = "0.7.4", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "rust_decimal"] }

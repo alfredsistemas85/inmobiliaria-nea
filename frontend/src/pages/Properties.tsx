@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Search, Filter, MapPin, Bed, Bath, Maximize, AlertCircle, Loader2 } from 'lucide-react'
+import { Plus, Search, Filter, MapPin, Bed, Bath, Maximize, AlertCircle, Loader2, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -40,9 +40,11 @@ export default function Properties() {
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Propiedades</h1>
           <p className="text-muted-foreground">Gestiona el inventario de inmuebles.</p>
         </div>
-        <Button className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Nueva Propiedad
+        <Button className="flex items-center gap-2" asChild>
+          <Link to="/properties/new">
+            <Plus className="h-4 w-4" />
+            Nueva Propiedad
+          </Link>
         </Button>
       </div>
 
@@ -133,9 +135,13 @@ export default function Properties() {
                       <Maximize className="h-4 w-4" />
                       <span>{property.area_sqm || 0}m²</span>
                     </div>
+                    <div className="flex items-center gap-1" title="Vistas">
+                      <Eye className="h-4 w-4" />
+                      <span>{property.views || 0}</span>
+                    </div>
                   </div>
                   <div className="font-bold text-blue-600 text-base">
-                    ${property.price?.toLocaleString()}
+                    {property.currency || '$'} {property.price?.toLocaleString()}
                   </div>
                 </div>
               </div>

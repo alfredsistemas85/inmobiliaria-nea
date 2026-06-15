@@ -18,6 +18,12 @@ export const authService = {
       method: 'GET',
     });
   },
+  changePassword: async (data: any) => {
+    return fetchApi('/api/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('refresh_token');

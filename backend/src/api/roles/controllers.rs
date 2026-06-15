@@ -1,14 +1,7 @@
-use axum::{
-    extract::State,
-    http::StatusCode,
-    Json,
-};
+use crate::{api::roles::dtos::RoleResponseDto, models::role::Role};
+use axum::{extract::State, http::StatusCode, Json};
 use sqlx::PgPool;
 use std::sync::Arc;
-use crate::{
-    api::roles::dtos::RoleResponseDto,
-    models::role::Role,
-};
 
 pub async fn list_roles(
     State(pool): State<Arc<PgPool>>,

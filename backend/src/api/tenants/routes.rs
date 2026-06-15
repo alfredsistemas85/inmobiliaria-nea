@@ -1,13 +1,9 @@
-use axum::{
-    routing::get,
-    Router,
-    middleware,
-};
+use super::controllers::{create_tenant, get_tenant, list_tenants};
+use crate::core::rbac::middleware::require_super_admin;
+use crate::core::tenant::middleware::tenant_middleware;
+use axum::{middleware, routing::get, Router};
 use sqlx::PgPool;
 use std::sync::Arc;
-use super::controllers::{list_tenants, get_tenant, create_tenant};
-use crate::core::tenant::middleware::tenant_middleware;
-use crate::core::rbac::middleware::require_super_admin;
 
 pub fn router(pool: Arc<PgPool>) -> Router {
     Router::new()

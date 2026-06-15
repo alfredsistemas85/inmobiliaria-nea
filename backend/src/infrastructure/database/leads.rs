@@ -1,5 +1,5 @@
-use crate::models::lead::{Lead, LeadActivity};
 use crate::models::common::PaginatedResponse;
+use crate::models::lead::{Lead, LeadActivity};
 use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -13,7 +13,15 @@ impl LeadRepository {
         Self { pool }
     }
 
-    pub async fn create(&self, tenant_id: Uuid, client_id: Uuid, property_id: Option<Uuid>, status: Option<&str>, source: Option<&str>, assigned_to: Option<Uuid>) -> Result<Lead, sqlx::Error> {
+    pub async fn create(
+        &self,
+        tenant_id: Uuid,
+        client_id: Uuid,
+        property_id: Option<Uuid>,
+        status: Option<&str>,
+        source: Option<&str>,
+        assigned_to: Option<Uuid>,
+    ) -> Result<Lead, sqlx::Error> {
         let lead = sqlx::query_as::<_, Lead>(
             r#"
             INSERT INTO leads (tenant_id, client_id, property_id, status, source, assigned_to)
@@ -33,9 +41,15 @@ impl LeadRepository {
         Ok(lead)
     }
 
-    pub async fn list(&self, tenant_id: Uuid, limit: i64, offset: i64, q: Option<&str>) -> Result<PaginatedResponse<Lead>, sqlx::Error> {
+    pub async fn list(
+        &self,
+        tenant_id: Uuid,
+        limit: i64,
+        offset: i64,
+        q: Option<&str>,
+    ) -> Result<PaginatedResponse<Lead>, sqlx::Error> {
         let q_pattern = q.map(|s| format!("%{}%", s));
-        
+
         let total: (i64,) = if let Some(ref query_str) = q_pattern {
             sqlx::query_as(
                 "SELECT COUNT(*) FROM leads l
@@ -47,12 +61,10 @@ impl LeadRepository {
             .fetch_one(&*self.pool)
             .await?
         } else {
-            sqlx::query_as(
-                "SELECT COUNT(*) FROM leads WHERE tenant_id = $1 AND deleted_at IS NULL"
-            )
-            .bind(tenant_id)
-            .fetch_one(&*self.pool)
-            .await?
+            sqlx::query_as("SELECT COUNT(*) FROM leads WHERE tenant_id = $1 AND deleted_at IS NULL")
+                .bind(tenant_id)
+                .fetch_one(&*self.pool)
+                .await?
         };
 
         let leads = if let Some(ref query_str) = q_pattern {
@@ -107,7 +119,14 @@ impl LeadRepository {
         Ok(lead)
     }
 
-    pub async fn update(&self, id: Uuid, tenant_id: Uuid, status: Option<&str>, assigned_to: Option<Uuid>, source: Option<&str>) -> Result<Lead, sqlx::Error> {
+    pub async fn update(
+        &self,
+        id: Uuid,
+        tenant_id: Uuid,
+        status: Option<&str>,
+        assigned_to: Option<Uuid>,
+        source: Option<&str>,
+    ) -> Result<Lead, sqlx::Error> {
         let lead = sqlx::query_as::<_, Lead>(
             r#"
             UPDATE leads
@@ -142,13 +161,20 @@ impl LeadRepository {
         Ok(result.rows_affected())
     }
 
-    pub async fn log_activity(&self, tenant_id: Uuid, lead_id: Uuid, user_id: Option<Uuid>, activity_type: &str, description: Option<&str>) -> Result<LeadActivity, sqlx::Error> {
+    pub async fn log_activity(
+        &self,
+        tenant_id: Uuid,
+        lead_id: Uuid,
+        user_id: Option<Uuid>,
+        activity_type: &str,
+        description: Option<&str>,
+    ) -> Result<LeadActivity, sqlx::Error> {
         let activity = sqlx::query_as::<_, LeadActivity>(
             r#"
             INSERT INTO lead_activities (tenant_id, lead_id, user_id, activity_type, description)
             VALUES ($1, $2, $3, $4, $5)
             RETURNING id, tenant_id, lead_id, user_id, activity_type, description, created_at
-            "#
+            "#,
         )
         .bind(tenant_id)
         .bind(lead_id)

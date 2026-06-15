@@ -3,3 +3,11 @@
 .env
 .env.*
 !.env.example
+
+uploads/
+uploads/**
+
+backups/
+backups/**
+
+*.log

@@ -1,9 +1,9 @@
 use crate::models::appointment::Appointment;
 use crate::models::common::PaginatedResponse;
+use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 pub struct AppointmentRepository {
     pool: Arc<PgPool>,
@@ -14,7 +14,16 @@ impl AppointmentRepository {
         Self { pool }
     }
 
-    pub async fn create(&self, tenant_id: Uuid, client_id: Uuid, property_id: Option<Uuid>, user_id: Option<Uuid>, scheduled_at: DateTime<Utc>, status: Option<&str>, notes: Option<&str>) -> Result<Appointment, sqlx::Error> {
+    pub async fn create(
+        &self,
+        tenant_id: Uuid,
+        client_id: Uuid,
+        property_id: Option<Uuid>,
+        user_id: Option<Uuid>,
+        scheduled_at: DateTime<Utc>,
+        status: Option<&str>,
+        notes: Option<&str>,
+    ) -> Result<Appointment, sqlx::Error> {
         let appointment = sqlx::query_as::<_, Appointment>(
             r#"
             INSERT INTO appointments (tenant_id, client_id, property_id, user_id, scheduled_at, status, notes)
@@ -35,9 +44,15 @@ impl AppointmentRepository {
         Ok(appointment)
     }
 
-    pub async fn list(&self, tenant_id: Uuid, limit: i64, offset: i64, q: Option<&str>) -> Result<PaginatedResponse<Appointment>, sqlx::Error> {
+    pub async fn list(
+        &self,
+        tenant_id: Uuid,
+        limit: i64,
+        offset: i64,
+        q: Option<&str>,
+    ) -> Result<PaginatedResponse<Appointment>, sqlx::Error> {
         let q_pattern = q.map(|s| format!("%{}%", s));
-        
+
         let total: (i64,) = if let Some(ref query_str) = q_pattern {
             sqlx::query_as(
                 "SELECT COUNT(*) FROM appointments a
@@ -50,7 +65,7 @@ impl AppointmentRepository {
             .await?
         } else {
             sqlx::query_as(
-                "SELECT COUNT(*) FROM appointments WHERE tenant_id = $1 AND deleted_at IS NULL"
+                "SELECT COUNT(*) FROM appointments WHERE tenant_id = $1 AND deleted_at IS NULL",
             )
             .bind(tenant_id)
             .fetch_one(&*self.pool)
@@ -97,7 +112,11 @@ impl AppointmentRepository {
         })
     }
 
-    pub async fn get_by_id(&self, id: Uuid, tenant_id: Uuid) -> Result<Option<Appointment>, sqlx::Error> {
+    pub async fn get_by_id(
+        &self,
+        id: Uuid,
+        tenant_id: Uuid,
+    ) -> Result<Option<Appointment>, sqlx::Error> {
         let appointment = sqlx::query_as::<_, Appointment>(
             "SELECT id, tenant_id, client_id, property_id, user_id, scheduled_at, status, notes, confirmed_at, cancelled_at, confirmation_sent_at, created_at, updated_at, deleted_at FROM appointments WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL"
         )
@@ -109,7 +128,17 @@ impl AppointmentRepository {
         Ok(appointment)
     }
 
-    pub async fn update(&self, id: Uuid, tenant_id: Uuid, client_id: Option<Uuid>, property_id: Option<Uuid>, user_id: Option<Uuid>, scheduled_at: Option<DateTime<Utc>>, status: Option<&str>, notes: Option<&str>) -> Result<Appointment, sqlx::Error> {
+    pub async fn update(
+        &self,
+        id: Uuid,
+        tenant_id: Uuid,
+        client_id: Option<Uuid>,
+        property_id: Option<Uuid>,
+        user_id: Option<Uuid>,
+        scheduled_at: Option<DateTime<Utc>>,
+        status: Option<&str>,
+        notes: Option<&str>,
+    ) -> Result<Appointment, sqlx::Error> {
         let appointment = sqlx::query_as::<_, Appointment>(
             r#"
             UPDATE appointments

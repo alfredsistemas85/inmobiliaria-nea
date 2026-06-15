@@ -51,5 +51,30 @@ export const whatsappService = {
       method: 'POST',
       body: JSON.stringify({ content }),
     });
+  },
+
+  getInstanceStatus: async () => {
+    return fetchApi('/whatsapp/instance', {
+      method: 'GET',
+    });
+  },
+
+  createInstance: async (instanceName: string) => {
+    return fetchApi('/whatsapp/instance', {
+      method: 'POST',
+      body: JSON.stringify({ instance_name: instanceName }),
+    });
+  },
+
+  getQr: async () => {
+    return fetchApi('/whatsapp/instance/qr', {
+      method: 'GET',
+    });
+  },
+
+  logoutInstance: async () => {
+    return fetchApi('/whatsapp/instance/logout', {
+      method: 'POST',
+    });
   }
 };

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { usePublicTenant } from '../context/PublicTenantContext'
 import { Link, useSearchParams } from 'react-router-dom'
+import { API_URL } from '@/services/api'
 
 interface PropertyItem {
   id: string
@@ -43,7 +44,7 @@ export default function PropertyListPage() {
         if (pmin) query.set('price_min', pmin)
         if (pmax) query.set('price_max', pmax)
 
-        const res = await fetch(`/api/public/properties?${query.toString()}`)
+        const res = await fetch(`${API_URL}/api/public/properties?${query.toString()}`)
         if (res.ok) {
           const data = await res.json()
           setProperties(data.data)

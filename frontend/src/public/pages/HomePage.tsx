@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { usePublicTenant } from '../context/PublicTenantContext'
 import { Link } from 'react-router-dom'
+import { API_URL } from '@/services/api'
 
 interface FeaturedProperty {
   id: string
@@ -22,7 +23,7 @@ export default function HomePage() {
     if (!tenant) return
     const fetchFeatured = async () => {
       try {
-        const res = await fetch(`/api/public/featured?tenant_id=${tenant.id}&limit=6`)
+        const res = await fetch(`${API_URL}/api/public/featured?tenant_id=${tenant.id}&limit=6`)
         if (res.ok) {
           const data = await res.json()
           setFeatured(data)

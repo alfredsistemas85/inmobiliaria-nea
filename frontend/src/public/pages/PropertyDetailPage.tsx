@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { usePublicTenant } from '../context/PublicTenantContext'
+import { API_URL } from '@/services/api'
 
 export default function PropertyDetailPage() {
   const { id } = useParams()
@@ -15,7 +16,7 @@ export default function PropertyDetailPage() {
     if (!tenant || !id) return
     const fetchProp = async () => {
       try {
-        const res = await fetch(`/api/public/properties/${id}?tenant_id=${tenant.id}`)
+        const res = await fetch(`${API_URL}/api/public/properties/${id}?tenant_id=${tenant.id}`)
         if (!res.ok) throw new Error('No se encontró la propiedad')
         const data = await res.json()
         setProperty(data)
@@ -34,7 +35,7 @@ export default function PropertyDetailPage() {
     const formData = new FormData(form)
     
     try {
-      const res = await fetch('/api/public/leads', {
+      const res = await fetch(`${API_URL}/api/public/leads`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

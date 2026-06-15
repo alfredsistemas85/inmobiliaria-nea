@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { usePublicTenant } from '../context/PublicTenantContext'
+import { API_URL } from '@/services/api'
 
 export default function ContactPage() {
   const { tenant } = usePublicTenant()
@@ -11,7 +12,7 @@ export default function ContactPage() {
     const formData = new FormData(form)
     
     try {
-      const res = await fetch('/api/public/leads', {
+      const res = await fetch(`${API_URL}/api/public/leads`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

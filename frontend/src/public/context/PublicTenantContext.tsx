@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
+import { fetchApi } from '@/services/api'
 
 export interface PublicTenant {
   id: string
@@ -34,9 +35,7 @@ export function PublicTenantProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     const fetchBootstrap = async () => {
       try {
-        const res = await fetch('/api/public/bootstrap')
-        if (!res.ok) throw new Error('Error cargando portal')
-        const data = await res.json()
+        const data = await fetchApi('/public/bootstrap')
         setTenant(data.tenant)
         setPortal(data.portal)
         

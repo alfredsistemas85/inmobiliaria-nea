@@ -12,3 +12,4 @@ pub mod tenants;
 pub mod users;
 pub mod whatsapp;
 pub mod system;
+pub mod superadmin;

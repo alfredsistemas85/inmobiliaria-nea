@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { DashboardLayout } from '@/layouts/DashboardLayout'
+import { SuperAdminLayout } from '@/layouts/SuperAdminLayout'
 
 // Pages
 import Login from '@/pages/Login'
@@ -15,6 +16,13 @@ import Reports from '@/pages/Reports'
 import Users from '@/pages/Users'
 import Settings from '@/pages/Settings'
 
+// SuperAdmin Pages
+import SuperAdminDashboard from '@/pages/superadmin/Dashboard'
+import SuperAdminTenants from '@/pages/superadmin/TenantsList'
+import SuperAdminTenantDetail from '@/pages/superadmin/TenantDetail'
+import SuperAdminSupport from '@/pages/superadmin/Support'
+import SuperAdminMonitoring from '@/pages/superadmin/Monitoring'
+
 /**
  * Guard de autenticación.
  * Si no hay token en localStorage, redirige al login SIN montar DashboardLayout.
@@ -24,6 +32,17 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('token')
   if (!token) {
     return <Navigate to="/login" replace />
+  }
+  return <>{children}</>
+}
+
+function RequireSuperAdmin({ children }: { children: React.ReactNode }) {
+  const token = localStorage.getItem('token')
+  const userStr = localStorage.getItem('user')
+  const user = userStr ? JSON.parse(userStr) : null
+
+  if (!token || user?.role !== 'super_admin') {
+    return <Navigate to="/dashboard" replace />
   }
   return <>{children}</>
 }
@@ -73,6 +92,23 @@ function App() {
           <Route path="reports"            element={<Reports />} />
           <Route path="users"              element={<Users />} />
           <Route path="settings"           element={<Settings />} />
+        </Route>
+
+        {/* SUPERADMIN PANEL */}
+        <Route
+          path="/superadmin"
+          element={
+            <RequireSuperAdmin>
+              <SuperAdminLayout />
+            </RequireSuperAdmin>
+          }
+        >
+          <Route index element={<SuperAdminDashboard />} />
+          <Route path="tenants" element={<SuperAdminTenants />} />
+          <Route path="tenants/:id" element={<SuperAdminTenantDetail />} />
+          <Route path="monitoring" element={<SuperAdminMonitoring />} />
+          <Route path="support" element={<SuperAdminSupport />} />
+          <Route path="settings" element={<div className="p-6">Ajustes Globales</div>} />
         </Route>
 
         {/* Fallback */}

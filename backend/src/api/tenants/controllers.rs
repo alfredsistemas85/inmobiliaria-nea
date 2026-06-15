@@ -93,3 +93,32 @@ pub async fn create_tenant(
 
     Ok(Json(TenantResponseDto::from(created)))
 }
+
+#[derive(serde::Deserialize)]
+pub struct UpdateTenantStatusDto {
+    pub status: String,
+}
+
+pub async fn update_tenant_status(
+    State(pool): State<Arc<PgPool>>,
+    Path(id): Path<Uuid>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<UpdateTenantStatusDto>,
+) -> Result<StatusCode, StatusCode> {
+    if claims.role != "super_admin" {
+        return Err(StatusCode::FORBIDDEN);
+    }
+
+    let valid_statuses = ["PENDING", "ACTIVE", "SUSPENDED", "DELETED"];
+    if !valid_statuses.contains(&payload.status.as_str()) {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let repo = TenantRepository::new(pool);
+    repo.update_status(id, &payload.status)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(StatusCode::OK)
+}
+

@@ -224,10 +224,18 @@ async fn main() {
             api::reports::routes::router(shared_pool.clone()),
         )
         .nest(
+            "/api/superadmin",
+            api::superadmin::router(shared_pool.clone()),
+        )
+        .nest(
             "/api/public",
             api::public::routes::router(shared_pool.clone(), Arc::new(redis_client.clone())),
         )
         .nest_service("/uploads", ServeDir::new("uploads"))
+        .layer(axum::middleware::from_fn_with_state(
+            shared_pool.clone(),
+            core::system_errors::error_logging_middleware,
+        ))
         .layer(axum::middleware::from_fn(security_headers_middleware))
         .layer(cors);
 

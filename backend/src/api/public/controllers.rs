@@ -25,8 +25,17 @@ pub async fn bootstrap(
     headers: HeaderMap,
 ) -> Result<Json<BootstrapResponse>, StatusCode> {
     let host = headers
-        .get("x-forwarded-host")
+        .get("origin")
         .and_then(|h| h.to_str().ok())
+        .or_else(|| headers.get("referer").and_then(|h| h.to_str().ok()))
+        .and_then(|url| {
+            // Extraer el host de una URL (ej: https://inmonea.agentech.ar -> inmonea.agentech.ar)
+            url.trim_start_matches("http://")
+               .trim_start_matches("https://")
+               .split('/')
+               .next()
+        })
+        .or_else(|| headers.get("x-forwarded-host").and_then(|h| h.to_str().ok()))
         .or_else(|| headers.get("host").and_then(|h| h.to_str().ok()))
         .unwrap_or("localhost");
 

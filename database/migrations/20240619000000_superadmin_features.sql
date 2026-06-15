@@ -1,7 +1,7 @@
 -- Módulo SuperAdmin: Estado de Inmobiliarias, Monitoreo y Soporte
 
 -- 1. Agregar estado a tenants (PENDING, ACTIVE, SUSPENDED, DELETED)
-ALTER TABLE tenants ADD COLUMN status VARCHAR(50) DEFAULT 'ACTIVE';
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'ACTIVE';
 
 -- Actualizar el estado inicial basado en is_active actual
 UPDATE tenants SET status = 'ACTIVE' WHERE is_active = true;

@@ -5,7 +5,6 @@ pub mod dashboard;
 pub mod leads;
 pub mod notifications;
 pub mod properties;
-pub mod public;
 pub mod reports;
 pub mod roles;
 pub mod tenants;

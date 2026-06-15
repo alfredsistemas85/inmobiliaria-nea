@@ -47,11 +47,7 @@ function RequireSuperAdmin({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
-import PublicLayout from '@/public/PublicLayout'
-import HomePage from '@/public/pages/HomePage'
-import PropertyListPage from '@/public/pages/PropertyListPage'
-import PropertyDetailPage from '@/public/pages/PropertyDetailPage'
-import ContactPage from '@/public/pages/ContactPage'
+
 
 import VerifyEmail from '@/pages/VerifyEmail'
 
@@ -59,20 +55,14 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* PUBLIC PORTAL */}
-        <Route element={<PublicLayout />}>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/buscar" element={<PropertyListPage />} />
-          <Route path="/propiedad/:id" element={<PropertyDetailPage />} />
-          <Route path="/contacto" element={<ContactPage />} />
-        </Route>
+        {/* Root Redirect */}
+        <Route path="/" element={<Navigate to="/login" replace />} />
 
         <Route path="/login" element={<Login />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
 
         {/* CRM ADMINISTRATIVO (rutas directas protegidas) */}
         <Route
-          path="/"
           element={
             <RequireAuth>
               <DashboardLayout />
@@ -80,18 +70,18 @@ function App() {
           }
         >
           {/* No definimos index para CRM aquí para no pisar el HomePage, el login redirige directo a /dashboard */}
-          <Route path="dashboard"          element={<Dashboard />} />
-          <Route path="properties"         element={<Properties />} />
-          <Route path="properties/new"     element={<PropertyForm />} />
-          <Route path="properties/:id"     element={<PropertyDetail />} />
-          <Route path="properties/:id/edit" element={<PropertyForm />} />
-          <Route path="clients"            element={<Clients />} />
-          <Route path="leads"              element={<Leads />} />
-          <Route path="appointments"       element={<Appointments />} />
-          <Route path="whatsapp"           element={<WhatsApp />} />
-          <Route path="reports"            element={<Reports />} />
-          <Route path="users"              element={<Users />} />
-          <Route path="settings"           element={<Settings />} />
+          <Route path="/dashboard"          element={<Dashboard />} />
+          <Route path="/properties"         element={<Properties />} />
+          <Route path="/properties/new"     element={<PropertyForm />} />
+          <Route path="/properties/:id"     element={<PropertyDetail />} />
+          <Route path="/properties/:id/edit" element={<PropertyForm />} />
+          <Route path="/clients"            element={<Clients />} />
+          <Route path="/leads"              element={<Leads />} />
+          <Route path="/appointments"       element={<Appointments />} />
+          <Route path="/whatsapp"           element={<WhatsApp />} />
+          <Route path="/reports"            element={<Reports />} />
+          <Route path="/users"              element={<Users />} />
+          <Route path="/settings"           element={<Settings />} />
         </Route>
 
         {/* SUPERADMIN PANEL */}

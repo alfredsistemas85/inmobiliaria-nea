@@ -1,5 +1,8 @@
 use axum::{
-    middleware,
+    extract::Request,
+    http::StatusCode,
+    middleware::{self, Next},
+    response::Response,
     routing::{get, post},
     Router,
 };
@@ -43,10 +46,24 @@ pub fn router(pool: Arc<PgPool>) -> Router {
     let webhook_routes = Router::new()
         .route("/webhook/:tenant_id", post(webhook))
         .route("/reminders/run", post(run_reminders))
+        .route_layer(middleware::from_fn(require_webhook_secret))
         .with_state(pool);
 
     Router::new()
         .merge(agent_routes)
         .merge(admin_routes)
         .merge(webhook_routes)
+}
+
+async fn require_webhook_secret(
+    req: Request,
+    next: Next,
+) -> Result<Response, StatusCode> {
+    let expected_secret = std::env::var("EVOLUTION_API_KEY").unwrap_or_else(|_| "apikey_evolution".to_string());
+    if let Some(auth_header) = req.headers().get("apikey") {
+        if auth_header.to_str().unwrap_or_default() == expected_secret {
+            return Ok(next.run(req).await);
+        }
+    }
+    Err(StatusCode::UNAUTHORIZED)
 }

@@ -1,8 +1,21 @@
 import { fetchApi } from './api';
 
+export interface Property {
+  id: string;
+  tenant_id: string;
+  title: string;
+  description: string;
+  property_type: string;
+  operation_type: string;
+  price: number;
+  currency: string;
+  status: string;
+  created_at: string;
+}
+
 export const propertiesService = {
-  getAll: async () => {
-    return fetchApi('/api/properties', {
+  getAll: async (limit: number = 20, offset: number = 0) => {
+    return fetchApi(`/api/properties?limit=${limit}&offset=${offset}`, {
       method: 'GET',
     });
   },

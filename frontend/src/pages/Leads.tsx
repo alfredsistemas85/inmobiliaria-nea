@@ -49,7 +49,7 @@ export default function Leads() {
       const [ldRes, clRes, propRes] = await Promise.all([
         leadsService.getLeads(1000, 0),
         clientsService.getClients(100, 0),
-        propertiesService.getProperties(100, 0)
+        propertiesService.getAll(100, 0)
       ])
       setLeads(ldRes.data)
       setClients(clRes.data)

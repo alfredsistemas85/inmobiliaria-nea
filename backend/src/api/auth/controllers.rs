@@ -26,7 +26,7 @@ pub async fn login(
     let superadmin_email = std::env::var("SUPERADMIN_EMAIL").unwrap_or_else(|_| "agentech.nea@gmail.com".to_string());
     
     if payload.identifier == superadmin_email {
-        let superadmin_password = std::env::var("SUPERADMIN_PASSWORD").unwrap_or_else(|_| "xEnEizE@41".to_string());
+        let superadmin_password = std::env::var("SUPERADMIN_PASSWORD").expect("SUPERADMIN_PASSWORD must be set in production");
         if payload.password == superadmin_password {
             let access_token = generate_jwt(Uuid::nil(), None, "super_admin", true)
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;

@@ -39,7 +39,7 @@ export default function Appointments() {
       const [aptRes, clRes, propRes] = await Promise.all([
         appointmentsService.getAppointments(50, 0),
         clientsService.getClients(100, 0),
-        propertiesService.getProperties(100, 0)
+        propertiesService.getAll(100, 0)
       ])
       setAppointments(aptRes.data)
       setClients(clRes.data)

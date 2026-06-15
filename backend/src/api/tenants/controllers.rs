@@ -61,9 +61,15 @@ pub async fn create_tenant(
         return Err(StatusCode::FORBIDDEN);
     }
 
+    let normalized_cuit = crate::core::utils::cuit_validator::normalize_cuit(&payload.cuit);
+    if !crate::core::utils::cuit_validator::is_valid_cuit(&normalized_cuit) {
+        tracing::warn!("CREATE_TENANT_FAILED: invalid CUIT {}", payload.cuit);
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
     let tenant = Tenant {
         id: Uuid::new_v4(),
-        cuit: payload.cuit,
+        cuit: normalized_cuit,
         dni_responsable: payload.dni_responsable,
         first_name: payload.first_name,
         last_name: payload.last_name,
@@ -73,6 +79,7 @@ pub async fn create_tenant(
         city: payload.city,
         province: payload.province,
         is_active: Some(true),
+        status: Some("PENDING".to_string()),
         slug: None,
         created_at: None,
         updated_at: None,

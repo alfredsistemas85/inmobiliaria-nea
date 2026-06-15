@@ -68,11 +68,18 @@ pub async fn create_user(
             None
         } else {
             Some(Uuid::nil())
-        } // This will cause foreign key failure, but better to explicitly reject
+        }
     });
     if claims.tenant_id.is_none() && claims.role != "super_admin" {
         return Err(StatusCode::FORBIDDEN);
     }
+
+    if crate::core::utils::email_validator::is_disposable(&payload.email) {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let email_type = crate::core::utils::email_validator::get_email_type(&payload.email);
+    let v_token = Uuid::new_v4().to_string();
 
     let user = User {
         id: Uuid::new_v4(),
@@ -83,6 +90,10 @@ pub async fn create_user(
         first_name: payload.first_name,
         last_name: payload.last_name,
         is_active: Some(true),
+        email_verified_at: None,
+        verification_token: Some(v_token.clone()),
+        verification_sent_at: Some(chrono::Utc::now()),
+        email_type: Some(email_type),
         created_at: None,
         updated_at: None,
     };
@@ -92,6 +103,8 @@ pub async fn create_user(
         .create(user)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    tracing::info!("EMAIL_SENT: to={} token={}", created.email, v_token);
 
     Ok(Json(UserResponseDto::from(created)))
 }

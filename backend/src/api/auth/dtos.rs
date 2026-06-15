@@ -4,8 +4,14 @@ use uuid::Uuid;
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct LoginRequest {
-    pub email: String,
+    #[serde(alias = "email")]
+    pub identifier: String,
     pub password: String,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct VerifyEmailRequest {
+    pub token: String,
 }
 
 #[derive(Debug, Serialize, ToSchema)]

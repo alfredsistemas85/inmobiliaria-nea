@@ -24,6 +24,12 @@ export const authService = {
       body: JSON.stringify(data),
     });
   },
+  verifyEmail: async (token: string) => {
+    return fetchApi('/api/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+  },
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('refresh_token');

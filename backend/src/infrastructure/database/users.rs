@@ -14,7 +14,7 @@ impl UserRepository {
 
     pub async fn find_by_email(&self, email: &str) -> Result<Option<User>, sqlx::Error> {
         sqlx::query_as::<_, User>(
-            r#"SELECT id, tenant_id, role_id, email, password_hash, first_name, last_name, is_active, created_at, updated_at 
+            r#"SELECT id, tenant_id, role_id, email, password_hash, first_name, last_name, is_active, email_verified_at, verification_token, verification_sent_at, email_type, created_at, updated_at 
                FROM users WHERE email = $1 AND deleted_at IS NULL"#
         )
         .bind(email)
@@ -29,7 +29,7 @@ impl UserRepository {
     ) -> Result<Option<User>, sqlx::Error> {
         if let Some(t_id) = tenant_id {
             sqlx::query_as::<_, User>(
-                r#"SELECT id, tenant_id, role_id, email, password_hash, first_name, last_name, is_active, created_at, updated_at 
+                r#"SELECT id, tenant_id, role_id, email, password_hash, first_name, last_name, is_active, email_verified_at, verification_token, verification_sent_at, email_type, created_at, updated_at 
                    FROM users WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL"#
             )
             .bind(id)
@@ -38,7 +38,7 @@ impl UserRepository {
             .await
         } else {
             sqlx::query_as::<_, User>(
-                r#"SELECT id, tenant_id, role_id, email, password_hash, first_name, last_name, is_active, created_at, updated_at 
+                r#"SELECT id, tenant_id, role_id, email, password_hash, first_name, last_name, is_active, email_verified_at, verification_token, verification_sent_at, email_type, created_at, updated_at 
                    FROM users WHERE id = $1 AND deleted_at IS NULL"#
             )
             .bind(id)
@@ -49,9 +49,9 @@ impl UserRepository {
 
     pub async fn create(&self, user: User) -> Result<User, sqlx::Error> {
         sqlx::query_as::<_, User>(
-            r#"INSERT INTO users (id, tenant_id, role_id, email, password_hash, first_name, last_name, is_active)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-               RETURNING id, tenant_id, role_id, email, password_hash, first_name, last_name, is_active, created_at, updated_at"#
+            r#"INSERT INTO users (id, tenant_id, role_id, email, password_hash, first_name, last_name, is_active, email_verified_at, verification_token, verification_sent_at, email_type)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+               RETURNING id, tenant_id, role_id, email, password_hash, first_name, last_name, is_active, email_verified_at, verification_token, verification_sent_at, email_type, created_at, updated_at"#
         )
         .bind(user.id)
         .bind(user.tenant_id)
@@ -61,6 +61,10 @@ impl UserRepository {
         .bind(user.first_name)
         .bind(user.last_name)
         .bind(user.is_active)
+        .bind(user.email_verified_at)
+        .bind(user.verification_token)
+        .bind(user.verification_sent_at)
+        .bind(user.email_type)
         .fetch_one(&*self.pool)
         .await
     }
@@ -70,7 +74,7 @@ impl UserRepository {
         email: &str,
     ) -> Result<Option<(User, String)>, sqlx::Error> {
         let row = sqlx::query(
-            r#"SELECT u.id, u.tenant_id, u.role_id, u.email, u.password_hash, u.first_name, u.last_name, u.is_active, u.created_at, u.updated_at, r.name as role_name
+            r#"SELECT u.id, u.tenant_id, u.role_id, u.email, u.password_hash, u.first_name, u.last_name, u.is_active, u.email_verified_at, u.verification_token, u.verification_sent_at, u.email_type, u.created_at, u.updated_at, r.name as role_name
                FROM users u LEFT JOIN roles r ON u.role_id = r.id WHERE u.email = $1 AND u.deleted_at IS NULL"#
         )
         .bind(email)
@@ -88,6 +92,10 @@ impl UserRepository {
                 first_name: r.try_get("first_name")?,
                 last_name: r.try_get("last_name")?,
                 is_active: r.try_get("is_active")?,
+                email_verified_at: r.try_get("email_verified_at")?,
+                verification_token: r.try_get("verification_token")?,
+                verification_sent_at: r.try_get("verification_sent_at")?,
+                email_type: r.try_get("email_type")?,
                 created_at: r.try_get("created_at")?,
                 updated_at: r.try_get("updated_at")?,
             };
@@ -107,10 +115,10 @@ impl UserRepository {
         tenant_id: Option<Uuid>,
     ) -> Result<Option<(User, String)>, sqlx::Error> {
         let query_str = if tenant_id.is_some() {
-            r#"SELECT u.id, u.tenant_id, u.role_id, u.email, u.password_hash, u.first_name, u.last_name, u.is_active, u.created_at, u.updated_at, r.name as role_name
+            r#"SELECT u.id, u.tenant_id, u.role_id, u.email, u.password_hash, u.first_name, u.last_name, u.is_active, u.email_verified_at, u.verification_token, u.verification_sent_at, u.email_type, u.created_at, u.updated_at, r.name as role_name
                FROM users u LEFT JOIN roles r ON u.role_id = r.id WHERE u.id = $1 AND u.tenant_id = $2 AND u.deleted_at IS NULL"#
         } else {
-            r#"SELECT u.id, u.tenant_id, u.role_id, u.email, u.password_hash, u.first_name, u.last_name, u.is_active, u.created_at, u.updated_at, r.name as role_name
+            r#"SELECT u.id, u.tenant_id, u.role_id, u.email, u.password_hash, u.first_name, u.last_name, u.is_active, u.email_verified_at, u.verification_token, u.verification_sent_at, u.email_type, u.created_at, u.updated_at, r.name as role_name
                FROM users u LEFT JOIN roles r ON u.role_id = r.id WHERE u.id = $1 AND u.deleted_at IS NULL"#
         };
 
@@ -132,6 +140,10 @@ impl UserRepository {
                 first_name: r.try_get("first_name")?,
                 last_name: r.try_get("last_name")?,
                 is_active: r.try_get("is_active")?,
+                email_verified_at: r.try_get("email_verified_at")?,
+                verification_token: r.try_get("verification_token")?,
+                verification_sent_at: r.try_get("verification_sent_at")?,
+                email_type: r.try_get("email_type")?,
                 created_at: r.try_get("created_at")?,
                 updated_at: r.try_get("updated_at")?,
             };
@@ -143,5 +155,27 @@ impl UserRepository {
         } else {
             Ok(None)
         }
+    }
+
+    pub async fn update_email_verification(&self, id: Uuid) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            r#"UPDATE users 
+               SET email_verified_at = CURRENT_TIMESTAMP, verification_token = NULL 
+               WHERE id = $1"#
+        )
+        .bind(id)
+        .execute(&*self.pool)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn find_by_verification_token(&self, token: &str) -> Result<Option<User>, sqlx::Error> {
+        sqlx::query_as::<_, User>(
+            r#"SELECT id, tenant_id, role_id, email, password_hash, first_name, last_name, is_active, email_verified_at, verification_token, verification_sent_at, email_type, created_at, updated_at 
+               FROM users WHERE verification_token = $1 AND deleted_at IS NULL"#
+        )
+        .bind(token)
+        .fetch_optional(&*self.pool)
+        .await
     }
 }

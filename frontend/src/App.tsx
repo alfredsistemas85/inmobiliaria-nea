@@ -34,6 +34,8 @@ import PropertyListPage from '@/public/pages/PropertyListPage'
 import PropertyDetailPage from '@/public/pages/PropertyDetailPage'
 import ContactPage from '@/public/pages/ContactPage'
 
+import VerifyEmail from '@/pages/VerifyEmail'
+
 function App() {
   return (
     <BrowserRouter>
@@ -47,6 +49,7 @@ function App() {
         </Route>
 
         <Route path="/login" element={<Login />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
 
         {/* CRM ADMINISTRATIVO (rutas directas protegidas) */}
         <Route

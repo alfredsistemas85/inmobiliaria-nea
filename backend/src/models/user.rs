@@ -14,6 +14,10 @@ pub struct User {
     pub first_name: Option<String>,
     pub last_name: Option<String>,
     pub is_active: Option<bool>,
+    pub email_verified_at: Option<DateTime<Utc>>,
+    pub verification_token: Option<String>,
+    pub verification_sent_at: Option<DateTime<Utc>>,
+    pub email_type: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }

@@ -8,7 +8,7 @@ import { authService } from '@/services/auth'
 
 export default function Login() {
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -19,7 +19,7 @@ export default function Login() {
     setError('')
     
     try {
-      const response = await authService.login({ email, password })
+      const response = await authService.login({ identifier, password })
       localStorage.setItem('token', response.access_token)
       localStorage.setItem('refresh_token', response.refresh_token)
       if (response.tenant_id) localStorage.setItem('tenant_id', response.tenant_id)
@@ -31,7 +31,11 @@ export default function Login() {
       }))
       navigate('/dashboard')
     } catch (err: any) {
-      setError(err.message || 'Error al iniciar sesión')
+      if (err.status === 403) {
+        setError('Debes verificar tu correo para poder ingresar. Por favor revisa tu bandeja de entrada.')
+      } else {
+        setError(err.message || 'Error al iniciar sesión')
+      }
     } finally {
       setLoading(false)
     }
@@ -68,16 +72,16 @@ export default function Login() {
                 </div>
               )}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground" htmlFor="email">
-                  Correo Electrónico
+                <label className="text-sm font-medium text-foreground" htmlFor="identifier">
+                  Correo Electrónico o CUIT
                 </label>
                 <Input 
-                  id="email" 
-                  type="email" 
-                  placeholder="ejemplo@inmobicrm.com" 
+                  id="identifier" 
+                  type="text" 
+                  placeholder="ejemplo@inmobicrm.com o 30712345678" 
                   required 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
                 />
               </div>
               <div className="space-y-2">

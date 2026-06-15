@@ -1,4 +1,4 @@
-use super::controllers::{change_password, login, logout, me, refresh};
+use super::controllers::{change_password, login, logout, me, refresh, verify_email};
 use crate::core::tenant::middleware::tenant_middleware;
 use axum::{
     middleware,
@@ -20,6 +20,7 @@ pub fn router(
                 crate::core::security::rate_limit::login_rate_limit,
             )),
         )
+        .route("/verify-email", post(verify_email))
         .route(
             "/refresh",
             post(refresh).route_layer(middleware::from_fn_with_state(

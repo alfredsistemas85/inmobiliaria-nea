@@ -126,7 +126,9 @@ export const fetchApi = async (endpoint: string, options: RequestInit = {}): Pro
 
       if (!retryResponse.ok) {
         const errData = await retryResponse.json().catch(() => null);
-        throw new Error(errData?.error || errData?.message || 'Error en la petición');
+        const error = new Error(errData?.error || errData?.message || 'Error en la petición');
+        (error as any).status = retryResponse.status;
+        throw error;
       }
       if (retryResponse.status === 204) return null;
       return retryResponse.json();
@@ -144,7 +146,9 @@ export const fetchApi = async (endpoint: string, options: RequestInit = {}): Pro
   // ── Otros errores HTTP ────────────────────────────────────────────────────
   if (!response.ok) {
     const errorData = await response.json().catch(() => null);
-    throw new Error(errorData?.error || errorData?.message || 'Error en la petición');
+    const error = new Error(errorData?.error || errorData?.message || 'Error en la petición');
+    (error as any).status = response.status;
+    throw error;
   }
 
   if (response.status === 204) return null;

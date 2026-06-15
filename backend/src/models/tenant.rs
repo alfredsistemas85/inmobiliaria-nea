@@ -16,6 +16,7 @@ pub struct Tenant {
     pub city: Option<String>,
     pub province: Option<String>,
     pub is_active: Option<bool>,
+    pub status: Option<String>,
     pub slug: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,

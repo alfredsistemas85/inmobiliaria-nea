@@ -9,6 +9,7 @@ pub struct Claims {
     pub sub: Uuid,
     pub tenant_id: Option<Uuid>,
     pub role: String,
+    pub email_verified: bool,
     pub exp: usize,
     pub token_type: String, // "access" or "refresh"
 }
@@ -17,6 +18,7 @@ pub fn generate_jwt(
     user_id: Uuid,
     tenant_id: Option<Uuid>,
     role: &str,
+    email_verified: bool,
 ) -> Result<String, jsonwebtoken::errors::Error> {
     let expiration = Utc::now()
         .checked_add_signed(Duration::minutes(15))
@@ -27,6 +29,7 @@ pub fn generate_jwt(
         sub: user_id,
         tenant_id,
         role: role.to_owned(),
+        email_verified,
         exp: expiration,
         token_type: "access".to_string(),
     };
@@ -43,6 +46,7 @@ pub fn generate_refresh_jwt(
     user_id: Uuid,
     tenant_id: Option<Uuid>,
     role: &str,
+    email_verified: bool,
 ) -> Result<String, jsonwebtoken::errors::Error> {
     let expiration = Utc::now()
         .checked_add_signed(Duration::days(7))
@@ -53,6 +57,7 @@ pub fn generate_refresh_jwt(
         sub: user_id,
         tenant_id,
         role: role.to_owned(),
+        email_verified,
         exp: expiration,
         token_type: "refresh".to_string(),
     };

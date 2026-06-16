@@ -1,27 +1,62 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Search, Building2, MoreHorizontal } from 'lucide-react'
+import { Plus, Search, Building2, MoreHorizontal, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Modal } from '@/components/ui/modal'
+import { superadminService } from '@/services/superadmin'
 import { cn } from '@/lib/utils'
 
 export default function SuperAdminTenants() {
   const [tenants, setTenants] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filter, setFilter] = useState('ALL')
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [newTenant, setNewTenant] = useState({
+    business_name: '', cuit: '', dni_responsable: '', first_name: '', last_name: '', phone: ''
+  })
 
   useEffect(() => {
-    // Mock fetch for now, will connect to API later
-    setTimeout(() => {
-      setTenants([
-        { id: '1', business_name: 'Inmobiliaria Central', cuit: '30-71234567-8', status: 'ACTIVE', created_at: '2024-01-10T10:00:00Z' },
-        { id: '2', business_name: 'Propiedades del Norte', cuit: '33-65432109-9', status: 'PENDING', created_at: '2024-06-15T14:30:00Z' },
-        { id: '3', business_name: 'Sur Bienes Raíces', cuit: '30-11223344-5', status: 'SUSPENDED', created_at: '2023-11-05T09:15:00Z' }
-      ])
-      setLoading(false)
-    }, 500)
+    loadTenants()
   }, [])
+
+  const loadTenants = async () => {
+    try {
+      setLoading(true)
+      const data = await superadminService.getTenants()
+      setTenants(data || [])
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCreateTenant = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      setIsSubmitting(true)
+      await superadminService.createTenant(newTenant)
+      setIsModalOpen(false)
+      loadTenants()
+    } catch (err) {
+      console.error(err)
+      alert("Error al crear la inmobiliaria")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const filteredTenants = tenants.filter(t => {
+    const matchesSearch = t.business_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          t.cuit.includes(searchTerm)
+    if (filter === 'ALL') return matchesSearch
+    return matchesSearch && t.status === filter
+  })
 
   return (
     <div className="space-y-6">
@@ -30,7 +65,7 @@ export default function SuperAdminTenants() {
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Inmobiliarias</h1>
           <p className="text-muted-foreground">Gestión de todos los tenants del sistema.</p>
         </div>
-        <Button className="bg-purple-600 hover:bg-purple-700">
+        <Button onClick={() => setIsModalOpen(true)} className="bg-purple-600 hover:bg-purple-700">
           <Plus className="mr-2 h-4 w-4" />
           Nueva Inmobiliaria
         </Button>
@@ -40,12 +75,19 @@ export default function SuperAdminTenants() {
         <div className="p-4 border-b border-border flex flex-col sm:flex-row gap-4 justify-between">
           <div className="relative max-w-sm w-full">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input type="text" placeholder="Buscar por nombre o CUIT..." className="pl-9" />
+            <Input 
+              type="text" 
+              placeholder="Buscar por nombre o CUIT..." 
+              className="pl-9" 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">Todas</Button>
-            <Button variant="ghost" size="sm" className="text-green-600">Activas</Button>
-            <Button variant="ghost" size="sm" className="text-amber-600">Pendientes</Button>
+            <Button variant={filter === 'ALL' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('ALL')}>Todas</Button>
+            <Button variant={filter === 'ACTIVE' ? 'default' : 'ghost'} size="sm" className={filter === 'ACTIVE' ? '' : 'text-green-600'} onClick={() => setFilter('ACTIVE')}>Activas</Button>
+            <Button variant={filter === 'PENDING' ? 'default' : 'ghost'} size="sm" className={filter === 'PENDING' ? '' : 'text-amber-600'} onClick={() => setFilter('PENDING')}>Pendientes</Button>
+            <Button variant={filter === 'SUSPENDED' ? 'default' : 'ghost'} size="sm" className={filter === 'SUSPENDED' ? '' : 'text-red-600'} onClick={() => setFilter('SUSPENDED')}>Suspendidas</Button>
           </div>
         </div>
         <CardContent className="p-0">
@@ -64,11 +106,18 @@ export default function SuperAdminTenants() {
                 {loading ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
                       Cargando inmobiliarias...
                     </td>
                   </tr>
+                ) : filteredTenants.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
+                      No se encontraron inmobiliarias.
+                    </td>
+                  </tr>
                 ) : (
-                  tenants.map(tenant => (
+                  filteredTenants.map(tenant => (
                     <tr key={tenant.id} className="hover:bg-muted/50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
@@ -85,11 +134,11 @@ export default function SuperAdminTenants() {
                           tenant.status === 'PENDING' && "border-amber-500 text-amber-500",
                           tenant.status === 'SUSPENDED' && "border-red-500 text-red-500",
                         )}>
-                          {tenant.status}
+                          {tenant.status || 'PENDING'}
                         </Badge>
                       </td>
                       <td className="px-6 py-4 text-muted-foreground">
-                        {new Date(tenant.created_at).toLocaleDateString('es-AR')}
+                        {tenant.created_at ? new Date(tenant.created_at).toLocaleDateString('es-AR') : '-'}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <Link to={`/superadmin/tenants/${tenant.id}`}>
@@ -106,6 +155,45 @@ export default function SuperAdminTenants() {
           </div>
         </CardContent>
       </Card>
+
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Nueva Inmobiliaria">
+        <form onSubmit={handleCreateTenant} className="space-y-4">
+          <div>
+            <label className="text-sm font-medium">Razón Social o Nombre Fantasía</label>
+            <Input required value={newTenant.business_name} onChange={e => setNewTenant({...newTenant, business_name: e.target.value})} />
+          </div>
+          <div>
+            <label className="text-sm font-medium">CUIT</label>
+            <Input required value={newTenant.cuit} onChange={e => setNewTenant({...newTenant, cuit: e.target.value})} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium">Nombre (Resp.)</label>
+              <Input required value={newTenant.first_name} onChange={e => setNewTenant({...newTenant, first_name: e.target.value})} />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Apellido (Resp.)</label>
+              <Input required value={newTenant.last_name} onChange={e => setNewTenant({...newTenant, last_name: e.target.value})} />
+            </div>
+          </div>
+          <div>
+            <label className="text-sm font-medium">DNI (Resp.)</label>
+            <Input required value={newTenant.dni_responsable} onChange={e => setNewTenant({...newTenant, dni_responsable: e.target.value})} />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Teléfono (Opcional)</label>
+            <Input value={newTenant.phone} onChange={e => setNewTenant({...newTenant, phone: e.target.value})} />
+          </div>
+          
+          <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Crear Inmobiliaria
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }

@@ -1,101 +1,115 @@
 import { useEffect, useState } from 'react'
-import { LifeBuoy, MessageSquare, Clock } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { MessageSquare, Clock, CheckCircle, Search, Loader2 } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { superadminService } from '@/services/superadmin'
 
 export default function SuperAdminSupport() {
   const [tickets, setTickets] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const loadTickets = async () => {
+    try {
+      setLoading(true)
+      const data = await superadminService.getTickets()
+      setTickets(data || [])
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    // Mock tickets
-    setTickets([
-      { id: 1, subject: 'Problema con conexión de WhatsApp', tenant: 'Inmobiliaria Central', status: 'OPEN', priority: 'HIGH', updated_at: 'hace 30 min' },
-      { id: 2, subject: 'Duda sobre facturación', tenant: 'Propiedades del Norte', status: 'IN_PROGRESS', priority: 'NORMAL', updated_at: 'hace 2 horas' },
-      { id: 3, subject: 'No puedo agregar usuarios', tenant: 'Sur Bienes Raíces', status: 'RESOLVED', priority: 'NORMAL', updated_at: 'hace 1 día' },
-    ])
+    loadTickets()
   }, [])
+
+  const filteredTickets = tickets.filter(t => 
+    t.subject.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Soporte Técnico</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
+            <MessageSquare className="h-8 w-8 text-purple-600" />
+            Soporte Técnico
+          </h1>
           <p className="text-muted-foreground">Gestión de tickets de ayuda de las inmobiliarias.</p>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Tickets Abiertos</CardTitle>
-            <LifeBuoy className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-500">8</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">En Progreso</CardTitle>
-            <Clock className="h-4 w-4 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-500">3</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Resueltos (Semana)</CardTitle>
-            <MessageSquare className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-500">24</div>
-          </CardContent>
-        </Card>
-      </div>
-
       <Card>
+        <div className="p-4 border-b border-border flex flex-col sm:flex-row gap-4 justify-between">
+          <div className="relative max-w-sm w-full">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input 
+              type="text" 
+              placeholder="Buscar por asunto..." 
+              className="pl-9" 
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead className="text-xs text-muted-foreground uppercase bg-muted/50">
                 <tr>
                   <th className="px-6 py-3 font-medium">Asunto</th>
-                  <th className="px-6 py-3 font-medium">Tenant</th>
-                  <th className="px-6 py-3 font-medium">Estado</th>
+                  <th className="px-6 py-3 font-medium">Inmobiliaria (ID)</th>
                   <th className="px-6 py-3 font-medium">Prioridad</th>
-                  <th className="px-6 py-3 font-medium">Última Actividad</th>
-                  <th className="px-6 py-3 text-right font-medium">Acción</th>
+                  <th className="px-6 py-3 font-medium">Estado</th>
+                  <th className="px-6 py-3 font-medium">Fecha</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {tickets.map(ticket => (
-                  <tr key={ticket.id} className="hover:bg-muted/50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-foreground">{ticket.subject}</td>
-                    <td className="px-6 py-4 text-muted-foreground">{ticket.tenant}</td>
-                    <td className="px-6 py-4">
-                      <Badge variant="outline" className={
-                        ticket.status === 'OPEN' ? "border-blue-500 text-blue-500" :
-                        ticket.status === 'IN_PROGRESS' ? "border-amber-500 text-amber-500" :
-                        "border-green-500 text-green-500"
-                      }>
-                        {ticket.status}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4">
-                      <Badge variant="secondary" className={
-                        ticket.priority === 'HIGH' ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" : ""
-                      }>
-                        {ticket.priority}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 text-muted-foreground">{ticket.updated_at}</td>
-                    <td className="px-6 py-4 text-right">
-                      <Button variant="ghost" size="sm" className="text-purple-600 hover:text-purple-700">Ver Ticket</Button>
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                      Cargando tickets...
                     </td>
                   </tr>
-                ))}
+                ) : filteredTickets.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center">
+                      <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-3" />
+                      <p className="text-muted-foreground">No hay tickets pendientes.</p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredTickets.map((ticket, idx) => (
+                    <tr key={idx} className="hover:bg-muted/50 transition-colors cursor-pointer">
+                      <td className="px-6 py-4 font-medium text-foreground">
+                        {ticket.subject}
+                      </td>
+                      <td className="px-6 py-4 text-muted-foreground font-mono text-xs">
+                        {ticket.tenant_id}
+                      </td>
+                      <td className="px-6 py-4">
+                        <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200">
+                          {ticket.priority || 'NORMAL'}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4">
+                        <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200">
+                          {ticket.status || 'OPEN'}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4" />
+                          {ticket.created_at ? new Date(ticket.created_at).toLocaleDateString() : '-'}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

@@ -4,15 +4,12 @@ use uuid::Uuid;
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateTenantDto {
-    pub cuit: String,
-    pub dni_responsable: String,
-    pub first_name: String,
-    pub last_name: String,
     pub business_name: String,
-    pub address: Option<String>,
-    pub phone: Option<String>,
-    pub city: Option<String>,
-    pub province: Option<String>,
+    pub cuit: String,
+    pub admin_email: String,
+    pub admin_first_name: String,
+    pub admin_last_name: String,
+    pub phone: String,
 }
 
 #[derive(Debug, Serialize, ToSchema)]

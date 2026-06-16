@@ -233,6 +233,7 @@ async fn main() {
             core::system_errors::error_logging_middleware,
         ))
         .layer(axum::middleware::from_fn(security_headers_middleware))
+        .layer(axum::Extension(Arc::new(redis_client.clone())))
         .layer(cors);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));

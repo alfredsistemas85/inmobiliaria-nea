@@ -62,28 +62,20 @@ pub async fn create_user(
     let hashed_pw =
         hash_password(&payload.password).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    if let Some(role_id) = payload.role_id {
-        let role_name: Option<String> = sqlx::query_scalar("SELECT name FROM roles WHERE id = $1")
-            .bind(role_id)
-            .fetch_optional(&*pool)
-            .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-        if role_name.as_deref() == Some("super_admin") {
-            tracing::warn!("SECURITY_VIOLATION: Attempt to assign super_admin role on creation");
-            return Err(StatusCode::FORBIDDEN);
-        }
+    if payload.role == crate::models::role::UserRole::Superadmin {
+        tracing::warn!("SECURITY_VIOLATION: Attempt to assign super_admin role on creation");
+        return Err(StatusCode::FORBIDDEN);
     }
 
     // Safety check: a non-super_admin MUST have a tenant_id to create a user
     let target_tenant_id = claims.tenant_id.or_else(|| {
-        if claims.role == "super_admin" {
+        if claims.role == "super_admin" || claims.role == "SUPERADMIN" {
             None
         } else {
             Some(Uuid::nil())
         }
     });
-    if claims.tenant_id.is_none() && claims.role != "super_admin" {
+    if claims.tenant_id.is_none() && claims.role != "super_admin" && claims.role != "SUPERADMIN" {
         return Err(StatusCode::FORBIDDEN);
     }
 
@@ -97,7 +89,7 @@ pub async fn create_user(
     let user = User {
         id: Uuid::new_v4(),
         tenant_id: target_tenant_id,
-        role_id: payload.role_id,
+        role: Some(payload.role),
         email: payload.email,
         password_hash: hashed_pw,
         first_name: payload.first_name,
@@ -107,6 +99,8 @@ pub async fn create_user(
         verification_token: Some(v_token.clone()),
         verification_sent_at: Some(chrono::Utc::now()),
         email_type: Some(email_type),
+        onboarding_token: None,
+        onboarding_token_expires_at: None,
         created_at: None,
         updated_at: None,
     };
@@ -161,32 +155,25 @@ pub async fn update_user(
     if let Some(last_name) = payload.last_name {
         user.last_name = Some(last_name);
     }
-    if let Some(role_id) = payload.role_id {
-        // Prevent assigning super_admin role
-        let role_name: Option<String> = sqlx::query_scalar("SELECT name FROM roles WHERE id = $1")
-            .bind(role_id)
-            .fetch_optional(&*pool)
-            .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-        if role_name.as_deref() == Some("super_admin") {
-            tracing::warn!("SECURITY_VIOLATION: Attempt to assign super_admin role");
+    if let Some(role) = payload.role {
+        if role == crate::models::role::UserRole::Superadmin {
+            tracing::warn!("SECURITY_VIOLATION: Attempt to assign superadmin role");
             return Err(StatusCode::FORBIDDEN);
         }
-        user.role_id = Some(role_id);
+        user.role = Some(role);
     }
     if let Some(is_active) = payload.is_active {
         user.is_active = Some(is_active);
     }
 
     let updated = sqlx::query_as::<_, User>(
-        r#"UPDATE users SET email = $1, first_name = $2, last_name = $3, role_id = $4, is_active = $5 
+        r#"UPDATE users SET email = $1, first_name = $2, last_name = $3, role = $4, is_active = $5 
            WHERE id = $6 RETURNING *"#
     )
     .bind(&user.email)
     .bind(&user.first_name)
     .bind(&user.last_name)
-    .bind(&user.role_id)
+    .bind(&user.role)
     .bind(&user.is_active)
     .bind(user.id)
     .fetch_one(&*pool)

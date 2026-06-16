@@ -5,10 +5,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { UserPlus, Edit, Trash2, Shield, Search } from 'lucide-react'
 
-// Simulamos los roles. Lo ideal es tener un endpoint de roles o sacarlo de constantes.
+// Roles según la Fase 3
 const ROLES = [
-  { id: '11111111-1111-1111-1111-111111111111', name: 'tenant_admin', label: 'Administrador' },
-  { id: '22222222-2222-2222-2222-222222222222', name: 'tenant_agent', label: 'Agente' }
+  { id: 'ADMIN_INMOBILIARIA', label: 'Administrador' },
+  { id: 'SUPERVISOR', label: 'Supervisor' },
+  { id: 'AGENTE', label: 'Agente' },
+  { id: 'OPERADOR', label: 'Operador' }
 ];
 
 export default function Users() {
@@ -25,7 +27,7 @@ export default function Users() {
     last_name: '',
     email: '',
     password: '',
-    role_id: ROLES[1].id,
+    role: ROLES[2].id, // Default to AGENTE
     is_active: true
   })
 
@@ -53,7 +55,7 @@ export default function Users() {
           first_name: formData.first_name,
           last_name: formData.last_name,
           email: formData.email,
-          role_id: formData.role_id,
+          role: formData.role,
           is_active: formData.is_active
         })
       } else {
@@ -62,7 +64,7 @@ export default function Users() {
           last_name: formData.last_name,
           email: formData.email,
           password: formData.password || '123456', // Pass por defecto si no ingresan
-          role_id: formData.role_id
+          role: formData.role
         })
       }
       setShowForm(false)
@@ -91,7 +93,7 @@ export default function Users() {
       last_name: user.last_name || '',
       email: user.email,
       password: '',
-      role_id: user.role_id || ROLES[1].id,
+      role: user.role || ROLES[2].id,
       is_active: user.is_active !== false
     })
     setShowForm(true)
@@ -104,7 +106,7 @@ export default function Users() {
       last_name: '',
       email: '',
       password: '',
-      role_id: ROLES[1].id,
+      role: ROLES[2].id,
       is_active: true
     })
     setShowForm(true)
@@ -117,9 +119,8 @@ export default function Users() {
   )
 
   const getRoleLabel = (roleIdOrName: string) => {
-    // Si viene el UUID o el nombre, tratar de mapear
-    const r = ROLES.find(r => r.id === roleIdOrName || r.name === roleIdOrName)
-    return r ? r.label : (roleIdOrName === 'tenant_admin' ? 'Administrador' : 'Agente')
+    const r = ROLES.find(r => r.id === roleIdOrName)
+    return r ? r.label : roleIdOrName
   }
 
   if (showForm) {
@@ -162,8 +163,8 @@ export default function Users() {
                   <label className="text-sm font-medium">Rol</label>
                   <select 
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    value={formData.role_id}
-                    onChange={e => setFormData({...formData, role_id: e.target.value})}
+                    value={formData.role}
+                    onChange={e => setFormData({...formData, role: e.target.value})}
                   >
                     {ROLES.map(r => (
                       <option key={r.id} value={r.id}>{r.label}</option>
@@ -259,7 +260,7 @@ export default function Users() {
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1.5">
                             <Shield className="h-3.5 w-3.5 text-blue-500" />
-                            {getRoleLabel(user.role || user.role_id || '')}
+                            {getRoleLabel(user.role || '')}
                           </div>
                         </td>
                         <td className="px-4 py-3">

@@ -5,6 +5,7 @@ WORKDIR /usr/src/app
 COPY . .
 
 # Build the binary (release)
+ENV SQLX_OFFLINE=true
 RUN cargo build --release
 
 # Run stage

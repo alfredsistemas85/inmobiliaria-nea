@@ -42,6 +42,6 @@ pub fn router(
     Router::new()
         .merge(agent_routes)
         .merge(admin_routes)
-        .route_layer(middleware::from_fn(tenant_middleware))
+        .route_layer(middleware::from_fn_with_state(pool.clone(), tenant_middleware))
         .with_state(pool)
 }

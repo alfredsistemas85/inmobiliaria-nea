@@ -57,7 +57,7 @@ pub async fn create_tenant(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<CreateTenantDto>,
 ) -> Result<Json<TenantResponseDto>, StatusCode> {
-    if claims.role != "super_admin" {
+    if claims.role != "super_admin" && claims.role != "SUPERADMIN" {
         return Err(StatusCode::FORBIDDEN);
     }
 
@@ -67,31 +67,90 @@ pub async fn create_tenant(
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    let tenant = Tenant {
-        id: Uuid::new_v4(),
+    let mut tx = pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let tenant_id = Uuid::new_v4();
+    let user_id = Uuid::new_v4();
+    let onboarding_token = Uuid::new_v4().to_string();
+    let trial_ends_at = chrono::Utc::now() + chrono::Duration::days(15);
+    let onboarding_expires = chrono::Utc::now() + chrono::Duration::hours(48);
+
+    // 1. Create Tenant
+    sqlx::query(
+        r#"INSERT INTO tenants (id, cuit, dni_responsable, first_name, last_name, business_name, phone, is_active, status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#,
+    )
+    .bind(tenant_id)
+    .bind(&normalized_cuit)
+    .bind("") // Dni responsable is no longer in DTO, fallback to empty
+    .bind(&payload.admin_first_name)
+    .bind(&payload.admin_last_name)
+    .bind(&payload.business_name)
+    .bind(&payload.phone)
+    .bind(true)
+    .bind("ACTIVE")
+    .execute(&mut *tx)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // 2. Create Subscription (BASIC / TRIAL)
+    sqlx::query(
+        r#"INSERT INTO subscriptions (tenant_id, plan_type, status, trial_ends_at)
+           VALUES ($1, 'BASIC', 'TRIAL', $2)"#,
+    )
+    .bind(tenant_id)
+    .bind(trial_ends_at)
+    .execute(&mut *tx)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // 3. Create Admin User
+    sqlx::query(
+        r#"INSERT INTO users (id, tenant_id, role, email, password_hash, first_name, last_name, is_active, onboarding_token, onboarding_token_expires_at)
+           VALUES ($1, $2, 'ADMIN_INMOBILIARIA', $3, '', $4, $5, true, $6, $7)"#,
+    )
+    .bind(user_id)
+    .bind(tenant_id)
+    .bind(&payload.admin_email)
+    .bind(&payload.admin_first_name)
+    .bind(&payload.admin_last_name)
+    .bind(&onboarding_token)
+    .bind(onboarding_expires)
+    .execute(&mut *tx)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // 4. Log Audit
+    sqlx::query(
+        r#"INSERT INTO audit_logs (tenant_id, user_id, action, entity_type, entity_id, new_data)
+           VALUES ($1, $2, 'TENANT_CREATED', 'tenant', $1, $3)"#,
+    )
+    .bind(tenant_id)
+    .bind(claims.sub)
+    .bind(serde_json::json!({ "business_name": payload.business_name, "cuit": payload.cuit }))
+    .execute(&mut *tx)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    tracing::info!(
+        "ONBOARDING EMAIL SIMULADO: Enviar a {} token: {}",
+        payload.admin_email,
+        onboarding_token
+    );
+
+    let response = TenantResponseDto {
+        id: tenant_id,
         cuit: normalized_cuit,
-        dni_responsable: payload.dni_responsable,
-        first_name: payload.first_name,
-        last_name: payload.last_name,
+        dni_responsable: "".to_string(),
+        first_name: payload.admin_first_name,
+        last_name: payload.admin_last_name,
         business_name: payload.business_name,
-        address: payload.address,
-        phone: payload.phone,
-        city: payload.city,
-        province: payload.province,
         is_active: Some(true),
-        status: Some("PENDING".to_string()),
-        slug: None,
-        created_at: None,
-        updated_at: None,
     };
 
-    let repo = TenantRepository::new(pool);
-    let created = repo
-        .create(tenant)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    Ok(Json(TenantResponseDto::from(created)))
+    Ok(Json(response))
 }
 
 #[derive(serde::Deserialize)]

@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
+use crate::models::role::UserRole;
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateUserDto {
@@ -8,7 +9,7 @@ pub struct CreateUserDto {
     pub password: String,
     pub first_name: Option<String>,
     pub last_name: Option<String>,
-    pub role_id: Option<Uuid>,
+    pub role: UserRole,
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
@@ -16,7 +17,7 @@ pub struct UpdateUserDto {
     pub email: Option<String>,
     pub first_name: Option<String>,
     pub last_name: Option<String>,
-    pub role_id: Option<Uuid>,
+    pub role: Option<UserRole>,
     pub is_active: Option<bool>,
 }
 
@@ -24,7 +25,7 @@ pub struct UpdateUserDto {
 pub struct UserResponseDto {
     pub id: Uuid,
     pub tenant_id: Option<Uuid>,
-    pub role_id: Option<Uuid>,
+    pub role: Option<UserRole>,
     pub email: String,
     pub first_name: Option<String>,
     pub last_name: Option<String>,
@@ -36,7 +37,7 @@ impl From<crate::models::user::User> for UserResponseDto {
         Self {
             id: user.id,
             tenant_id: user.tenant_id,
-            role_id: user.role_id,
+            role: user.role,
             email: user.email,
             first_name: user.first_name,
             last_name: user.last_name,

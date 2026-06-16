@@ -14,6 +14,12 @@ pub struct VerifyEmailRequest {
     pub token: String,
 }
 
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct SetupPasswordRequest {
+    pub token: String,
+    pub password: String,
+}
+
 #[derive(Debug, Serialize, ToSchema)]
 pub struct AuthResponse {
     pub access_token: String,

@@ -64,9 +64,9 @@ pub async fn login(
             
         if let Some(tenant) = tenant {
             let row = sqlx::query(
-                r#"SELECT u.id, u.tenant_id, u.role_id, u.email, u.password_hash, u.first_name, u.last_name, u.is_active, u.email_verified_at, u.verification_token, u.verification_sent_at, u.email_type, u.created_at, u.updated_at, r.name as role_name
-                   FROM users u LEFT JOIN roles r ON u.role_id = r.id 
-                   WHERE u.tenant_id = $1 AND r.name = 'tenant_admin' AND u.deleted_at IS NULL LIMIT 1"#
+                r#"SELECT u.id, u.tenant_id, u.role, u.email, u.password_hash, u.first_name, u.last_name, u.is_active, u.email_verified_at, u.verification_token, u.verification_sent_at, u.email_type, u.onboarding_token, u.onboarding_token_expires_at, u.created_at, u.updated_at
+                   FROM users u
+                   WHERE u.tenant_id = $1 AND u.role = 'ADMIN_INMOBILIARIA' AND u.deleted_at IS NULL LIMIT 1"#
             )
             .bind(tenant.id)
             .fetch_optional(&*pool)
@@ -78,7 +78,7 @@ pub async fn login(
                 let user = crate::models::user::User {
                     id: r.try_get("id").unwrap(),
                     tenant_id: r.try_get("tenant_id").unwrap(),
-                    role_id: r.try_get("role_id").unwrap(),
+                    role: r.try_get("role").unwrap(),
                     email: r.try_get("email").unwrap(),
                     password_hash: r.try_get("password_hash").unwrap(),
                     first_name: r.try_get("first_name").unwrap(),
@@ -88,11 +88,12 @@ pub async fn login(
                     verification_token: r.try_get("verification_token").unwrap(),
                     verification_sent_at: r.try_get("verification_sent_at").unwrap(),
                     email_type: r.try_get("email_type").unwrap(),
+                    onboarding_token: r.try_get("onboarding_token").unwrap(),
+                    onboarding_token_expires_at: r.try_get("onboarding_token_expires_at").unwrap(),
                     created_at: r.try_get("created_at").unwrap(),
                     updated_at: r.try_get("updated_at").unwrap(),
                 };
-                let role_name: String = r.try_get("role_name").unwrap_or_else(|_| "tenant_admin".to_string());
-                Some((user, role_name))
+                Some(user)
             } else {
                 None
             }
@@ -101,7 +102,12 @@ pub async fn login(
         }
     };
 
-    if let Some((user, role)) = user_data {
+    if let Some(user) = user_data {
+        let role = match user.role {
+            Some(crate::models::role::UserRole::Superadmin) => "super_admin".to_string(),
+            Some(crate::models::role::UserRole::AdminInmobiliaria) => "tenant_admin".to_string(),
+            _ => "tenant_agent".to_string(),
+        };
         if verify_password(&payload.password, &user.password_hash).unwrap_or(false) {
             if user.email_verified_at.is_none() {
                 tracing::warn!(
@@ -187,7 +193,13 @@ pub async fn refresh(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    if let Some((user, role)) = user_data {
+    if let Some(user) = user_data {
+        let role = match user.role {
+            Some(crate::models::role::UserRole::Superadmin) => "super_admin".to_string(),
+            Some(crate::models::role::UserRole::AdminInmobiliaria) => "tenant_admin".to_string(),
+            _ => "tenant_agent".to_string(),
+        };
+
         if user.email_verified_at.is_none() {
             tracing::warn!(
                 "TOKEN_REFRESH_BLOCKED_UNVERIFIED: user_id={}",
@@ -257,7 +269,13 @@ pub async fn me(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    if let Some((user, role)) = user_data {
+    if let Some(user) = user_data {
+        let role = match user.role {
+            Some(crate::models::role::UserRole::Superadmin) => "super_admin".to_string(),
+            Some(crate::models::role::UserRole::AdminInmobiliaria) => "tenant_admin".to_string(),
+            _ => "tenant_agent".to_string(),
+        };
+
         return Ok(Json(MeResponse {
             id: user.id,
             email: user.email,
@@ -341,5 +359,43 @@ pub async fn verify_email(
     }
     
     tracing::warn!("EMAIL_VERIFICATION_FAILED: invalid or missing token");
+    Err(StatusCode::BAD_REQUEST)
+}
+
+pub async fn setup_password(
+    State(pool): State<Arc<PgPool>>,
+    Json(payload): Json<crate::api::auth::dtos::SetupPasswordRequest>,
+) -> Result<StatusCode, StatusCode> {
+    let row = sqlx::query("SELECT id, onboarding_token_expires_at FROM users WHERE onboarding_token = $1")
+        .bind(&payload.token)
+        .fetch_optional(&*pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if let Some(r) = row {
+        use sqlx::Row;
+        let id: Uuid = r.try_get("id").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let expires_at: Option<chrono::DateTime<chrono::Utc>> = r.try_get("onboarding_token_expires_at").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        if let Some(expires) = expires_at {
+            if chrono::Utc::now() > expires {
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        }
+
+        let new_hash = hash_password(&payload.password).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        sqlx::query("UPDATE users SET password_hash = $1, onboarding_token = NULL, onboarding_token_expires_at = NULL WHERE id = $2")
+            .bind(new_hash)
+            .bind(id)
+            .execute(&*pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        tracing::info!("SETUP_PASSWORD_SUCCESS: user_id={}", id);
+        return Ok(StatusCode::OK);
+    }
+
+    tracing::warn!("SETUP_PASSWORD_FAILED: invalid token");
     Err(StatusCode::BAD_REQUEST)
 }

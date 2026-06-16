@@ -8,3 +8,4 @@ pub mod role;
 pub mod tenant;
 pub mod user;
 pub mod whatsapp;
+pub mod subscription;

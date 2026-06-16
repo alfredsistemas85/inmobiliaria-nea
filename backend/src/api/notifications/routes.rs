@@ -13,6 +13,6 @@ pub fn router(pool: Arc<PgPool>) -> Router {
     Router::new()
         .route("/", get(list_notifications))
         .route("/:id/read", post(mark_as_read))
-        .route_layer(middleware::from_fn(tenant_middleware))
+        .route_layer(middleware::from_fn_with_state(pool.clone(), tenant_middleware))
         .with_state(pool)
 }

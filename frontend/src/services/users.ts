@@ -5,7 +5,7 @@ export interface User {
   first_name: string;
   last_name: string;
   email: string;
-  role_id: string;
+  role: string;
   is_active: boolean;
   tenant_id: string;
 }
@@ -14,7 +14,7 @@ export interface CreateUserPayload {
   email: string;
   first_name: string;
   last_name: string;
-  role_id: string;
+  role: string;
   password?: string;
 }
 
@@ -22,7 +22,7 @@ export interface UpdateUserPayload {
   email?: string;
   first_name?: string;
   last_name?: string;
-  role_id?: string;
+  role?: string;
   is_active?: boolean;
 }
 

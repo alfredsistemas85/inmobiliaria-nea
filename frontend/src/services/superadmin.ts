@@ -1,42 +1,41 @@
-import api from './api';
+import { fetchApi } from './api';
 
 export const superadminService = {
   // Dashboard
   getStats: async () => {
-    const response = await api.get('/superadmin/dashboard/stats');
-    return response.data;
+    return fetchApi('/superadmin/dashboard/stats');
   },
 
   // Tenants
   getTenants: async () => {
-    const response = await api.get('/superadmin/tenants');
-    return response.data;
+    return fetchApi('/superadmin/tenants');
   },
   
   getTenant: async (id: string) => {
-    const response = await api.get(`/superadmin/tenants/${id}`);
-    return response.data;
+    return fetchApi(`/superadmin/tenants/${id}`);
   },
 
   createTenant: async (data: any) => {
-    const response = await api.post('/superadmin/tenants', data);
-    return response.data;
+    return fetchApi('/superadmin/tenants', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   },
 
   updateTenantStatus: async (id: string, status: string) => {
-    const response = await api.put(`/superadmin/tenants/${id}/status`, { status });
-    return response.data;
+    return fetchApi(`/superadmin/tenants/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status })
+    });
   },
 
   // Monitoring
   getSystemErrors: async () => {
-    const response = await api.get('/superadmin/monitoring/errors');
-    return response.data;
+    return fetchApi('/superadmin/monitoring/errors');
   },
 
   // Support
   getTickets: async () => {
-    const response = await api.get('/superadmin/support');
-    return response.data;
+    return fetchApi('/superadmin/support');
   }
 };

@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT id, tenant_id, client_id, assigned_to\n        FROM leads\n        WHERE status = 'NUEVO' \n          AND created_at <= CURRENT_TIMESTAMP - INTERVAL '24 hours'\n          AND deleted_at IS NULL\n        FOR UPDATE SKIP LOCKED\n        LIMIT 20\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "tenant_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "client_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "assigned_to",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "87c086fa0931fa0e3317d43a8136e1fd5e730af7918f7e3c399680f5f458d785"
+}

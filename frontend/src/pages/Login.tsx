@@ -29,7 +29,12 @@ export default function Login() {
         first_name: response.first_name,
         last_name: response.last_name,
       }))
-      navigate('/dashboard')
+      
+      if (response.role === 'super_admin') {
+        navigate('/superadmin')
+      } else {
+        navigate('/dashboard')
+      }
     } catch (err: any) {
       if (err.status === 403) {
         setError('Debes verificar tu correo para poder ingresar. Por favor revisa tu bandeja de entrada.')

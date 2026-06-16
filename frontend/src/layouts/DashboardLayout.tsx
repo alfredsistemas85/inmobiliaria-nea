@@ -272,7 +272,7 @@ export function DashboardLayout() {
 
             {/* Avatar (mobile) */}
             <div className="md:hidden h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-              JD
+              {user?.first_name?.[0] || 'U'}{user?.last_name?.[0] || ''}
             </div>
           </div>
         </header>

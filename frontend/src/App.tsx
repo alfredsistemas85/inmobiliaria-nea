@@ -30,9 +30,17 @@ import SuperAdminMonitoring from '@/pages/superadmin/Monitoring'
  */
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('token')
+  const userStr = localStorage.getItem('user')
+  const user = userStr ? JSON.parse(userStr) : null
+
   if (!token) {
     return <Navigate to="/login" replace />
   }
+
+  if (user?.role === 'super_admin') {
+    return <Navigate to="/superadmin" replace />
+  }
+
   return <>{children}</>
 }
 

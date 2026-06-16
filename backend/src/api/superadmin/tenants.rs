@@ -81,11 +81,11 @@ async fn get_tenant(
 async fn create_tenant(
     State(pool): State<Arc<PgPool>>,
     Json(payload): Json<CreateTenantDto>,
-) -> Result<Json<Tenant>, StatusCode> {
+) -> Result<Json<Tenant>, axum::response::Response> {
     let mut slug = payload.business_name.to_lowercase().replace(" ", "-");
     slug.retain(|c| c.is_ascii_alphanumeric() || c == '-');
     
-    let tenant = sqlx::query_as!(
+    let tenant = match sqlx::query_as!(
         Tenant,
         r#"
         INSERT INTO tenants (business_name, cuit, dni_responsable, first_name, last_name, phone, status, slug, is_active)
@@ -102,10 +102,24 @@ async fn create_tenant(
     )
     .fetch_one(&*pool)
     .await
-    .map_err(|e| {
-        tracing::error!("Error creating tenant: {}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+    {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::error!("Error creating tenant: {}", e);
+            if let Some(db_err) = e.as_database_error() {
+                let msg = db_err.message();
+                if msg.contains("tenants_cuit_key") || msg.contains("cuit") {
+                    let err_resp = (StatusCode::CONFLICT, axum::Json(serde_json::json!({"error": "El CUIT ingresado ya está registrado"}))).into_response();
+                    return Err(err_resp);
+                } else if msg.contains("tenants_slug_key") || msg.contains("slug") {
+                    let err_resp = (StatusCode::CONFLICT, axum::Json(serde_json::json!({"error": "El nombre de inmobiliaria genera un identificador ya en uso"}))).into_response();
+                    return Err(err_resp);
+                }
+            }
+            let err_resp = (StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "Error interno del servidor"}))).into_response();
+            return Err(err_resp);
+        }
+    };
 
     Ok(Json(tenant))
 }

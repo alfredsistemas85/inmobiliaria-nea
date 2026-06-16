@@ -62,10 +62,10 @@ export default function Login() {
         </div>
 
         <Card className="mt-8">
-          <CardHeader>
-            <CardTitle>Iniciar Sesión</CardTitle>
-            <CardDescription>
-              Ingresa tus credenciales para acceder al sistema.
+          <CardHeader className="space-y-2 text-center pb-8">
+            <CardTitle className="text-2xl font-bold tracking-tight">Acceso al sistema</CardTitle>
+            <CardDescription className="text-base">
+              Ingresa tus credenciales para continuar.
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleLogin}>
@@ -108,8 +108,8 @@ export default function Login() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Iniciando sesión...' : 'Ingresar al Dashboard'}
+              <Button type="submit" className="w-full text-base h-11 transition-all" disabled={loading}>
+                {loading ? 'Ingresando...' : 'Ingresar'}
               </Button>
             </CardFooter>
           </form>

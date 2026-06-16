@@ -43,9 +43,9 @@ export default function SuperAdminTenants() {
       await superadminService.createTenant(newTenant)
       setIsModalOpen(false)
       loadTenants()
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      alert("Error al crear la inmobiliaria")
+      alert(err.message || "Error al crear la inmobiliaria")
     } finally {
       setIsSubmitting(false)
     }

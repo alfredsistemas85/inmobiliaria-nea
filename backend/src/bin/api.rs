@@ -195,6 +195,9 @@ async fn main() {
         .nest("/api/tenants", api::tenants::router(shared_pool.clone()))
         .nest("/api/admin/system", api::system::routes::router(shared_pool.clone()))
         .nest("/api/roles", api::roles::router(shared_pool.clone()))
+        .nest("/api/payments", api::payments::router(shared_pool.clone()))
+        .nest("/api/contracts", api::contracts::router(shared_pool.clone()))
+        .nest("/api/financials", api::financials::router(shared_pool.clone()))
         .nest(
             "/api/clients",
             api::clients::routes::router(shared_pool.clone()),

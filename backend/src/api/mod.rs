@@ -12,3 +12,6 @@ pub mod users;
 pub mod whatsapp;
 pub mod system;
 pub mod superadmin;
+pub mod payments;
+pub mod contracts;
+pub mod financials;

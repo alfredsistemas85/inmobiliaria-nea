@@ -119,6 +119,12 @@ export default function Settings() {
             >
               <Smartphone className="h-4 w-4" /> Integración WhatsApp
             </button>
+            <button 
+              onClick={() => setActiveTab('pagos')}
+              className={`flex items-center gap-2 px-3 py-2.5 rounded-md text-sm font-medium shrink-0 transition-colors w-full text-left ${activeTab === 'pagos' ? 'bg-blue-50 text-blue-700' : 'text-muted-foreground hover:bg-background hover:text-foreground'}`}
+            >
+              <CreditCard className="h-4 w-4" /> Configuración de Pagos
+            </button>
           </nav>
         </aside>
 
@@ -135,6 +141,40 @@ export default function Settings() {
           )}
 
           {activeTab === 'whatsapp' && <WhatsAppSettings />}
+
+          {activeTab === 'pagos' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Configuración de Pagos</CardTitle>
+                <CardDescription>
+                  Configura tus credenciales de Mercado Pago y datos bancarios para cobrar a tus clientes.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <form className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Mercado Pago Access Token</label>
+                    <Input placeholder="APP_USR-..." type="password" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Mercado Pago Public Key</label>
+                    <Input placeholder="APP_USR-..." />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">CBU / CVU Bancario</label>
+                      <Input placeholder="0000000000000000000000" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Alias</label>
+                      <Input placeholder="mi.alias.banco" />
+                    </div>
+                  </div>
+                  <Button className="mt-4">Guardar Credenciales</Button>
+                </form>
+              </CardContent>
+            </Card>
+          )}
 
           {activeTab === 'perfil' && (
             <Card>

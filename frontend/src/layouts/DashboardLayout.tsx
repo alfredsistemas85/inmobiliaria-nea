@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Home, Users, UserPlus, CalendarDays,
-  MessageCircle, Settings, Bell, LogOut, Search, BarChart3, Check, Moon, Sun, UserCog
+  MessageCircle, Settings, Bell, LogOut, Search, BarChart3, Check, Moon, Sun, UserCog,
+  FileText, DollarSign
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/context/ThemeContext'
@@ -14,6 +15,8 @@ const NAV_ITEMS = [
   { name: 'Clientes',     path: '/clients',      icon: Users },
   { name: 'Leads',        path: '/leads',        icon: UserPlus },
   { name: 'Citas',        path: '/appointments', icon: CalendarDays },
+  { name: 'Contratos',    path: '/contracts',    icon: FileText },
+  { name: 'Finanzas',     path: '/financials',   icon: DollarSign },
   { name: 'WhatsApp',     path: '/whatsapp',     icon: MessageCircle },
   { name: 'Reportes',     path: '/reports',      icon: BarChart3 },
   { name: 'Usuarios',     path: '/users',        icon: UserCog, adminOnly: true },

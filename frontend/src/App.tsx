@@ -15,6 +15,8 @@ import WhatsApp from '@/pages/WhatsApp'
 import Reports from '@/pages/Reports'
 import Users from '@/pages/Users'
 import Settings from '@/pages/Settings'
+import Contracts from '@/pages/Contracts'
+import Financials from '@/pages/Financials'
 
 // SuperAdmin Pages
 import SuperAdminDashboard from '@/pages/superadmin/Dashboard'
@@ -90,6 +92,8 @@ function App() {
           <Route path="/reports"            element={<Reports />} />
           <Route path="/users"              element={<Users />} />
           <Route path="/settings"           element={<Settings />} />
+          <Route path="/contracts"          element={<Contracts />} />
+          <Route path="/financials"         element={<Financials />} />
         </Route>
 
         {/* SUPERADMIN PANEL */}

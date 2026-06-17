@@ -1,5 +1,5 @@
 ALTER TABLE tenants
-ADD COLUMN slug VARCHAR(120);
+ADD COLUMN IF NOT EXISTS slug VARCHAR(120);
 
-CREATE UNIQUE INDEX idx_tenants_slug
+CREATE UNIQUE INDEX IF NOT EXISTS idx_tenants_slug
 ON tenants(slug);

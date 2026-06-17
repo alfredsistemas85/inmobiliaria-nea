@@ -255,7 +255,7 @@ export default function Settings() {
               <CardHeader>
                 <CardTitle>Suscripción y Facturación</CardTitle>
                 <CardDescription>
-                  Administra el pago de tu mensualidad por el uso de la plataforma InmobiCRM.
+                  Administra el pago de tu mensualidad por el uso de la plataforma InmoNeaCRM.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">

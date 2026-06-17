@@ -54,7 +54,7 @@ export default function Login() {
             <Home className="h-6 w-6" />
           </div>
           <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-foreground">
-            InmobiCRM
+            InmoNeaCRM
           </h2>
           <p className="mt-2 text-center text-sm text-muted-foreground">
             Sistema de Gestión Inmobiliaria

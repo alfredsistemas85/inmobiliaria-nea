@@ -62,7 +62,7 @@ pub async fn create_subscription_preference(
         .json(&json!({
             "items": [
                 {
-                    "title": "Suscripción SaaS InmobiCRM",
+                    "title": "Suscripción SaaS InmoNeaCRM",
                     "quantity": 1,
                     "unit_price": saas_price,
                     "currency_id": "ARS"

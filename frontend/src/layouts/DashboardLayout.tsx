@@ -95,9 +95,9 @@ export function DashboardLayout() {
       {/* ── Desktop Sidebar ─────────────────────────────────────────────────── */}
       <aside className="hidden w-64 flex-col border-r border-border bg-card md:flex">
         <div className="flex h-16 items-center px-6 border-b border-border">
-          <div className="flex items-center gap-2 font-bold text-xl text-blue-600">
-            <Home className="h-6 w-6" />
-            <span>InmobiCRM</span>
+          <div className="flex items-center gap-2 font-bold text-xl text-primary mb-8 px-2">
+            <Building2 className="h-8 w-8" />
+            <span>InmoNeaCRM</span>
           </div>
         </div>
 
@@ -156,9 +156,9 @@ export function DashboardLayout() {
         <header className="flex h-16 items-center justify-between border-b border-border bg-card px-4 md:px-6">
           {/* Brand (mobile) */}
           <div className="flex items-center gap-4 md:hidden">
-            <div className="flex items-center gap-2 font-bold text-lg text-primary">
-              <Home className="h-5 w-5" />
-              <span>InmobiCRM</span>
+            <div className="flex items-center gap-2 font-bold text-xl text-primary">
+              <Building2 className="h-6 w-6" />
+              <span>InmoNeaCRM</span>
             </div>
           </div>
 

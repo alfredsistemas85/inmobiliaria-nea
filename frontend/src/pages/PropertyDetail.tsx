@@ -4,6 +4,7 @@ import { ArrowLeft, MapPin, Bed, Bath, Maximize, Edit, Trash2, CalendarDays, Che
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import DocumentManager from '@/components/documents/DocumentManager'
 import { propertiesService } from '@/services/properties'
 
 export default function PropertyDetail() {
@@ -139,6 +140,8 @@ export default function PropertyDetail() {
               </p>
             </CardContent>
           </Card>
+
+          <DocumentManager entityType="property" entityId={id!} />
         </div>
 
         <div className="space-y-6">

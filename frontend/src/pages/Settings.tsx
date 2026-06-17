@@ -125,6 +125,12 @@ export default function Settings() {
             >
               <CreditCard className="h-4 w-4" /> Configuración de Pagos
             </button>
+            <button 
+              onClick={() => setActiveTab('integrations')}
+              className={`flex items-center gap-2 px-3 py-2.5 rounded-md text-sm font-medium shrink-0 transition-colors w-full text-left ${activeTab === 'integrations' ? 'bg-blue-50 text-blue-700' : 'text-muted-foreground hover:bg-background hover:text-foreground'}`}
+            >
+              <Globe className="h-4 w-4" /> Integraciones
+            </button>
           </nav>
         </aside>
 
@@ -141,6 +147,36 @@ export default function Settings() {
           )}
 
           {activeTab === 'whatsapp' && <WhatsAppSettings />}
+
+          {activeTab === 'integrations' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Integraciones</CardTitle>
+                <CardDescription>Conecta servicios externos para potenciar tu CRM.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between border p-4 rounded-lg">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-white p-2 rounded-full border shadow-sm">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M23.52 12.2727C23.52 11.4218 23.4436 10.6036 23.3018 9.81818H12V14.4545H18.4582C18.18 15.9491 17.3291 17.2036 16.0636 18.0545V21.0545H19.9473C22.2164 18.9545 23.52 15.8945 23.52 12.2727Z" fill="#4285F4"/>
+                        <path fillRule="evenodd" clipRule="evenodd" d="M12 24C15.24 24 17.9673 22.9255 19.9473 21.0545L16.0636 18.0545C14.9945 18.7745 13.6145 19.2 12 19.2C8.87455 19.2 6.22909 17.0891 5.27455 14.2582H1.27636V17.3564C3.24545 21.2673 7.30909 24 12 24Z" fill="#34A853"/>
+                        <path fillRule="evenodd" clipRule="evenodd" d="M5.27455 14.2582C5.02909 13.5218 4.89273 12.7691 4.89273 12C4.89273 11.2309 5.02909 10.4782 5.27455 9.74182V6.64364H1.27636C0.463636 8.26364 0 10.08 0 12C0 13.92 0.463636 15.7364 1.27636 17.3564L5.27455 14.2582Z" fill="#FBBC05"/>
+                        <path fillRule="evenodd" clipRule="evenodd" d="M12 4.8C13.7673 4.8 15.3491 5.40545 16.5982 6.59455L20.0291 3.16364C17.9618 1.23818 15.24 0 12 0C7.30909 0 3.24545 2.73273 1.27636 6.64364L5.27455 9.74182C6.22909 6.91091 8.87455 4.8 12 4.8Z" fill="#EA4335"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900">Google Calendar</h4>
+                      <p className="text-sm text-gray-500">Sincroniza tus visitas y reuniones automáticamente</p>
+                    </div>
+                  </div>
+                  <Button variant="outline" onClick={() => window.location.href = `${import.meta.env.VITE_API_URL}/api/calendar/google/connect`}>
+                    Conectar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {activeTab === 'pagos' && (
             <Card>

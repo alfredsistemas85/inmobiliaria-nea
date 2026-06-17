@@ -17,6 +17,7 @@ import Users from '@/pages/Users'
 import Settings from '@/pages/Settings'
 import Contracts from '@/pages/Contracts'
 import Financials from '@/pages/Financials'
+import Documents from '@/pages/Documents'
 
 // SuperAdmin Pages
 import SuperAdminDashboard from '@/pages/superadmin/Dashboard'
@@ -94,6 +95,7 @@ function App() {
           <Route path="/settings"           element={<Settings />} />
           <Route path="/contracts"          element={<Contracts />} />
           <Route path="/financials"         element={<Financials />} />
+          <Route path="/documents"          element={<Documents />} />
         </Route>
 
         {/* SUPERADMIN PANEL */}

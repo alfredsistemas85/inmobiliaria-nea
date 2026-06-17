@@ -230,6 +230,14 @@ async fn main() {
             "/api/superadmin",
             api::superadmin::router(shared_pool.clone()),
         )
+        .nest(
+            "/api/documents",
+            api::documents::router(shared_pool.clone()),
+        )
+        .nest(
+            "/api/calendar",
+            api::calendar::router(shared_pool.clone()),
+        )
         .nest_service("/uploads", ServeDir::new("uploads"))
         .layer(axum::middleware::from_fn_with_state(
             shared_pool.clone(),

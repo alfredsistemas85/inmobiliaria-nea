@@ -15,3 +15,5 @@ pub mod superadmin;
 pub mod payments;
 pub mod contracts;
 pub mod financials;
+pub mod documents;
+pub mod calendar;

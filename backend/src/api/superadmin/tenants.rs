@@ -71,7 +71,7 @@ async fn get_tenant(
 ) -> Result<Json<Tenant>, StatusCode> {
     let repo = TenantRepository::new(pool);
     let tenant = repo
-        .find_by_id(id)
+        .find_by_id_any_status(id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .ok_or(StatusCode::NOT_FOUND)?;

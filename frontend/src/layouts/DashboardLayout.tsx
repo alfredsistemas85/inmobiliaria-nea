@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { name: 'Leads',        path: '/leads',        icon: UserPlus },
   { name: 'Citas',        path: '/appointments', icon: CalendarDays },
   { name: 'Contratos',    path: '/contracts',    icon: FileText },
+  { name: 'Documentos',   path: '/documents',    icon: FileText },
   { name: 'Finanzas',     path: '/financials',   icon: DollarSign },
   { name: 'WhatsApp',     path: '/whatsapp',     icon: MessageCircle },
   { name: 'Reportes',     path: '/reports',      icon: BarChart3 },

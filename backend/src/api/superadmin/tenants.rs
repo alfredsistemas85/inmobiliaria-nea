@@ -160,5 +160,6 @@ pub fn router(pool: Arc<PgPool>) -> Router {
         .route("/:id", get(get_tenant))
         .route("/:id/status", put(update_tenant_status))
         .route_layer(middleware::from_fn(require_super_admin))
+        .route_layer(middleware::from_fn_with_state(pool.clone(), crate::core::tenant::middleware::tenant_middleware))
         .with_state(pool)
 }

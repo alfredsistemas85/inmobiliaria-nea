@@ -103,5 +103,6 @@ async fn get_stats(
 pub fn router(pool: Arc<PgPool>) -> Router {
     Router::new()
         .route("/stats", get(get_stats))
+        .route_layer(axum::middleware::from_fn_with_state(pool.clone(), crate::core::tenant::middleware::tenant_middleware))
         .with_state(pool)
 }

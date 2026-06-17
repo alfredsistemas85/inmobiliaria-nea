@@ -237,5 +237,6 @@ pub fn router(pool: Arc<PgPool>) -> Router {
         .route("/:tenant_id/plan", patch(change_plan))
         .route("/:tenant_id/status", patch(set_status))
         .route("/:tenant_id/trial", patch(extend_trial))
+        .route_layer(axum::middleware::from_fn_with_state(pool.clone(), crate::core::tenant::middleware::tenant_middleware))
         .with_state(pool)
 }

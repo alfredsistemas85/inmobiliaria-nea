@@ -41,5 +41,6 @@ pub fn router(pool: Arc<PgPool>) -> Router {
     Router::new()
         .route("/", get(get_all_tickets))
         .route_layer(middleware::from_fn(require_super_admin))
+        .route_layer(middleware::from_fn_with_state(pool.clone(), crate::core::tenant::middleware::tenant_middleware))
         .with_state(pool)
 }

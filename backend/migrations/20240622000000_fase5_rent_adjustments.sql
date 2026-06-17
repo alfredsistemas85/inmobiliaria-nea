@@ -123,7 +123,6 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    contract_id UUID REFERENCES contracts(id) ON DELETE SET NULL,
     action VARCHAR(255) NOT NULL,
     old_data JSONB,
     new_data JSONB,
@@ -131,6 +130,8 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     ip_address VARCHAR(45),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS contract_id UUID REFERENCES contracts(id) ON DELETE SET NULL;
 
 CREATE INDEX IF NOT EXISTS idx_audit_logs_tenant ON audit_logs(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_contract ON audit_logs(contract_id);

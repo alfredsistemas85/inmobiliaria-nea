@@ -34,7 +34,7 @@ BEGIN
             IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'subscriptions' AND column_name = 'status' AND data_type = 'character varying') THEN
                 ALTER TABLE subscriptions ALTER COLUMN status DROP DEFAULT;
                 ALTER TABLE subscriptions ALTER COLUMN status TYPE subscription_status USING upper(status)::subscription_status;
-                ALTER TABLE subscriptions ALTER COLUMN status SET DEFAULT 'TRIAL'::subscription_status;
+                ALTER TABLE subscriptions ALTER COLUMN status SET DEFAULT 'TRIAL';
             ELSE
                 ALTER TABLE subscriptions ADD COLUMN status subscription_status NOT NULL DEFAULT 'TRIAL';
             END IF;
@@ -81,8 +81,9 @@ BEGIN
                 FROM roles r WHERE users.role_id = r.id;
             END IF;
             
-            -- Enforce NOT NULL after migration
-            ALTER TABLE users ALTER COLUMN role SET NOT NULL DEFAULT 'AGENTE'::user_role;
+            -- Enforce NOT NULL and DEFAULT after migration
+            ALTER TABLE users ALTER COLUMN role SET DEFAULT 'AGENTE'::user_role;
+            ALTER TABLE users ALTER COLUMN role SET NOT NULL;
         END IF;
         
         -- Do NOT drop role_id to preserve foreign key integrity just in case.

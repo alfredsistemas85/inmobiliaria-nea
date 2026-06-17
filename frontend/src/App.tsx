@@ -25,6 +25,7 @@ import SuperAdminTenants from '@/pages/superadmin/TenantsList'
 import SuperAdminTenantDetail from '@/pages/superadmin/TenantDetail'
 import SuperAdminSupport from '@/pages/superadmin/Support'
 import SuperAdminMonitoring from '@/pages/superadmin/Monitoring'
+import SuperAdminSettings from '@/pages/superadmin/Settings'
 
 /**
  * Guard de autenticación.
@@ -114,7 +115,7 @@ function App() {
           <Route path="tenants/:id" element={<SuperAdminTenantDetail />} />
           <Route path="monitoring" element={<SuperAdminMonitoring />} />
           <Route path="support" element={<SuperAdminSupport />} />
-          <Route path="settings" element={<div className="p-6">Ajustes Globales</div>} />
+          <Route path="settings" element={<SuperAdminSettings />} />
         </Route>
 
         {/* Fallback */}

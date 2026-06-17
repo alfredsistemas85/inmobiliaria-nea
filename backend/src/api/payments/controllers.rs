@@ -38,11 +38,21 @@ pub struct UpdatePaymentConfigDto {
 
 // 1. Cobro de Suscripción SaaS (SuperAdmin cobra a Inmobiliaria)
 pub async fn create_subscription_preference(
-    State(_pool): State<Arc<PgPool>>,
+    State(pool): State<Arc<PgPool>>,
     Extension(claims): Extension<Claims>,
 ) -> Result<Json<CheckoutResponse>, StatusCode> {
     let tenant_id = claims.tenant_id.ok_or(StatusCode::BAD_REQUEST)?;
     
+    // Fetch price from system_settings
+    let price_row: Option<(String,)> = sqlx::query_as("SELECT value FROM system_settings WHERE key = 'SAAS_SUBSCRIPTION_PRICE'")
+        .fetch_optional(&*pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    
+    let saas_price: f64 = price_row
+        .and_then(|(v,)| v.parse().ok())
+        .unwrap_or(50000.0);
+
     // Aquí iría el Access Token del SuperAdmin (dueño del SaaS)
     let access_token = std::env::var("MP_ACCESS_TOKEN").unwrap_or_default();
     
@@ -54,7 +64,7 @@ pub async fn create_subscription_preference(
                 {
                     "title": "Suscripción SaaS InmobiCRM",
                     "quantity": 1,
-                    "unit_price": 50000,
+                    "unit_price": saas_price,
                     "currency_id": "ARS"
                 }
             ],

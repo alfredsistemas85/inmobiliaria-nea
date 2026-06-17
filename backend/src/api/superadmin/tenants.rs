@@ -9,7 +9,7 @@ use axum::{
     middleware,
     response::IntoResponse,
     routing::{get, post, put},
-    Json, Router,
+    Json, Router, Extension,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
@@ -35,6 +35,7 @@ pub struct CreateTenantDto {
     pub dni_responsable: String,
     pub first_name: String,
     pub last_name: String,
+    pub admin_email: String,
     pub phone: Option<String>,
 }
 
@@ -81,32 +82,38 @@ async fn get_tenant(
 
 async fn create_tenant(
     State(pool): State<Arc<PgPool>>,
+    Extension(claims): Extension<crate::core::security::jwt::Claims>,
     Json(payload): Json<CreateTenantDto>,
 ) -> Result<Json<Tenant>, axum::response::Response> {
     let mut slug = payload.business_name.to_lowercase().replace(" ", "-");
     slug.retain(|c| c.is_ascii_alphanumeric() || c == '-');
     
-    let tenant = match sqlx::query_as!(
-        Tenant,
+    let mut tx = pool.begin().await.map_err(|e| {
+        tracing::error!("Failed to begin transaction: {}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "Error interno"}))).into_response()
+    })?;
+
+    let tenant = match sqlx::query_as::<_, Tenant>(
         r#"
         INSERT INTO tenants (business_name, cuit, dni_responsable, first_name, last_name, phone, status, slug, is_active)
-        VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', $7, false)
+        VALUES ($1, $2, $3, $4, $5, $6, 'ACTIVE', $7, true)
         RETURNING *
-        "#,
-        payload.business_name,
-        payload.cuit,
-        payload.dni_responsable,
-        payload.first_name,
-        payload.last_name,
-        payload.phone,
-        slug
+        "#
     )
-    .fetch_one(&*pool)
+    .bind(&payload.business_name)
+    .bind(&payload.cuit)
+    .bind(&payload.dni_responsable)
+    .bind(&payload.first_name)
+    .bind(&payload.last_name)
+    .bind(&payload.phone)
+    .bind(slug)
+    .fetch_one(&mut *tx)
     .await
     {
         Ok(t) => t,
         Err(e) => {
             tracing::error!("Error creating tenant: {}", e);
+            let _ = tx.rollback().await;
             if let Some(db_err) = e.as_database_error() {
                 let msg = db_err.message();
                 if msg.contains("tenants_cuit_key") || msg.contains("cuit") {
@@ -117,10 +124,89 @@ async fn create_tenant(
                     return Err(err_resp);
                 }
             }
-            let err_resp = (StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "Error interno del servidor"}))).into_response();
+            let err_resp = (StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "Error interno al crear inmobiliaria"}))).into_response();
             return Err(err_resp);
         }
     };
+
+    let trial_ends_at = Utc::now() + chrono::Duration::days(14);
+    
+    if let Err(e) = sqlx::query(
+        r#"INSERT INTO subscriptions (tenant_id, plan_type, status, trial_ends_at)
+           VALUES ($1, 'BASIC', 'TRIAL', $2)"#,
+    )
+    .bind(tenant.id)
+    .bind(trial_ends_at)
+    .execute(&mut *tx)
+    .await
+    {
+        tracing::error!("Error creating subscription: {}", e);
+        let _ = tx.rollback().await;
+        return Err((StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "Error interno"}))).into_response());
+    }
+
+    let user_id = Uuid::new_v4();
+    let onboarding_token = Uuid::new_v4().to_string();
+    let onboarding_expires = Utc::now() + chrono::Duration::days(7);
+
+    if let Err(e) = sqlx::query(
+        r#"INSERT INTO users (id, tenant_id, role, email, password_hash, first_name, last_name, is_active, onboarding_token, onboarding_token_expires_at)
+           VALUES ($1, $2, 'ADMIN_INMOBILIARIA', $3, '', $4, $5, true, $6, $7)"#,
+    )
+    .bind(user_id)
+    .bind(tenant.id)
+    .bind(&payload.admin_email)
+    .bind(&payload.first_name)
+    .bind(&payload.last_name)
+    .bind(&onboarding_token)
+    .bind(onboarding_expires)
+    .execute(&mut *tx)
+    .await
+    {
+        tracing::error!("Error creating user: {}", e);
+        let _ = tx.rollback().await;
+        if e.to_string().contains("users_email_key") {
+            return Err((StatusCode::CONFLICT, axum::Json(serde_json::json!({"error": "El correo electrónico ya está en uso"}))).into_response());
+        }
+        return Err((StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "Error al crear administrador"}))).into_response());
+    }
+
+    if let Err(e) = sqlx::query(
+        r#"INSERT INTO audit_logs (tenant_id, user_id, action, entity_type, entity_id, new_data)
+           VALUES ($1, $2, 'TENANT_CREATED_BY_SUPERADMIN', 'tenant', $1, $3)"#,
+    )
+    .bind(tenant.id)
+    .bind(claims.sub)
+    .bind(serde_json::json!({ "business_name": payload.business_name, "cuit": payload.cuit }))
+    .execute(&mut *tx)
+    .await
+    {
+        tracing::error!("Error creating audit log: {}", e);
+        // non-fatal
+    }
+
+    if let Err(e) = tx.commit().await {
+        tracing::error!("Error committing transaction: {}", e);
+        return Err((StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "Error interno"}))).into_response());
+    }
+
+    let magic_link = format!("http://localhost:5173/onboarding?token={}", onboarding_token);
+    tracing::info!("ONBOARDING EMAIL SIMULADO: Enviar a {} link: {}", payload.admin_email, magic_link);
+
+    // Send WhatsApp if phone is available
+    if let Some(phone) = &payload.phone {
+        if !phone.trim().is_empty() {
+            let msg = format!("¡Hola {}! Tu inmobiliaria {} ha sido dada de alta exitosamente en nuestra plataforma SaaS.\n\nPara acceder por primera vez y configurar tu contraseña, ingresa al siguiente enlace (valido por 7 días):\n{}", payload.first_name, payload.business_name, magic_link);
+            let p = phone.clone();
+            tokio::spawn(async move {
+                let evo_client = crate::infrastructure::evolution::client::EvolutionClient::new();
+                match evo_client.send_message(&p, &msg).await {
+                    Ok(_) => tracing::info!("WhatsApp de onboarding enviado a {}", p),
+                    Err(e) => tracing::error!("Error enviando WhatsApp de onboarding a {}: {}", p, e),
+                }
+            });
+        }
+    }
 
     Ok(Json(tenant))
 }

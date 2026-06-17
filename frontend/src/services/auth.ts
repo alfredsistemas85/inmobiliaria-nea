@@ -25,9 +25,15 @@ export const authService = {
     });
   },
   verifyEmail: async (token: string) => {
-    return fetchApi('/api/auth/verify-email', {
+    return fetchApi('/auth/verify-email', {
       method: 'POST',
       body: JSON.stringify({ token }),
+    });
+  },
+  setupPassword: async (token: string, password: string) => {
+    return fetchApi('/auth/setup-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, password }),
     });
   },
   logout: () => {

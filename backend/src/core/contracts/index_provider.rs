@@ -75,3 +75,12 @@ impl IndexProvider for FutureApiIndexProvider {
         Err("Not implemented yet".to_string())
     }
 }
+
+pub fn get_provider() -> Box<dyn IndexProvider> {
+    let provider_type = std::env::var("INDEX_PROVIDER").unwrap_or_else(|_| "manual".to_string());
+    match provider_type.as_str() {
+        "mock" => Box::new(MockIndexProvider),
+        "api" => Box::new(FutureApiIndexProvider),
+        _ => Box::new(ManualIndexProvider),
+    }
+}

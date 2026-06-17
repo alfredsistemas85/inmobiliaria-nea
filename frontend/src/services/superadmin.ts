@@ -37,5 +37,12 @@ export const superadminService = {
   // Support
   getTickets: async () => {
     return fetchApi('/superadmin/support');
+  },
+
+  // Scheduler
+  triggerAdjustments: async () => {
+    return fetchApi('/superadmin/scheduler/trigger-adjustments', {
+      method: 'POST',
+    });
   }
 };

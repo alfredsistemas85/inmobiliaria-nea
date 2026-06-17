@@ -25,6 +25,12 @@ export default function Settings() {
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
 
+  // Payments Form
+  const [mpAccessToken, setMpAccessToken] = useState('')
+  const [mpPublicKey, setMpPublicKey] = useState('')
+  const [cbu, setCbu] = useState('')
+  const [alias, setAlias] = useState('')
+
   useEffect(() => {
     loadUser()
   }, [])
@@ -84,6 +90,30 @@ export default function Settings() {
     }
   }
 
+  const handlePaymentsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSaving(true)
+    setError('')
+    setSuccess('')
+    try {
+      const { fetchApi } = await import('@/services/api')
+      await fetchApi('/payments/config', {
+        method: 'PUT',
+        body: JSON.stringify({
+          mp_access_token: mpAccessToken,
+          mp_public_key: mpPublicKey,
+          cbu,
+          alias
+        })
+      })
+      setSuccess('Configuración de pagos guardada correctamente')
+    } catch (err: any) {
+      setError(err.message || 'Error al guardar configuración de pagos')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   if (loading) {
     return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
   }
@@ -124,6 +154,12 @@ export default function Settings() {
               className={`flex items-center gap-2 px-3 py-2.5 rounded-md text-sm font-medium shrink-0 transition-colors w-full text-left ${activeTab === 'pagos' ? 'bg-blue-50 text-blue-700' : 'text-muted-foreground hover:bg-background hover:text-foreground'}`}
             >
               <CreditCard className="h-4 w-4" /> Configuración de Pagos
+            </button>
+            <button 
+              onClick={() => setActiveTab('suscripcion')}
+              className={`flex items-center gap-2 px-3 py-2.5 rounded-md text-sm font-medium shrink-0 transition-colors w-full text-left ${activeTab === 'suscripcion' ? 'bg-blue-50 text-blue-700' : 'text-muted-foreground hover:bg-background hover:text-foreground'}`}
+            >
+              <CreditCard className="h-4 w-4" /> Suscripción (SaaS)
             </button>
             <button 
               onClick={() => setActiveTab('integrations')}
@@ -187,27 +223,78 @@ export default function Settings() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <form className="space-y-4">
+                <form onSubmit={handlePaymentsSubmit} className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Mercado Pago Access Token</label>
-                    <Input placeholder="APP_USR-..." type="password" />
+                    <Input placeholder="APP_USR-..." type="password" value={mpAccessToken} onChange={e => setMpAccessToken(e.target.value)} />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Mercado Pago Public Key</label>
-                    <Input placeholder="APP_USR-..." />
+                    <Input placeholder="APP_USR-..." value={mpPublicKey} onChange={e => setMpPublicKey(e.target.value)} />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">CBU / CVU Bancario</label>
-                      <Input placeholder="0000000000000000000000" />
+                      <Input placeholder="0000000000000000000000" value={cbu} onChange={e => setCbu(e.target.value)} />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Alias</label>
-                      <Input placeholder="mi.alias.banco" />
+                      <Input placeholder="mi.alias.banco" value={alias} onChange={e => setAlias(e.target.value)} />
                     </div>
                   </div>
-                  <Button className="mt-4">Guardar Credenciales</Button>
+                  <Button type="submit" className="mt-4" disabled={saving}>
+                    {saving ? 'Guardando...' : 'Guardar Credenciales'}
+                  </Button>
                 </form>
+              </CardContent>
+            </Card>
+          )}
+
+          {activeTab === 'suscripcion' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Suscripción y Facturación</CardTitle>
+                <CardDescription>
+                  Administra el pago de tu mensualidad por el uso de la plataforma InmobiCRM.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="bg-purple-50 p-6 rounded-lg border border-purple-100 flex flex-col md:flex-row items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold text-purple-900">Plan Profesional</h3>
+                    <p className="text-purple-700">Disfruta de todas las características sin límites.</p>
+                  </div>
+                  <div className="mt-4 md:mt-0 text-center md:text-right">
+                    <span className="text-2xl font-bold text-purple-900">$50.000</span>
+                    <span className="text-sm text-purple-700"> / mes</span>
+                  </div>
+                </div>
+                
+                <Button 
+                  className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700"
+                  onClick={async () => {
+                    try {
+                      setSaving(true);
+                      const { fetchApi } = await import('@/services/api');
+                      const res = await fetchApi('/payments/checkout/subscription', { method: 'POST' });
+                      if (res && res.init_point) {
+                        window.location.href = res.init_point;
+                      } else {
+                        throw new Error('No se pudo generar el link de pago');
+                      }
+                    } catch (err: any) {
+                      setError(err.message || 'Error al conectar con Mercado Pago');
+                      setSaving(false);
+                    }
+                  }}
+                  disabled={saving}
+                >
+                  {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  {saving ? 'Redirigiendo a Mercado Pago...' : 'Pagar Mensualidad'}
+                </Button>
+                <p className="text-xs text-muted-foreground mt-4 text-center sm:text-left">
+                  Al hacer clic serás redirigido a Mercado Pago para completar tu suscripción de forma segura. No cobramos comisiones adicionales.
+                </p>
               </CardContent>
             </Card>
           )}

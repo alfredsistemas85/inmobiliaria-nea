@@ -1,4 +1,5 @@
 use backend::{core, models};
+use chrono::Timelike;
 use dotenvy::dotenv;
 use sqlx::postgres::PgPoolOptions;
 use std::env;
@@ -29,6 +30,10 @@ async fn main() {
 
     let shared_pool = Arc::new(pool);
     tracing::info!("Worker conectado a PostgreSQL Exitosamente.");
+
+    let adjustment_engine = Arc::new(backend::core::contracts::adjustment_engine::RentalAdjustmentEngine::new(shared_pool.clone()));
+    let adjustment_scheduler = backend::core::workers::adjustment_scheduler::RentalAdjustmentScheduler::new(shared_pool.clone(), adjustment_engine.clone());
+
 
     loop {
         tracing::debug!("Worker tick...");
@@ -71,6 +76,19 @@ async fn main() {
                 }
             }
             Err(e) => tracing::error!("Error processing conversation followups: {}", e),
+        }
+
+        // 5. Daily Rent Adjustments (run at target hour)
+        let current_hour = chrono::Local::now().time().hour();
+        let target_hour = std::env::var("ADJUSTMENT_SCHEDULER_HOUR")
+            .unwrap_or_else(|_| "2".to_string())
+            .parse::<u32>()
+            .unwrap_or(2);
+
+        if current_hour == target_hour {
+            if let Err(e) = adjustment_scheduler.process_daily_adjustments().await {
+                tracing::error!("Error processing daily rent adjustments: {:?}", e);
+            }
         }
 
         tokio::time::sleep(Duration::from_secs(10)).await;

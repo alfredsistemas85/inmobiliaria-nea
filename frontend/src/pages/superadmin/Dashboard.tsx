@@ -1,15 +1,43 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Building2, Activity, ShieldAlert, LifeBuoy, Loader2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Building2, Activity, ShieldAlert, LifeBuoy, Loader2, Play } from 'lucide-react'
 import { superadminService } from '@/services/superadmin'
 
 export default function SuperAdminDashboard() {
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
+  const [triggerLoading, setTriggerLoading] = useState(false)
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
+
   useEffect(() => {
     loadStats()
   }, [])
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg)
+    setTimeout(() => setToastMessage(null), 5000)
+  }
+
+  const handleTriggerAdjustments = async () => {
+    try {
+      setTriggerLoading(true)
+      const res = await superadminService.triggerAdjustments()
+      const data = await res.json()
+      
+      if (res.ok) {
+        showToast(`Motor ejecutado correctamente.\n${data.contracts_checked} contratos analizados.\n${data.adjustments_generated} ajustes generados.\nTiempo: ${data.execution_time_ms}ms`)
+      } else {
+        showToast("Error al ejecutar el motor.")
+      }
+    } catch (err) {
+      console.error(err)
+      showToast("Error de conexión al ejecutar motor.")
+    } finally {
+      setTriggerLoading(false)
+    }
+  }
 
   const loadStats = async () => {
     try {
@@ -114,6 +142,30 @@ export default function SuperAdminDashboard() {
           </div>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Acciones del Sistema</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between p-4 border rounded-md bg-muted/30">
+            <div>
+              <p className="font-medium text-foreground">Motor de Ajustes</p>
+              <p className="text-sm text-muted-foreground">Fuerza la ejecución del scheduler de ajustes para la fecha actual (solo evalúa contratos habilitados para la fecha).</p>
+            </div>
+            <Button onClick={handleTriggerAdjustments} disabled={triggerLoading} className="gap-2">
+              {triggerLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+              Ejecutar Motor de Ajustes
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+      
+      {toastMessage && (
+        <div className="fixed bottom-4 right-4 bg-slate-800 text-white px-4 py-3 rounded-md shadow-lg z-50 transition-opacity whitespace-pre-line max-w-sm">
+          {toastMessage}
+        </div>
+      )}
     </div>
   )
 }

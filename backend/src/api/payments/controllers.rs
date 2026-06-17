@@ -28,6 +28,14 @@ pub struct WebhookData {
     pub id: String,
 }
 
+#[derive(Deserialize)]
+pub struct UpdatePaymentConfigDto {
+    pub mp_access_token: String,
+    pub mp_public_key: String,
+    pub cbu: String,
+    pub alias: String,
+}
+
 // 1. Cobro de Suscripción SaaS (SuperAdmin cobra a Inmobiliaria)
 pub async fn create_subscription_preference(
     State(_pool): State<Arc<PgPool>>,
@@ -158,6 +166,31 @@ pub async fn mp_webhook(
         // Si el pago es de alquiler, se actualizaría la invoice y se crearía el Payment
         // Si es de SaaS, se actualizaría la suscripción del tenant
     }
+
+    Ok(StatusCode::OK)
+}
+
+pub async fn update_payment_config(
+    State(pool): State<Arc<PgPool>>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<UpdatePaymentConfigDto>,
+) -> Result<StatusCode, StatusCode> {
+    let tenant_id = claims.tenant_id.ok_or(StatusCode::BAD_REQUEST)?;
+
+    sqlx::query(
+        "UPDATE tenants SET mp_access_token = $1, mp_public_key = $2, cbu = $3, alias = $4 WHERE id = $5"
+    )
+    .bind(&payload.mp_access_token)
+    .bind(&payload.mp_public_key)
+    .bind(&payload.cbu)
+    .bind(&payload.alias)
+    .bind(tenant_id)
+    .execute(&*pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Error updating payment config: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     Ok(StatusCode::OK)
 }

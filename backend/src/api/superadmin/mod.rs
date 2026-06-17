@@ -3,6 +3,7 @@ pub mod support;
 pub mod subscriptions;
 pub mod dashboard;
 pub mod tenants;
+pub mod scheduler;
 
 use axum::Router;
 use sqlx::PgPool;
@@ -15,4 +16,5 @@ pub fn router(pool: Arc<PgPool>) -> Router {
         .nest("/subscriptions", subscriptions::router(pool.clone()))
         .nest("/dashboard", dashboard::router(pool.clone()))
         .nest("/tenants", tenants::router(pool.clone()))
+        .nest("/scheduler", scheduler::router(pool.clone()))
 }

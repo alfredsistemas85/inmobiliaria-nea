@@ -17,7 +17,7 @@ export default function SuperAdminTenants() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [newTenant, setNewTenant] = useState({
-    business_name: '', cuit: '', dni_responsable: '', first_name: '', last_name: '', phone: ''
+    business_name: '', cuit: '', dni_responsable: '', first_name: '', last_name: '', admin_email: '', phone: ''
   })
 
   useEffect(() => {
@@ -179,6 +179,10 @@ export default function SuperAdminTenants() {
           <div>
             <label className="text-sm font-medium">DNI (Resp.)</label>
             <Input required value={newTenant.dni_responsable} onChange={e => setNewTenant({...newTenant, dni_responsable: e.target.value})} />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Correo Electrónico (Resp.)</label>
+            <Input required type="email" value={newTenant.admin_email} onChange={e => setNewTenant({...newTenant, admin_email: e.target.value})} />
           </div>
           <div>
             <label className="text-sm font-medium">Teléfono (Opcional)</label>

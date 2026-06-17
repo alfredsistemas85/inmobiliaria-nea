@@ -61,6 +61,7 @@ function RequireSuperAdmin({ children }: { children: React.ReactNode }) {
 
 
 import VerifyEmail from '@/pages/VerifyEmail'
+import Onboarding from '@/pages/Onboarding'
 
 function App() {
   return (
@@ -71,6 +72,7 @@ function App() {
 
         <Route path="/login" element={<Login />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/onboarding" element={<Onboarding />} />
 
         {/* CRM ADMINISTRATIVO (rutas directas protegidas) */}
         <Route

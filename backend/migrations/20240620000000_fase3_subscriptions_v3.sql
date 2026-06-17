@@ -32,7 +32,9 @@ BEGIN
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'subscriptions' AND column_name = 'status' AND data_type = 'USER-DEFINED' AND udt_name = 'subscription_status') THEN
             -- If status exists but is varchar, alter type
             IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'subscriptions' AND column_name = 'status' AND data_type = 'character varying') THEN
-                ALTER TABLE subscriptions ALTER COLUMN status TYPE subscription_status USING status::subscription_status;
+                ALTER TABLE subscriptions ALTER COLUMN status DROP DEFAULT;
+                ALTER TABLE subscriptions ALTER COLUMN status TYPE subscription_status USING upper(status)::subscription_status;
+                ALTER TABLE subscriptions ALTER COLUMN status SET DEFAULT 'TRIAL'::subscription_status;
             ELSE
                 ALTER TABLE subscriptions ADD COLUMN status subscription_status NOT NULL DEFAULT 'TRIAL';
             END IF;

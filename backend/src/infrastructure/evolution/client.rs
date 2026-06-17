@@ -90,6 +90,59 @@ impl EvolutionClient {
         }
     }
 
+    pub async fn send_media(&self, phone: &str, message: &str, media_url: &str, file_name: &str) -> Result<(), String> {
+        let url = format!("{}/message/sendMedia/{}", self.api_url, self.instance);
+
+        let payload = json!({
+            "number": phone,
+            "mediatype": "document",
+            "media": media_url,
+            "fileName": file_name,
+            "caption": message
+        });
+
+        let mut retries = 3;
+        let mut delay = Duration::from_secs(1);
+
+        loop {
+            let req = self
+                .client
+                .post(&url)
+                .header("apikey", &self.api_key)
+                .json(&payload)
+                .send()
+                .await;
+
+            match req {
+                Ok(resp) => {
+                    if resp.status().is_success() {
+                        return Ok(());
+                    } else {
+                        let status = resp.status();
+                        let text = resp.text().await.unwrap_or_default();
+                        
+                        if status.is_client_error() && status != StatusCode::TOO_MANY_REQUESTS {
+                            return Err(format!(
+                                "Client error sending WhatsApp media: {} - {}",
+                                status, text
+                            ));
+                        }
+                        tracing::warn!("Failed to send WhatsApp media. Status: {}. Response: {}", status, text);
+                    }
+                }
+                Err(e) => tracing::warn!("Network error sending WhatsApp media: {}", e),
+            }
+
+            retries -= 1;
+            if retries == 0 {
+                return Err("Max retries reached for sending WhatsApp media".to_string());
+            }
+
+            sleep(delay).await;
+            delay *= 2;
+        }
+    }
+
     pub async fn create_instance(&self, instance_name: &str) -> Result<serde_json::Value, String> {
         let url = format!("{}/instance/create", self.api_url);
         let payload = json!({

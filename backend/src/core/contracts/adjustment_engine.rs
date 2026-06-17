@@ -97,8 +97,18 @@ impl RentalAdjustmentEngine {
 
         tx.commit().await.map_err(|_: sqlx::Error| AppError::InternalServerError)?;
 
-        // 5. TODO: Queue event for PDF generation
-        // 6. TODO: Queue event for WhatsApp notification
+        // 5. Queue event for PDF generation and WhatsApp notification
+        let event = crate::core::contracts::events::RentAdjustmentApproved {
+            tenant_id: adj_record.tenant_id,
+            contract_id: adj_record.contract_id,
+            adjustment_id,
+            user_id: approved_by,
+        };
+
+        let pool_clone = self.pool.clone();
+        tokio::spawn(async move {
+            crate::core::contracts::events::handle_rent_adjustment_approved(event, pool_clone).await;
+        });
 
         Ok(())
     }

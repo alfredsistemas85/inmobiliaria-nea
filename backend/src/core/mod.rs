@@ -5,3 +5,4 @@ pub mod security;
 pub mod tenant;
 pub mod utils;
 pub mod system_errors;
+pub mod storage;

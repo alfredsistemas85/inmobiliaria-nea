@@ -119,7 +119,7 @@ impl PropertyRepository {
     }
 
     pub async fn soft_delete(&self, id: Uuid, tenant_id: Uuid) -> Result<u64, sqlx::Error> {
-        let result = sqlx::query!(
+        let result: sqlx::postgres::PgQueryResult = sqlx::query!(
             "UPDATE properties SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2",
             id,
             tenant_id

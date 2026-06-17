@@ -48,7 +48,7 @@ pub async fn tenant_middleware(
                         None => {
                             // 2. Fallback to PostgreSQL
                             let sub = sqlx::query!("SELECT status::text FROM subscriptions WHERE tenant_id = $1", tenant_id)
-                                .fetch_optional(&*pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+                                .fetch_optional(&*pool).await.map_err(|_: sqlx::Error| StatusCode::INTERNAL_SERVER_ERROR)?;
                             
                             let st = sub.and_then(|s| s.status).unwrap_or_default();
                             

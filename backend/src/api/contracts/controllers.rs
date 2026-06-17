@@ -12,26 +12,8 @@ use uuid::Uuid;
 use crate::core::security::jwt::Claims;
 use rust_decimal::Decimal;
 
-#[derive(Serialize, sqlx::FromRow)]
-pub struct Contract {
-    pub id: Uuid,
-    pub tenant_id: Uuid,
-    pub property_id: Uuid,
-    pub start_date: NaiveDate,
-    pub end_date: NaiveDate,
-    pub rent_amount: Decimal,
-    pub index_type: Option<String>,
-    pub status: Option<String>,
-}
-
-#[derive(Deserialize)]
-pub struct CreateContractDto {
-    pub property_id: Uuid,
-    pub start_date: NaiveDate,
-    pub end_date: NaiveDate,
-    pub rent_amount: Decimal,
-    pub index_type: String,
-}
+use super::models::Contract;
+use super::dto::CreateContractDto;
 
 pub async fn list_contracts(
     State(pool): State<Arc<PgPool>>,
@@ -40,7 +22,10 @@ pub async fn list_contracts(
     let tenant_id = claims.tenant_id.ok_or(StatusCode::BAD_REQUEST)?;
 
     let contracts = sqlx::query_as::<_, Contract>(
-        "SELECT id, tenant_id, property_id, start_date, end_date, rent_amount, index_type, status FROM contracts WHERE tenant_id = $1"
+        r#"SELECT id, tenant_id, property_id, start_date, end_date, 
+           original_rent_amount, current_rent_amount, adjustment_method, adjustment_frequency,
+           automation_mode, fixed_percentage, first_notification_days, second_notification_days, third_notification_days, requires_manual_approval, next_adjustment_date, last_adjustment_date, status
+           FROM contracts WHERE tenant_id = $1"#
     )
     .bind(tenant_id)
     .fetch_all(&*pool)
@@ -59,17 +44,21 @@ pub async fn create_contract(
 
     let contract = sqlx::query_as::<_, Contract>(
         r#"
-        INSERT INTO contracts (tenant_id, property_id, start_date, end_date, rent_amount, index_type)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING id, tenant_id, property_id, start_date, end_date, rent_amount, index_type, status
+        INSERT INTO contracts (tenant_id, property_id, start_date, end_date, original_rent_amount, current_rent_amount, adjustment_method, adjustment_frequency, automation_mode, fixed_percentage, first_notification_days)
+        VALUES ($1, $2, $3, $4, $5, $5, $6, $7, $8, $9, $10)
+        RETURNING id, tenant_id, property_id, start_date, end_date, original_rent_amount, current_rent_amount, adjustment_method, adjustment_frequency, automation_mode, fixed_percentage, first_notification_days, second_notification_days, third_notification_days, requires_manual_approval, next_adjustment_date, last_adjustment_date, status
         "#
     )
     .bind(tenant_id)
     .bind(payload.property_id)
     .bind(payload.start_date)
     .bind(payload.end_date)
-    .bind(payload.rent_amount)
-    .bind(payload.index_type)
+    .bind(payload.original_rent_amount)
+    .bind(payload.adjustment_method.clone())
+    .bind(payload.adjustment_frequency.clone())
+    .bind(payload.automation_mode.clone())
+    .bind(payload.fixed_percentage)
+    .bind(payload.notification_days_before)
     .fetch_one(&*pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -77,14 +66,13 @@ pub async fn create_contract(
     Ok(Json(contract))
 }
 
-// Retorna un HTML que el frontend puede convertir a PDF o imprimir
 #[derive(sqlx::FromRow)]
 struct ContractPdfData {
     property_title: String,
     start_date: NaiveDate,
     end_date: NaiveDate,
-    rent_amount: Decimal,
-    index_type: Option<String>,
+    current_rent_amount: Option<Decimal>,
+    adjustment_method: Option<crate::api::contracts::models::AdjustmentMethod>,
 }
 
 pub async fn generate_contract_pdf(
@@ -95,7 +83,7 @@ pub async fn generate_contract_pdf(
     let tenant_id = claims.tenant_id.ok_or(StatusCode::BAD_REQUEST)?;
 
     let contract = sqlx::query_as::<_, ContractPdfData>(
-        "SELECT c.start_date, c.end_date, c.rent_amount, c.index_type, p.title as property_title FROM contracts c JOIN properties p ON c.property_id = p.id WHERE c.id = $1 AND c.tenant_id = $2"
+        "SELECT c.start_date, c.end_date, c.current_rent_amount, c.adjustment_method, p.title as property_title FROM contracts c JOIN properties p ON c.property_id = p.id WHERE c.id = $1 AND c.tenant_id = $2"
     )
     .bind(id)
     .bind(tenant_id)
@@ -115,7 +103,7 @@ pub async fn generate_contract_pdf(
                 <h3>2. PRECIO Y PLAZO</h3>
                 <p>El plazo de la locación es desde el {} hasta el {}. El canon locativo se fija en la suma de <strong>${}</strong> mensuales.</p>
                 <h3>3. AJUSTE</h3>
-                <p>El alquiler se actualizará bajo el índice <strong>{}</strong>.</p>
+                <p>El alquiler se actualizará bajo el método <strong>{:?}</strong>.</p>
                 <br><br><br>
                 <div style="display: flex; justify-content: space-around;">
                     <div><hr>Firma Locador</div>
@@ -127,8 +115,8 @@ pub async fn generate_contract_pdf(
         contract.property_title,
         contract.start_date,
         contract.end_date,
-        contract.rent_amount,
-        contract.index_type.unwrap_or_default()
+        contract.current_rent_amount.unwrap_or_default(),
+        contract.adjustment_method
     );
 
     Ok(Html(html))

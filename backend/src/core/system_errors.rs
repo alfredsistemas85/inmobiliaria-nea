@@ -8,6 +8,14 @@ use std::sync::Arc;
 use uuid::Uuid;
 use crate::core::security::jwt::Claims;
 
+#[derive(Debug)]
+pub enum AppError {
+    InternalServerError,
+    NotFoundError,
+    Unauthorized,
+    BadRequest(String),
+}
+
 pub async fn error_logging_middleware(
     State(pool): State<Arc<PgPool>>,
     req: Request,

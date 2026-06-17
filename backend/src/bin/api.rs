@@ -150,6 +150,14 @@ async fn main() {
     let shared_pool = Arc::new(pool);
     tracing::info!("Conectado a PostgreSQL Exitosamente.");
 
+    // Run database migrations automatically
+    tracing::info!("Ejecutando migraciones de base de datos...");
+    sqlx::migrate!("./migrations")
+        .run(&*shared_pool)
+        .await
+        .expect("Error al ejecutar las migraciones de la base de datos");
+    tracing::info!("Migraciones completadas exitosamente.");
+
     // Configurando Rate Limiting
     let redis_url = env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
     let redis_client = redis::Client::open(redis_url).expect("URL de Redis inválida");

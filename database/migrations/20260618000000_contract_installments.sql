@@ -1,0 +1,23 @@
+-- 20260618000000_contract_installments.sql
+
+CREATE TABLE IF NOT EXISTS contract_installments (
+    id UUID PRIMARY KEY,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    contract_id UUID NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
+    due_date DATE NOT NULL,
+    amount DECIMAL(12,2) NOT NULL,
+    status VARCHAR(50) DEFAULT 'PENDING',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS rent_adjustments (
+    id UUID PRIMARY KEY,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    contract_id UUID NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
+    previous_amount DECIMAL(12,2) NOT NULL,
+    new_amount DECIMAL(12,2) NOT NULL,
+    applied_date DATE NOT NULL,
+    status VARCHAR(50) DEFAULT 'APPLIED',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);

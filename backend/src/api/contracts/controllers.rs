@@ -42,6 +42,8 @@ pub async fn create_contract(
 ) -> Result<Json<Contract>, StatusCode> {
     let tenant_id = claims.tenant_id.ok_or(StatusCode::BAD_REQUEST)?;
 
+    let mut tx = pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
     let contract = sqlx::query_as::<_, Contract>(
         r#"
         INSERT INTO contracts (tenant_id, property_id, start_date, end_date, original_rent_amount, current_rent_amount, adjustment_method, adjustment_frequency, automation_mode, fixed_percentage, first_notification_days)
@@ -59,9 +61,47 @@ pub async fn create_contract(
     .bind(payload.automation_mode.clone())
     .bind(payload.fixed_percentage)
     .bind(payload.notification_days_before)
-    .fetch_one(&*pool)
+    .fetch_one(&mut *tx)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    use chrono::Datelike;
+    let mut current_date = payload.start_date;
+    while current_date < payload.end_date {
+        let mut year = current_date.year();
+        let mut month = current_date.month();
+        
+        let due_day = if payload.start_date.day() > 10 { payload.start_date.day() } else { 10 };
+        let due_date = chrono::NaiveDate::from_ymd_opt(year, month, due_day).unwrap_or(current_date);
+        
+        sqlx::query(
+            "INSERT INTO contract_installments (id, tenant_id, contract_id, due_date, amount, status) VALUES ($1, $2, $3, $4, $5, 'PENDING')"
+        )
+        .bind(uuid::Uuid::new_v4())
+        .bind(tenant_id)
+        .bind(contract.id)
+        .bind(due_date)
+        .bind(payload.original_rent_amount)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| {
+            tracing::error!("Error creating installment: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+        if month == 12 {
+            year += 1;
+            month = 1;
+        } else {
+            month += 1;
+        }
+        
+        let next_day = if current_date.day() > 28 { 28 } else { current_date.day() };
+        current_date = chrono::NaiveDate::from_ymd_opt(year, month, next_day)
+            .unwrap_or_else(|| chrono::NaiveDate::from_ymd_opt(year, month, 1).unwrap());
+    }
+
+    tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(contract))
 }

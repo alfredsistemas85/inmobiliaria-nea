@@ -21,10 +21,46 @@ impl RentalAdjustmentEngine {
         Self { pool }
     }
 
-    pub async fn calculate_new_amount(&self, _contract_id: Uuid, _proposed_index_value: Option<Decimal>) -> Result<Decimal, AppError> {
-        // Here we will calculate the new amount. For now, a placeholder logic:
-        // get contract's current_rent_amount, and apply proposed index variation
-        Ok(Decimal::new(0, 0))
+    pub async fn calculate_new_amount(&self, contract_id: Uuid, proposed_index_value: Option<Decimal>) -> Result<Decimal, AppError> {
+        #[derive(sqlx::FromRow)]
+        struct ContractData {
+            current_rent_amount: Option<Decimal>,
+            adjustment_method: Option<crate::api::contracts::models::AdjustmentMethod>,
+            fixed_percentage: Option<Decimal>,
+        }
+
+        let contract = sqlx::query_as::<_, ContractData>(
+            "SELECT current_rent_amount, adjustment_method, fixed_percentage FROM contracts WHERE id = $1"
+        )
+        .bind(contract_id)
+        .fetch_one(&*self.pool)
+        .await
+        .map_err(|_| AppError::NotFoundError)?;
+
+        let current_amount = contract.current_rent_amount.unwrap_or(Decimal::new(0, 0));
+        let method = contract.adjustment_method.unwrap_or(crate::api::contracts::models::AdjustmentMethod::Manual);
+
+        let new_amount = match method {
+            crate::api::contracts::models::AdjustmentMethod::Manual | crate::api::contracts::models::AdjustmentMethod::Custom => {
+                proposed_index_value.unwrap_or(current_amount)
+            },
+            crate::api::contracts::models::AdjustmentMethod::FixedPercentage => {
+                let percentage = contract.fixed_percentage.unwrap_or(Decimal::new(0, 0));
+                current_amount + (current_amount * percentage / Decimal::new(100, 0))
+            },
+            _ => {
+                let provider = crate::core::contracts::index_provider::get_provider();
+                let today = chrono::Utc::now().naive_utc().date();
+                match provider.get_index(method.clone(), today, today).await {
+                    Ok(calc) => {
+                        current_amount + (current_amount * calc.variation_percent / Decimal::new(100, 0))
+                    },
+                    Err(_) => current_amount,
+                }
+            }
+        };
+
+        Ok(new_amount)
     }
 
     pub async fn approve_adjustment(&self, adjustment_id: Uuid, approved_by: Uuid, new_amount: Decimal, notes: Option<String>) -> Result<(), AppError> {

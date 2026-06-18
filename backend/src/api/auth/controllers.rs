@@ -385,7 +385,7 @@ pub async fn setup_password(
 
         let new_hash = hash_password(&payload.password).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        sqlx::query("UPDATE users SET password_hash = $1, onboarding_token = NULL, onboarding_token_expires_at = NULL WHERE id = $2")
+        sqlx::query("UPDATE users SET password_hash = $1, onboarding_token = NULL, onboarding_token_expires_at = NULL, email_verified_at = CURRENT_TIMESTAMP WHERE id = $2")
             .bind(new_hash)
             .bind(id)
             .execute(&*pool)

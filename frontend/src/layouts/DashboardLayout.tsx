@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Home, Users, UserPlus, CalendarDays,
   MessageCircle, Settings, Bell, LogOut, Search, BarChart3, Check, Moon, Sun, UserCog,
-  FileText, DollarSign
+  FileText, DollarSign, Building2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/context/ThemeContext'

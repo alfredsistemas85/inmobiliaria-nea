@@ -19,6 +19,12 @@ export default function SuperAdminTenants() {
   const [newTenant, setNewTenant] = useState({
     business_name: '', cuit: '', dni_responsable: '', first_name: '', last_name: '', admin_email: '', phone: ''
   })
+  const [toastMessage, setToastMessage] = useState<{msg: string, type: 'error' | 'success'} | null>(null)
+
+  const showToast = (msg: string, type: 'error' | 'success' = 'success') => {
+    setToastMessage({ msg, type })
+    setTimeout(() => setToastMessage(null), 5000)
+  }
 
   useEffect(() => {
     loadTenants()
@@ -42,10 +48,12 @@ export default function SuperAdminTenants() {
       setIsSubmitting(true)
       await superadminService.createTenant(newTenant)
       setIsModalOpen(false)
-      loadTenants()
+      showToast("Inmobiliaria creada correctamente", "success")
+      setNewTenant({ business_name: '', cuit: '', dni_responsable: '', first_name: '', last_name: '', admin_email: '', phone: '' })
+      await loadTenants()
     } catch (err: any) {
-      console.error(err)
-      alert(err.message || "Error al crear la inmobiliaria")
+      console.error("Error creating tenant:", err)
+      showToast(`No se pudo crear la inmobiliaria: ${err.message || "Error interno del servidor"}`, "error")
     } finally {
       setIsSubmitting(false)
     }
@@ -198,6 +206,12 @@ export default function SuperAdminTenants() {
           </div>
         </form>
       </Modal>
+
+      {toastMessage && (
+        <div className={`fixed bottom-4 right-4 text-white px-6 py-3 rounded shadow-lg z-50 transition-opacity ${toastMessage.type === 'error' ? 'bg-red-600' : 'bg-green-600'}`}>
+          {toastMessage.msg}
+        </div>
+      )}
     </div>
   )
 }

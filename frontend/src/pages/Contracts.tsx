@@ -3,7 +3,7 @@ import { Plus, Search, Download, CheckCircle, XCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { authService } from '@/services/auth'
+import { fetchApi, API_URL } from '@/services/api'
 
 export default function Contracts() {
   const [activeTab, setActiveTab] = useState<'contracts' | 'pending'>('contracts')
@@ -11,6 +11,7 @@ export default function Contracts() {
   const [pendingAdjustments, setPendingAdjustments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [toastType, setToastType] = useState<'success' | 'error'>('success')
 
   useEffect(() => {
     if (activeTab === 'contracts') {
@@ -20,19 +21,22 @@ export default function Contracts() {
     }
   }, [activeTab])
 
-  const showToast = (msg: string) => {
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToastMessage(msg)
+    setToastType(type)
     setTimeout(() => setToastMessage(null), 3000)
   }
 
   const loadContracts = async () => {
     try {
       setLoading(true)
-      const res = await authService.fetchApi('/contracts')
-      const data = await res.json()
-      setContracts(data)
+      // fetchApi ya parsea el JSON y retorna el objeto directamente
+      const data = await fetchApi('/contracts')
+      setContracts(Array.isArray(data) ? data : data?.items || data?.data || [])
     } catch (err) {
-      console.error(err)
+      console.error('Error al cargar contratos:', err)
+      showToast('Error al cargar contratos', 'error')
+      setContracts([])
     } finally {
       setLoading(false)
     }
@@ -41,11 +45,12 @@ export default function Contracts() {
   const loadPendingAdjustments = async () => {
     try {
       setLoading(true)
-      const res = await authService.fetchApi('/contracts/adjustments/pending')
-      const data = await res.json()
-      setPendingAdjustments(data.items || [])
+      const data = await fetchApi('/contracts/adjustments/pending')
+      setPendingAdjustments(data?.items || data?.data || (Array.isArray(data) ? data : []))
     } catch (err) {
-      console.error(err)
+      console.error('Error al cargar ajustes pendientes:', err)
+      showToast('Error al cargar ajustes pendientes', 'error')
+      setPendingAdjustments([])
     } finally {
       setLoading(false)
     }
@@ -53,48 +58,42 @@ export default function Contracts() {
 
   const handleApprove = async (id: string) => {
     try {
-      const res = await authService.fetchApi(`/contracts/adjustments/${id}/approve`, {
+      await fetchApi(`/contracts/adjustments/${id}/approve`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ new_amount: null, notes: "Aprobado manualmente" }) // will use calculated amount from engine if new_amount is null
+        body: JSON.stringify({ new_amount: null, notes: 'Aprobado manualmente' }),
       })
-      if (res.ok) {
-        showToast("Ajuste aprobado correctamente.")
-        loadPendingAdjustments()
-      } else {
-        showToast("Error al aprobar el ajuste.")
-      }
+      showToast('Ajuste aprobado correctamente.', 'success')
+      loadPendingAdjustments()
     } catch (err) {
-      console.error(err)
-      showToast("Error de conexión.")
+      console.error('Error al aprobar ajuste:', err)
+      showToast('Error al aprobar el ajuste.', 'error')
     }
   }
 
   const handleReject = async (id: string) => {
-    const reason = window.prompt("Motivo de rechazo:")
-    if (reason === null) return // cancelled
+    const reason = window.prompt('Motivo de rechazo:')
+    if (reason === null) return // cancelado
     try {
-      const res = await authService.fetchApi(`/contracts/adjustments/${id}/reject`, {
+      await fetchApi(`/contracts/adjustments/${id}/reject`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason })
+        body: JSON.stringify({ reason }),
       })
-      if (res.ok) {
-        showToast("Ajuste rechazado.")
-        loadPendingAdjustments()
-      } else {
-        showToast("Error al rechazar el ajuste.")
-      }
+      showToast('Ajuste rechazado.', 'success')
+      loadPendingAdjustments()
     } catch (err) {
-      console.error(err)
-      showToast("Error de conexión.")
+      console.error('Error al rechazar ajuste:', err)
+      showToast('Error al rechazar el ajuste.', 'error')
     }
   }
 
   return (
     <div className="space-y-6 relative">
       {toastMessage && (
-        <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-md shadow-lg z-50 transition-opacity">
+        <div
+          className={`fixed bottom-4 right-4 px-4 py-2 rounded-md shadow-lg z-50 transition-opacity text-white ${
+            toastType === 'error' ? 'bg-red-600' : 'bg-green-600'
+          }`}
+        >
           {toastMessage}
         </div>
       )}
@@ -157,10 +156,16 @@ export default function Contracts() {
                   </tr>
                 </thead>
                 <tbody>
-                  {contracts.length === 0 ? (
+                  {loading ? (
                     <tr>
                       <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">
-                        {loading ? 'Cargando...' : 'No hay contratos registrados.'}
+                        Cargando...
+                      </td>
+                    </tr>
+                  ) : contracts.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">
+                        No hay contratos registrados.
                       </td>
                     </tr>
                   ) : (
@@ -176,7 +181,17 @@ export default function Contracts() {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <Button variant="ghost" size="sm" className="gap-2" onClick={() => window.open(`http://localhost:3000/api/contracts/${contract.id}/pdf`, '_blank')}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-2"
+                            onClick={() =>
+                              window.open(
+                                `${API_URL}/api/contracts/${contract.id}/pdf`,
+                                '_blank'
+                              )
+                            }
+                          >
                             <Download className="h-4 w-4" /> PDF
                           </Button>
                         </td>
@@ -212,10 +227,16 @@ export default function Contracts() {
                   </tr>
                 </thead>
                 <tbody>
-                  {pendingAdjustments.length === 0 ? (
+                  {loading ? (
                     <tr>
                       <td colSpan={7} className="px-6 py-8 text-center text-muted-foreground">
-                        {loading ? 'Cargando...' : 'No hay ajustes pendientes.'}
+                        Cargando...
+                      </td>
+                    </tr>
+                  ) : pendingAdjustments.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-8 text-center text-muted-foreground">
+                        No hay ajustes pendientes.
                       </td>
                     </tr>
                   ) : (
@@ -228,10 +249,20 @@ export default function Contracts() {
                         <td className="px-6 py-4 font-semibold text-primary">${adj.new_rent}</td>
                         <td className="px-6 py-4">{adj.effective_date}</td>
                         <td className="px-6 py-4 flex gap-2">
-                          <Button variant="outline" size="sm" className="text-green-600 border-green-200 hover:bg-green-50" onClick={() => handleApprove(adj.adjustment_id)}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-green-600 border-green-200 hover:bg-green-50"
+                            onClick={() => handleApprove(adj.adjustment_id)}
+                          >
                             <CheckCircle className="h-4 w-4 mr-1" /> Aprobar
                           </Button>
-                          <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleReject(adj.adjustment_id)}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-red-600 border-red-200 hover:bg-red-50"
+                            onClick={() => handleReject(adj.adjustment_id)}
+                          >
                             <XCircle className="h-4 w-4 mr-1" /> Rechazar
                           </Button>
                         </td>

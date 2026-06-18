@@ -24,28 +24,56 @@ export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [activity, setActivity] = useState<DashboardActivity[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const [statsRes, activityRes] = await Promise.all([
+        dashboardService.getStats(),
+        dashboardService.getActivity(),
+      ])
+      // La API puede retornar null si hay redirección por 401
+      if (!statsRes) throw new Error('No se pudieron cargar las métricas. Verifica tu sesión.')
+      setStats(statsRes)
+      setActivity(Array.isArray(activityRes) ? activityRes : [])
+    } catch (err: any) {
+      console.error('Error loading dashboard data:', err)
+      setError(err.message || 'Error al cargar el dashboard')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [statsRes, activityRes] = await Promise.all([
-          dashboardService.getStats(),
-          dashboardService.getActivity(),
-        ])
-        setStats(statsRes)
-        setActivity(activityRes)
-      } catch (error) {
-        console.error('Error loading dashboard data:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
     loadData()
   }, [])
 
-  if (loading || !stats) {
-    return <div className="p-4 text-muted-foreground">Cargando métricas...</div>
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-muted-foreground gap-3">
+        <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+        <span>Cargando métricas...</span>
+      </div>
+    )
+  }
+
+  if (error || !stats) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 gap-4">
+        <div className="p-4 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-md text-center max-w-md">
+          <p className="font-semibold mb-1">Error al cargar el dashboard</p>
+          <p className="text-sm">{error || 'No se recibieron datos del servidor'}</p>
+        </div>
+        <button
+          onClick={loadData}
+          className="px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          Reintentar
+        </button>
+      </div>
+    )
   }
 
   const STATS_UI = [

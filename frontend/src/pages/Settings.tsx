@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { authService } from '@/services/auth'
 import { usersService } from '@/services/users'
+import { fetchApi } from '@/services/api'
 import WhatsAppSettings from './WhatsAppSettings'
 
 export default function Settings() {
@@ -96,7 +97,6 @@ export default function Settings() {
     setError('')
     setSuccess('')
     try {
-      const { fetchApi } = await import('@/services/api')
       await fetchApi('/payments/config', {
         method: 'PUT',
         body: JSON.stringify({
@@ -140,7 +140,10 @@ export default function Settings() {
             >
               <Shield className="h-4 w-4" /> Seguridad
             </button>
-            <button className="flex items-center gap-2 text-muted-foreground hover:bg-background hover:text-foreground px-3 py-2.5 rounded-md text-sm font-medium shrink-0 transition-colors w-full text-left">
+            <button 
+              onClick={() => setActiveTab('notificaciones')}
+              className={`flex items-center gap-2 px-3 py-2.5 rounded-md text-sm font-medium shrink-0 transition-colors w-full text-left ${activeTab === 'notificaciones' ? 'bg-blue-50 text-blue-700' : 'text-muted-foreground hover:bg-background hover:text-foreground'}`}
+            >
               <Bell className="h-4 w-4" /> Notificaciones
             </button>
             <button 
@@ -180,6 +183,34 @@ export default function Settings() {
             <div className="p-4 text-green-700 bg-green-50 border border-green-100 rounded-md">
               {success}
             </div>
+          )}
+
+          {activeTab === 'notificaciones' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Preferencias de Notificaciones</CardTitle>
+                <CardDescription>
+                  Controla qué notificaciones recibirás dentro de la plataforma.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {[
+                  { label: 'Nuevo Lead asignado', description: 'Recibe una notificación cuando te asignen un lead.' },
+                  { label: 'Nueva cita agendada', description: 'Recibe una notificación cuando se agende una visita.' },
+                  { label: 'Mensaje de WhatsApp', description: 'Recibe alertas de nuevos mensajes entrantes.' },
+                  { label: 'Vencimiento de contrato', description: 'Alerta 30 días antes del vencimiento de un contrato.' },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center justify-between py-3 border-b border-border last:border-0">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{item.label}</p>
+                      <p className="text-xs text-muted-foreground">{item.description}</p>
+                    </div>
+                    <div className="text-xs text-muted-foreground italic">Activado</div>
+                  </div>
+                ))}
+                <p className="text-xs text-muted-foreground pt-2">La configuración granular de notificaciones estará disponible próximamente.</p>
+              </CardContent>
+            </Card>
           )}
 
           {activeTab === 'whatsapp' && <WhatsAppSettings />}
@@ -275,7 +306,6 @@ export default function Settings() {
                   onClick={async () => {
                     try {
                       setSaving(true);
-                      const { fetchApi } = await import('@/services/api');
                       const res = await fetchApi('/payments/checkout/subscription', { method: 'POST' });
                       if (res && res.init_point) {
                         window.location.href = res.init_point;

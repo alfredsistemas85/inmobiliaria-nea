@@ -3,13 +3,14 @@ import { DollarSign, Search, CheckCircle, CreditCard } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { authService } from '@/services/auth'
+import { fetchApi } from '@/services/api'
 
 export default function Financials() {
   const [activeTab, setActiveTab] = useState<'invoices' | 'liquidations'>('invoices')
   const [invoices, setInvoices] = useState<any[]>([])
   const [liquidations, setLiquidations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     if (activeTab === 'invoices') {
@@ -22,11 +23,14 @@ export default function Financials() {
   const loadInvoices = async () => {
     try {
       setLoading(true)
-      const res = await authService.fetchApi('/financials/invoices')
-      const data = await res.json()
-      setInvoices(data)
-    } catch (err) {
-      console.error(err)
+      setError('')
+      // fetchApi ya parsea el JSON y retorna el objeto directamente (NO es una Response)
+      const data = await fetchApi('/financials/invoices')
+      setInvoices(Array.isArray(data) ? data : data?.items || data?.data || [])
+    } catch (err: any) {
+      console.error('Error al cargar facturas:', err)
+      setError(err.message || 'Error al cargar cobros')
+      setInvoices([])
     } finally {
       setLoading(false)
     }
@@ -35,11 +39,13 @@ export default function Financials() {
   const loadLiquidations = async () => {
     try {
       setLoading(true)
-      const res = await authService.fetchApi('/financials/liquidations')
-      const data = await res.json()
-      setLiquidations(data)
-    } catch (err) {
-      console.error(err)
+      setError('')
+      const data = await fetchApi('/financials/liquidations')
+      setLiquidations(Array.isArray(data) ? data : data?.items || data?.data || [])
+    } catch (err: any) {
+      console.error('Error al cargar liquidaciones:', err)
+      setError(err.message || 'Error al cargar liquidaciones')
+      setLiquidations([])
     } finally {
       setLoading(false)
     }
@@ -47,22 +53,23 @@ export default function Financials() {
 
   const markAsPaid = async (id: string) => {
     try {
-      await authService.fetchApi(`/financials/invoices/${id}/pay_manual`, { method: 'POST' })
+      await fetchApi(`/financials/invoices/${id}/pay_manual`, { method: 'POST' })
       loadInvoices()
     } catch (err) {
-      alert("Error al marcar como pagado")
+      alert('Error al marcar como pagado')
     }
   }
 
   const payWithMP = async (id: string) => {
     try {
-      const res = await authService.fetchApi(`/payments/checkout/rent/${id}`, { method: 'POST' })
-      const data = await res.json()
-      if (data.init_point) {
+      const data = await fetchApi(`/payments/checkout/rent/${id}`, { method: 'POST' })
+      if (data?.init_point) {
         window.location.href = data.init_point
+      } else {
+        alert('No se pudo generar el link de pago')
       }
     } catch (err) {
-      alert("Error al generar pago")
+      alert('Error al generar pago')
     }
   }
 
@@ -92,6 +99,12 @@ export default function Financials() {
           Liquidaciones a Propietarios
         </button>
       </div>
+
+      {error && (
+        <div className="p-4 text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400 border border-red-100 dark:border-red-800 rounded-md">
+          {error}
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -129,7 +142,13 @@ export default function Financials() {
                 </tr>
               </thead>
               <tbody>
-                {activeTab === 'invoices' ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">
+                      Cargando...
+                    </td>
+                  </tr>
+                ) : activeTab === 'invoices' ? (
                   invoices.length === 0 ? (
                     <tr><td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">No hay cobros registrados.</td></tr>
                   ) : (

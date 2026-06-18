@@ -1,4 +1,4 @@
-﻿import { fetchApi } from './api'
+import { fetchApi } from './api'
 
 export interface ReportFilters {
   date_from?: string
@@ -17,8 +17,9 @@ export const reportsService = {
     if (filters.assigned_to) params.append('assigned_to', filters.assigned_to)
 
     const token = localStorage.getItem('token')
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
-    const url = `${baseUrl}/reports/${type}?${params.toString()}`
+    // VITE_API_URL apunta al host (ej. http://localhost:3000), agregamos /api explícitamente
+    const apiBase = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/$/, '')
+    const url = `${apiBase}/api/reports/${type}?${params.toString()}`
 
     const response = await fetch(url, {
       headers: {

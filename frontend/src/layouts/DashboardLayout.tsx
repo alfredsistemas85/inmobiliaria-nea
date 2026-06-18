@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Home, Users, UserPlus, CalendarDays,
   MessageCircle, Settings, Bell, LogOut, Search, BarChart3, Check, Moon, Sun, UserCog,
-  FileText, DollarSign, Building2
+  FileText, DollarSign, Building2, FolderOpen
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/context/ThemeContext'
@@ -16,7 +16,7 @@ const NAV_ITEMS = [
   { name: 'Leads',        path: '/leads',        icon: UserPlus },
   { name: 'Citas',        path: '/appointments', icon: CalendarDays },
   { name: 'Contratos',    path: '/contracts',    icon: FileText },
-  { name: 'Documentos',   path: '/documents',    icon: FileText },
+  { name: 'Documentos',   path: '/documents',    icon: FolderOpen },
   { name: 'Finanzas',     path: '/financials',   icon: DollarSign },
   { name: 'WhatsApp',     path: '/whatsapp',     icon: MessageCircle },
   { name: 'Reportes',     path: '/reports',      icon: BarChart3 },

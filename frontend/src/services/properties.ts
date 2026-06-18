@@ -10,44 +10,50 @@ export interface Property {
   price: number;
   currency: string;
   status: string;
+  location?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  area_sqm?: number;
+  views?: number;
+  images?: { url: string }[];
   created_at: string;
 }
 
 export const propertiesService = {
+  // NOTA: fetchApi ya agrega /api automáticamente. No incluir /api aquí.
   getAll: async (limit: number = 20, offset: number = 0) => {
-    return fetchApi(`/api/properties?limit=${limit}&offset=${offset}`, {
+    return fetchApi(`/properties?limit=${limit}&offset=${offset}`, {
       method: 'GET',
     });
   },
   getById: async (id: string) => {
-    return fetchApi(`/api/properties/${id}`, {
+    return fetchApi(`/properties/${id}`, {
       method: 'GET',
     });
   },
   create: async (data: any) => {
-    return fetchApi('/api/properties', {
+    return fetchApi('/properties', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   },
   update: async (id: string, data: any) => {
-    return fetchApi(`/api/properties/${id}`, {
+    return fetchApi(`/properties/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
   },
   delete: async (id: string) => {
-    return fetchApi(`/api/properties/${id}`, {
+    return fetchApi(`/properties/${id}`, {
       method: 'DELETE',
     });
   },
   uploadImage: async (id: string, file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    
-    // fetchApi envía Content-Type application/json por defecto si es objeto.
-    // Para FormData, tenemos que dejar que el browser asigne el boundary multipart,
-    // así que no seteamos Content-Type.
+
+    // Para FormData, el browser asigna el Content-Type multipart/form-data con boundary.
+    // No seteamos Content-Type manualmente.
     const token = localStorage.getItem('token');
     const headers: any = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -59,12 +65,12 @@ export const propertiesService = {
       body: formData,
     });
     if (!response.ok) throw new Error('Error al subir imagen');
-    return response;
+    return response.json().catch(() => null);
   },
   uploadDocument: async (id: string, file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    
+
     const token = localStorage.getItem('token');
     const headers: any = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -76,6 +82,6 @@ export const propertiesService = {
       body: formData,
     });
     if (!response.ok) throw new Error('Error al subir documento');
-    return response;
-  }
+    return response.json().catch(() => null);
+  },
 };

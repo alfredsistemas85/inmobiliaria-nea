@@ -27,34 +27,30 @@ export interface UpdateUserPayload {
 }
 
 export const usersService = {
+  // NOTA: fetchApi ya agrega /api automáticamente. No incluir /api aquí.
   getUsers: async () => {
-    const data = await fetchApi('/api/users', { method: 'GET' });
-    return data;
+    return fetchApi('/users', { method: 'GET' });
   },
-  
+
   getUser: async (id: string) => {
-    const data = await fetchApi(`/api/users/${id}`, { method: 'GET' });
-    return data;
+    return fetchApi(`/users/${id}`, { method: 'GET' });
   },
 
   createUser: async (payload: CreateUserPayload) => {
-    const data = await fetchApi('/api/users', {
+    return fetchApi('/users', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
-    return data;
   },
 
   updateUser: async (id: string, payload: UpdateUserPayload) => {
-    const data = await fetchApi(`/api/users/${id}`, {
+    return fetchApi(`/users/${id}`, {
       method: 'PUT',
       body: JSON.stringify(payload),
     });
-    return data;
   },
 
   deleteUser: async (id: string) => {
-    const data = await fetchApi(`/api/users/${id}`, { method: 'DELETE' });
-    return data;
-  }
+    return fetchApi(`/users/${id}`, { method: 'DELETE' });
+  },
 };

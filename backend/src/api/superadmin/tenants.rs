@@ -133,7 +133,7 @@ async fn create_tenant(
     
     if let Err(e) = sqlx::query(
         r#"INSERT INTO subscriptions (tenant_id, plan_type, status, trial_ends_at)
-           VALUES ($1, 'BASIC', 'TRIAL', $2)"#,
+           VALUES ($1, 'BASIC'::plan_type, 'TRIAL'::subscription_status, $2)"#,
     )
     .bind(tenant.id)
     .bind(trial_ends_at)
@@ -151,7 +151,7 @@ async fn create_tenant(
 
     if let Err(e) = sqlx::query(
         r#"INSERT INTO users (id, tenant_id, role, email, password_hash, first_name, last_name, is_active, onboarding_token, onboarding_token_expires_at)
-           VALUES ($1, $2, 'ADMIN_INMOBILIARIA', $3, '', $4, $5, true, $6, $7)"#,
+           VALUES ($1, $2, 'ADMIN_INMOBILIARIA'::user_role, $3, '', $4, $5, true, $6, $7)"#,
     )
     .bind(user_id)
     .bind(tenant.id)
@@ -172,8 +172,8 @@ async fn create_tenant(
     }
 
     if let Err(e) = sqlx::query(
-        r#"INSERT INTO audit_logs (tenant_id, user_id, action, entity_type, entity_id, new_data)
-           VALUES ($1, $2, 'TENANT_CREATED_BY_SUPERADMIN', 'tenant', $1, $3)"#,
+        r#"INSERT INTO audit_logs (tenant_id, user_id, action, new_data)
+           VALUES ($1, $2, 'TENANT_CREATED_BY_SUPERADMIN', $3)"#,
     )
     .bind(tenant.id)
     .bind(claims.sub)
@@ -237,7 +237,7 @@ async fn update_tenant_status(
 
     tracing::info!("TENANT_STATUS_UPDATED: tenant_id={} new_status={}", id, payload.status);
 
-    Ok(StatusCode::OK)
+    Ok(StatusCode::NO_CONTENT)
 }
 
 pub fn router(pool: Arc<PgPool>) -> Router {

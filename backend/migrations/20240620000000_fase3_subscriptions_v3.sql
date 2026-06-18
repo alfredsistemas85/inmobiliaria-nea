@@ -46,8 +46,6 @@ BEGIN
         END IF;
         
         -- We do NOT drop plan_id to keep the data safe, just mark it as deprecated in application logic
-        -- BUT we MUST drop the NOT NULL constraint since new tenants will not have a plan_id
-        ALTER TABLE subscriptions ALTER COLUMN plan_id DROP NOT NULL;
 
     END IF;
 END $$;

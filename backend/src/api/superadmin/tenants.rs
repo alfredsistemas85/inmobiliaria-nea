@@ -192,7 +192,9 @@ async fn create_tenant(
         return Err((StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "Error interno"}))).into_response());
     }
 
-    let magic_link = format!("http://localhost:5173/onboarding?token={}", onboarding_token);
+    let frontend_url = std::env::var("FRONTEND_URL")
+        .unwrap_or_else(|_| "https://inmonea.agentech.ar".to_string());
+    let magic_link = format!("{}/onboarding?token={}", frontend_url, onboarding_token);
     tracing::info!("ONBOARDING EMAIL SIMULADO: Enviar a {} link: {}", payload.admin_email, magic_link);
 
     // Send WhatsApp if phone is available

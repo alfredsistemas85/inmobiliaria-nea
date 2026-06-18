@@ -171,12 +171,14 @@ async fn create_tenant(
         return Err((StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "Error al crear administrador"}))).into_response());
     }
 
+    let audit_user_id = if claims.sub == Uuid::nil() { None } else { Some(claims.sub) };
+    
     if let Err(e) = sqlx::query(
         r#"INSERT INTO audit_logs (tenant_id, user_id, action, new_data)
            VALUES ($1, $2, 'TENANT_CREATED_BY_SUPERADMIN', $3)"#,
     )
     .bind(tenant.id)
-    .bind(claims.sub)
+    .bind(audit_user_id)
     .bind(serde_json::json!({ "business_name": payload.business_name, "cuit": payload.cuit }))
     .execute(&mut *tx)
     .await

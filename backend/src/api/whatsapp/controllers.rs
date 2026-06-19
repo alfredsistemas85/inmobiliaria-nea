@@ -515,7 +515,10 @@ pub async fn create_instance(
     let res = evo
         .create_instance(&payload.instance_name)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|e| {
+            tracing::error!("Error creating Evolution instance: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     let qr = res.pointer("/qrcode/base64").and_then(|v| v.as_str());
     let repo = WhatsAppRepository::new(pool);

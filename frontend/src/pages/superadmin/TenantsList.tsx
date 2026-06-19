@@ -59,7 +59,7 @@ export default function SuperAdminTenants() {
     }
   }
 
-  const filteredTenants = tenants.filter(t => {
+  const filteredTenants = (tenants || []).filter(t => {
     const matchesSearch = t.business_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           t.cuit.includes(searchTerm)
     if (filter === 'ALL') return matchesSearch

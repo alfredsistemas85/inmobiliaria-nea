@@ -26,7 +26,7 @@ export default function SuperAdminSupport() {
     loadTickets()
   }, [])
 
-  const filteredTickets = tickets.filter(t => 
+  const filteredTickets = (tickets || []).filter(t => 
     t.subject.toLowerCase().includes(searchTerm.toLowerCase())
   )
 

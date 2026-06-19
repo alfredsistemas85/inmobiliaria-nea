@@ -132,7 +132,7 @@ export default function Financials() {
     try {
       const data = await fetchApi('/contracts')
       const list: Contract[] = Array.isArray(data) ? data : data?.data || []
-      setContracts(list.filter(c => !c.status || c.status === 'Activo' || c.status === 'active'))
+      setContracts(Array.isArray(list) ? list.filter(c => !c.status || c.status === 'Activo' || c.status === 'active') : [])
     } catch {
       setContracts([])
     }

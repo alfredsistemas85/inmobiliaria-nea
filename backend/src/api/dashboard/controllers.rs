@@ -162,7 +162,7 @@ pub async fn get_activity(
     struct AuditRow {
         id: uuid::Uuid,
         action: String,
-        entity_type: String,
+        entity_type: Option<String>,
         created_at: chrono::DateTime<chrono::Utc>,
     }
 
@@ -183,7 +183,8 @@ pub async fn get_activity(
     let activity = logs
         .into_iter()
         .map(|log| {
-            let title = match (log.entity_type.as_str(), log.action.as_str()) {
+            let e_type = log.entity_type.unwrap_or_else(|| "system".to_string());
+            let title = match (e_type.as_str(), log.action.as_str()) {
                 ("client", "CREATE_CLIENT") => "Nuevo cliente registrado".to_string(),
                 ("client", "UPDATE_CLIENT") => "Cliente actualizado".to_string(),
                 ("lead", "CREATE_LEAD") => "Nuevo lead recibido".to_string(),
@@ -196,7 +197,7 @@ pub async fn get_activity(
                 id: log.id.to_string(),
                 title,
                 time: log.created_at.to_rfc3339(),
-                r#type: log.entity_type,
+                r#type: e_type,
             }
         })
         .collect();

@@ -39,7 +39,7 @@ export default function Leads() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null)
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<LeadFormData>({
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<LeadFormData>({
     resolver: zodResolver(leadSchema),
   })
 
@@ -176,7 +176,7 @@ export default function Leads() {
         ) : (
           <div className="flex gap-4 h-full min-w-max">
             {PIPELINE_STAGES.map((column) => {
-              const columnLeads = leads.filter(l => (l.status || 'NUEVO') === column.id)
+              const columnLeads = (leads || []).filter(l => (l.status || 'NUEVO') === column.id)
 
               return (
                 <div 
@@ -284,11 +284,11 @@ export default function Leads() {
           </div>
 
           <div className="pt-4 flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} disabled={isSubmitting}>
               Cancelar
             </Button>
-            <Button type="submit">
-              Crear Lead
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Guardando...' : 'Crear Lead'}
             </Button>
           </div>
         </form>

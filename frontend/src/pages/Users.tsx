@@ -16,6 +16,7 @@ const ROLES = [
 export default function Users() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
 
   // Formularios
@@ -49,6 +50,7 @@ export default function Users() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSaving(true)
     try {
       if (editingUser) {
         await usersService.updateUser(editingUser.id, {
@@ -72,6 +74,8 @@ export default function Users() {
       loadUsers()
     } catch (err) {
       alert("Error al guardar usuario. Verifique los datos o si el email ya existe.");
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -112,7 +116,7 @@ export default function Users() {
     setShowForm(true)
   }
 
-  const filteredUsers = users.filter(u => 
+  const filteredUsers = (users || []).filter(u => 
     (u.first_name?.toLowerCase() || '').includes(search.toLowerCase()) || 
     (u.last_name?.toLowerCase() || '').includes(search.toLowerCase()) || 
     (u.email?.toLowerCase() || '').includes(search.toLowerCase())
@@ -188,8 +192,10 @@ export default function Users() {
               </div>
 
               <div className="pt-4 flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Cancelar</Button>
-                <Button type="submit">Guardar Usuario</Button>
+                <Button type="button" variant="outline" onClick={() => setShowForm(false)} disabled={saving}>Cancelar</Button>
+                <Button type="submit" disabled={saving}>
+                  {saving ? 'Guardando...' : 'Guardar Usuario'}
+                </Button>
               </div>
             </form>
           </CardContent>

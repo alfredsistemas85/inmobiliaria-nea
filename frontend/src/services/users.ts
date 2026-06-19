@@ -1,4 +1,4 @@
-import { fetchApi } from './api';
+import { fetchApi } from '@/services/api';
 
 export interface User {
   id: string;

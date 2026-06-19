@@ -20,7 +20,8 @@ export default function Properties() {
     try {
       setLoading(true)
       const data = await propertiesService.getAll()
-      setProperties(data || [])
+      const list = Array.isArray(data) ? data : (data?.data || data?.items || [])
+      setProperties(list)
     } catch (err: any) {
       setError(err.message || 'Error al cargar propiedades')
     } finally {

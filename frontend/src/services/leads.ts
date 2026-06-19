@@ -1,4 +1,4 @@
-import { fetchApi } from './api'
+import { fetchApi } from '@/services/api';
 import { PaginatedResponse } from './clients'
 
 export interface Lead {

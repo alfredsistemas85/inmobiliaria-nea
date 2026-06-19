@@ -130,7 +130,7 @@ export default function Contracts() {
       const data = await propertiesService.getAll(100, 0)
       const list = Array.isArray(data) ? data : data?.data || []
       // Solo propiedades disponibles
-      setProperties(list.filter((p: any) => p.status !== 'Alquilada' && p.status !== 'Vendida'))
+      setProperties(Array.isArray(list) ? list.filter((p: any) => p.status !== 'Alquilada' && p.status !== 'Vendida') : [])
     } catch {
       setProperties([])
     }

@@ -1,5 +1,14 @@
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+export class ApiError extends Error {
+  public status?: number;
+  constructor(message: string, status?: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
 let isRefreshing = false;
 let refreshSubscribers: ((token: string | null) => void)[] = [];
 
@@ -126,9 +135,10 @@ export const fetchApi = async (endpoint: string, options: RequestInit = {}): Pro
 
       if (!retryResponse.ok) {
         const errData = await retryResponse.json().catch(() => null);
-        const error = new Error(errData?.error || errData?.message || 'Error en la petición');
-        (error as any).status = retryResponse.status;
-        throw error;
+        throw new ApiError(
+          errData?.error || errData?.message || 'Error en la petición',
+          retryResponse.status
+        );
       }
       if (retryResponse.status === 204) return null;
       return retryResponse.json();
@@ -146,9 +156,10 @@ export const fetchApi = async (endpoint: string, options: RequestInit = {}): Pro
   // ── Otros errores HTTP ────────────────────────────────────────────────────
   if (!response.ok) {
     const errorData = await response.json().catch(() => null);
-    const error = new Error(errorData?.error || errorData?.message || 'Error en la petición');
-    (error as any).status = response.status;
-    throw error;
+    throw new ApiError(
+      errorData?.error || errorData?.message || 'Error en la petición',
+      response.status
+    );
   }
 
   if (response.status === 204) return null;

@@ -31,7 +31,7 @@ export default function Clients() {
 
   const limit = 10
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<ClientFormData>({
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<ClientFormData>({
     resolver: zodResolver(clientSchema),
   })
 
@@ -245,11 +245,11 @@ export default function Clients() {
           </div>
 
           <div className="pt-4 flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} disabled={isSubmitting}>
               Cancelar
             </Button>
-            <Button type="submit">
-              {editingClient ? 'Guardar Cambios' : 'Crear Cliente'}
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Guardando...' : editingClient ? 'Guardar Cambios' : 'Crear Cliente'}
             </Button>
           </div>
         </form>

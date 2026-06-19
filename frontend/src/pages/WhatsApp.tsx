@@ -12,7 +12,7 @@ export default function WhatsApp() {
   const [sending, setSending] = useState(false)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true)
+  const isAutoScrollEnabledRef = useRef(true)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   // Filters
@@ -48,7 +48,7 @@ export default function WhatsApp() {
     try {
       const res = await whatsappService.getMessages(convId, 1, 50)
       setMessages(res.data)
-      if (!isPolling || isAutoScrollEnabled) {
+      if (!isPolling || isAutoScrollEnabledRef.current) {
         scrollToBottom()
       }
     } catch (error) {
@@ -63,7 +63,7 @@ export default function WhatsApp() {
   useEffect(() => {
     if (selectedConv) {
       loadMessages(selectedConv.id)
-      setIsAutoScrollEnabled(true)
+      isAutoScrollEnabledRef.current = true
     } else {
       setMessages([])
     }
@@ -90,14 +90,14 @@ export default function WhatsApp() {
     timeoutId = setTimeout(poll, POLLING_INTERVAL)
 
     return () => clearTimeout(timeoutId)
-  }, [selectedConv, isAutoScrollEnabled])
+  }, [selectedConv])
 
   // Handle scroll events to disable auto-scroll if user scrolls up
   const handleScroll = () => {
     if (!scrollContainerRef.current) return
     const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current
     const isAtBottom = scrollHeight - scrollTop - clientHeight < 50
-    setIsAutoScrollEnabled(isAtBottom)
+    isAutoScrollEnabledRef.current = isAtBottom
   }
 
   const scrollToBottom = () => {
@@ -131,7 +131,7 @@ export default function WhatsApp() {
   }
 
   // Filter conversations
-  const filteredConversations = conversations.filter(conv => {
+  const filteredConversations = (conversations || []).filter(conv => {
     // 1. Search filter
     if (searchQuery) {
       const q = searchQuery.toLowerCase()
@@ -181,7 +181,7 @@ export default function WhatsApp() {
             {['ALL', 'UNREAD', 'UNASSIGNED', 'MINE', 'CLOSED'].map((tab) => (
               <button
                 key={tab}
-                onClick={() => setFilterTab(tab as any)}
+                onClick={() => setFilterTab(tab as 'ALL' | 'UNREAD' | 'UNASSIGNED' | 'MINE' | 'CLOSED')}
                 className={`text-xs px-3 py-1.5 rounded-full whitespace-nowrap transition-colors ${
                   filterTab === tab ? 'bg-slate-900 text-white' : 'bg-card text-muted-foreground hover:bg-muted border border-border'
                 }`}

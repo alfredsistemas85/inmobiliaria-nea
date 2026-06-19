@@ -1,4 +1,4 @@
-import { fetchApi } from './api'
+import { fetchApi } from '@/services/api';
 
 /**
  * Modelo de notificación que refleja exactamente la respuesta del backend.

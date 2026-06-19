@@ -63,15 +63,17 @@ function RequireSuperAdmin({ children }: { children: React.ReactNode }) {
 
 import VerifyEmail from '@/pages/VerifyEmail'
 import Onboarding from '@/pages/Onboarding'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Root Redirect */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Routes>
+          {/* Root Redirect */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
 
-        <Route path="/login" element={<Login />} />
+          <Route path="/login" element={<Login />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/onboarding" element={<Onboarding />} />
 
@@ -119,9 +121,10 @@ function App() {
         </Route>
 
         {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </ErrorBoundary>
   )
 }
 

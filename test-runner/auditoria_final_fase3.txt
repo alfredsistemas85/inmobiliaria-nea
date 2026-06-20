@@ -1,0 +1,70 @@
+========================================
+AUDITORÍA FINAL FASE 3
+========================================
+
+--- PREPARANDO ENTORNO ---
+
+1. PRUEBA DE DUPLICACIÓN DE WEBHOOKS
+[HTTP POST] http://localhost:3000/api/whatsapp/webhook/0ec5b372-c66a-4075-9ed4-d0dd8dbfd6a8
+[HTTP POST] http://localhost:3000/api/whatsapp/webhook/0ec5b372-c66a-4075-9ed4-d0dd8dbfd6a8
+Cantidad de mensajes insertados con id MSG-DUP-1781415377296: 1 (Esperado: 1)
+
+2. PRUEBA CROSS-TENANT SOBRE CONVERSACIONES
+[HTTP GET] http://localhost:3000/api/whatsapp/conversations
+[HTTP GET] http://localhost:3000/api/whatsapp/conversations/2e21d842-ba22-4dde-a37e-6ae58d011922/messages
+Intento B lee A: Status 200. Data length: 0 (Esperado: 0 o 403)
+
+4. PRUEBA EVOLUTION API CAÍDA
+[HTTP POST] http://localhost:3000/api/whatsapp/conversations/2e21d842-ba22-4dde-a37e-6ae58d011922/messages
+[HTTP Body] {"content":"Fallo red"}
+Envío API Caída Status: 500 (Esperado: 500)
+Mensajes insertados tras fallo: 0 (Esperado: 0)
+
+5. VALIDACIÓN ESTADOS
+Estados en BBDD: [{"status":"delivered","direction":"inbound"}] (Esperado: delivered para inbound)
+
+6. VERIFICACIÓN ASSIGNED_USER_ID
+assigned_user_id: null (Columna existe)
+
+3. PRUEBA CON 5.000 MENSAJES (Rendimiento)
+Insertando 5,000 mensajes en conversación 2e21d842-ba22-4dde-a37e-6ae58d011922...
+✅ 5,000 mensajes insertados.
+[HTTP GET] http://localhost:3000/api/whatsapp/conversations/2e21d842-ba22-4dde-a37e-6ae58d011922/messages?page=10&limit=50
+Tiempo en recuperar página 10 con 5000 mensajes: 4730ms
+Total count reportado: 5001
+
+8. EXPLAIN ANALYZE
+Conversations Query Plan:
+Limit  (cost=3.41..3.41 rows=2 width=218) (actual time=0.050..0.051 rows=3 loops=1)
+  ->  Sort  (cost=3.41..3.41 rows=2 width=218) (actual time=0.049..0.049 rows=3 loops=1)
+        Sort Key: last_message_at DESC NULLS LAST
+        Sort Method: quicksort  Memory: 25kB
+        ->  Bitmap Heap Scan on conversations  (cost=1.26..3.40 rows=2 width=218) (actual time=0.040..0.041 rows=3 loops=1)
+              Recheck Cond: (tenant_id = '0ec5b372-c66a-4075-9ed4-d0dd8dbfd6a8'::uuid)
+              Heap Blocks: exact=1
+              ->  Bitmap Index Scan on idx_conversations_last_message  (cost=0.00..1.26 rows=2 width=0) (actual time=0.028..0.028 rows=6 loops=1)
+                    Index Cond: (tenant_id = '0ec5b372-c66a-4075-9ed4-d0dd8dbfd6a8'::uuid)
+Planning Time: 0.095 ms
+Execution Time: 0.079 ms
+
+Messages Query Plan:
+Limit  (cost=4.70..4.70 rows=1 width=1118) (actual time=3.160..3.168 rows=50 loops=1)
+  ->  Sort  (cost=4.70..4.70 rows=1 width=1118) (actual time=3.159..3.162 rows=50 loops=1)
+        Sort Key: created_at
+        Sort Method: top-N heapsort  Memory: 31kB
+        ->  Bitmap Heap Scan on messages  (cost=1.40..4.69 rows=1 width=1118) (actual time=0.149..1.519 rows=5001 loops=1)
+              Recheck Cond: (conversation_id = '2e21d842-ba22-4dde-a37e-6ae58d011922'::uuid)
+              Filter: (tenant_id = '0ec5b372-c66a-4075-9ed4-d0dd8dbfd6a8'::uuid)
+              Heap Blocks: exact=86
+              ->  Bitmap Index Scan on idx_messages_conversation  (cost=0.00..1.40 rows=3 width=0) (actual time=0.130..0.131 rows=5001 loops=1)
+                    Index Cond: (conversation_id = '2e21d842-ba22-4dde-a37e-6ae58d011922'::uuid)
+Planning Time: 0.122 ms
+Execution Time: 3.201 ms
+
+9. VERIFICACIÓN DE ÍNDICES
+idx_conversations_tenant: CREATE INDEX idx_conversations_tenant ON public.conversations USING btree (tenant_id)
+idx_conversations_last_message: CREATE INDEX idx_conversations_last_message ON public.conversations USING btree (tenant_id, last_message_at DESC)
+idx_conversations_deleted_at: CREATE INDEX idx_conversations_deleted_at ON public.conversations USING btree (deleted_at)
+idx_messages_conversation: CREATE INDEX idx_messages_conversation ON public.messages USING btree (conversation_id)
+idx_messages_external_id_tenant: CREATE UNIQUE INDEX idx_messages_external_id_tenant ON public.messages USING btree (tenant_id, external_id) WHERE (external_id IS NOT NULL)
+idx_messages_deleted_at: CREATE INDEX idx_messages_deleted_at ON public.messages USING btree (deleted_at)

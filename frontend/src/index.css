@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* ── Modo Claro ───────────────────────────────────────────────────────── */
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.5rem;
+  }
+
+  /* ── Modo Oscuro ─────────────────────────────────────────────────────── */
+  .dark {
+    --background: 222 47% 5%;
+    --foreground: 210 40% 98%;
+
+    --card: 215 28% 17%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 215 28% 17%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 47% 11%;
+
+    --secondary: 215 25% 27%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 215 25% 27%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 215 25% 27%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 215 25% 27%;
+    --input: 215 28% 22%;
+    --ring: 217 91% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  /*
+   * Transición suave global al cambiar de tema.
+   * Se aplica a color y background-color en todos los elementos.
+   * duration-300 mantiene la fluidez sin ser lenta.
+   */
+  *,
+  *::before,
+  *::after {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 300ms;
+  }
+
+  /*
+   * Excepción: los elementos interactivos (botones, links, inputs) mantienen
+   * sus transiciones de hover rápidas (no heredan la de 300ms del tema).
+   * Se sobreescriben con Tailwind cuando corresponde (transition-colors).
+   */
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}

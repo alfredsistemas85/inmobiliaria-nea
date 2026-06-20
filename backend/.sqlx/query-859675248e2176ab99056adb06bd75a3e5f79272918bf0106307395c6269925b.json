@@ -1,0 +1,66 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT id, tenant_id, user_id, type as \"type\", title, content, read_at, created_at\n            FROM notifications\n            WHERE tenant_id = $1 AND (user_id = $2 OR user_id IS NULL)\n            ORDER BY created_at DESC\n            LIMIT $3\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "tenant_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "title",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "content",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "read_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "859675248e2176ab99056adb06bd75a3e5f79272918bf0106307395c6269925b"
+}

@@ -1,0 +1,68 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO notifications (tenant_id, user_id, type, title, content)\n            VALUES ($1, $2, $3, $4, $5)\n            RETURNING id, tenant_id, user_id, type as \"type\", title, content, read_at, created_at\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "tenant_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "title",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "content",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "read_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "d0c3258839c46ca993fb4f61fd1e13e30aa1c7bd838f4d03b47a0cd669c61f8e"
+}

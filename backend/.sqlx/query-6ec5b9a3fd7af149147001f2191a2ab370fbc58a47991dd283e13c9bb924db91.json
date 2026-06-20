@@ -1,0 +1,103 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT id, tenant_id, conversation_id, sender_type, content, media_url, media_type, is_read, \n                   created_at, external_id, direction, status, is_ai_generated, deleted_at\n            FROM messages\n            WHERE tenant_id = $1 AND conversation_id = $2 AND deleted_at IS NULL\n            ORDER BY created_at ASC\n            LIMIT $3 OFFSET $4\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "tenant_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "conversation_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "sender_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "content",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "media_url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "media_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "is_read",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 9,
+        "name": "external_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 10,
+        "name": "direction",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 11,
+        "name": "status",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 12,
+        "name": "is_ai_generated",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 13,
+        "name": "deleted_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "6ec5b9a3fd7af149147001f2191a2ab370fbc58a47991dd283e13c9bb924db91"
+}

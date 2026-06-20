@@ -1,0 +1,61 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT id, client_id, property_id, status, scheduled_at, created_at, user_id as assigned_to\n        FROM appointments\n        WHERE tenant_id = $1 AND deleted_at IS NULL\n          AND ($2::timestamptz IS NULL OR scheduled_at >= $2)\n          AND ($3::timestamptz IS NULL OR scheduled_at <= $3)\n          AND ($4::uuid IS NULL OR user_id = $4)\n        ORDER BY scheduled_at DESC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "client_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "property_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "status",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "scheduled_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 6,
+        "name": "assigned_to",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz",
+        "Timestamptz",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "ccd3992e68bedd0113c4a283ffb6e1fa78b87510834cf61f508a0ff83e770d17"
+}

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE properties SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c524b4011c601c893b6324827df6f3e5db61a0bf21b29e1b9bab8ef2bc20d537"
+}

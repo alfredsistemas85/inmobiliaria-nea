@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE scheduled_tasks SET status = 'RUNNING', locked_at = CURRENT_TIMESTAMP WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b49a3b96d573d5dce65b2662fad00ed7f3a5ba54a99a10ff714252ec00ca16df"
+}

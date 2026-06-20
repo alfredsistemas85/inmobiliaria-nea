@@ -1,0 +1,112 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO tenants (business_name, cuit, dni_responsable, first_name, last_name, phone, status, slug, is_active)\n        VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', $7, false)\n        RETURNING *\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "cuit",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "dni_responsable",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "first_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "last_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "business_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "address",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "phone",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "city",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 9,
+        "name": "province",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 10,
+        "name": "is_active",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 11,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 12,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 13,
+        "name": "status",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 14,
+        "name": "slug",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "442302d111ae94fa4e7b454a19446d0a0541cee4e97b7ecc766c0d6e1c6fdde0"
+}

@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT id, tenant_id, task_type, payload\n        FROM scheduled_tasks\n        WHERE status = 'PENDING' AND run_at <= CURRENT_TIMESTAMP\n        FOR UPDATE SKIP LOCKED\n        LIMIT 10\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "tenant_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "task_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "payload",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "b1212547e839cd9dcf7eb763128fdb3068e08ca6b47a5915ae77633e3994966b"
+}

@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - redis
+    volumes:
+      - uploads_data:/app/uploads
+    networks:
+      - saas_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: ["worker"]
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - redis
+    networks:
+      - saas_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "ps", "aux", "|", "grep", "worker"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:80"
+    env_file:
+      - ./frontend/.env
+    networks:
+      - saas_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-secure_redis_password_123}
+    networks:
+      - saas_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  redis_data:
+  uploads_data:
+
+networks:
+  saas_network:
+    driver: bridge

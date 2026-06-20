@@ -6,9 +6,11 @@ pub mod adjustments_controllers;
 use axum::{
     routing::{get, post},
     Router,
+    middleware,
 };
 use std::sync::Arc;
 use sqlx::PgPool;
+use crate::core::tenant::middleware::tenant_middleware;
 
 pub fn router(pool: Arc<PgPool>) -> Router {
     Router::new()
@@ -20,5 +22,6 @@ pub fn router(pool: Arc<PgPool>) -> Router {
         .route("/:id/adjustments/propose", post(adjustments_controllers::propose_adjustment))
         .route("/adjustments/:adj_id/approve", post(adjustments_controllers::approve_adjustment))
         .route("/adjustments/:adj_id/reject", post(adjustments_controllers::reject_adjustment))
+        .route_layer(middleware::from_fn_with_state(pool.clone(), tenant_middleware))
         .with_state(pool)
 }

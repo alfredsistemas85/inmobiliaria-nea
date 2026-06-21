@@ -346,26 +346,48 @@ impl WhatsAppRepository {
         qr_code: Option<&str>,
         phone_connected: Option<&str>,
     ) -> Result<(), sqlx::Error> {
-        sqlx::query!(
-            r#"
-            INSERT INTO whatsapp_instances (id, tenant_id, instance_name, status, qr_code, phone_connected)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            ON CONFLICT (tenant_id) DO UPDATE 
-            SET instance_name = EXCLUDED.instance_name,
-                status = EXCLUDED.status,
-                qr_code = COALESCE(EXCLUDED.qr_code, whatsapp_instances.qr_code),
-                phone_connected = COALESCE(EXCLUDED.phone_connected, whatsapp_instances.phone_connected),
-                updated_at = CURRENT_TIMESTAMP
-            "#,
-            Uuid::new_v4(),
-            tenant_id,
-            instance_name,
-            status,
-            qr_code,
-            phone_connected
+        let exists = sqlx::query!(
+            "SELECT id FROM whatsapp_instances WHERE tenant_id = $1",
+            tenant_id
         )
-        .execute(&*self.pool)
+        .fetch_optional(&*self.pool)
         .await?;
+
+        if exists.is_some() {
+            sqlx::query!(
+                r#"
+                UPDATE whatsapp_instances
+                SET instance_name = $1,
+                    status = $2,
+                    qr_code = COALESCE($3, qr_code),
+                    phone_connected = COALESCE($4, phone_connected),
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE tenant_id = $5
+                "#,
+                instance_name,
+                status,
+                qr_code,
+                phone_connected,
+                tenant_id
+            )
+            .execute(&*self.pool)
+            .await?;
+        } else {
+            sqlx::query!(
+                r#"
+                INSERT INTO whatsapp_instances (id, tenant_id, instance_name, status, qr_code, phone_connected)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                "#,
+                Uuid::new_v4(),
+                tenant_id,
+                instance_name,
+                status,
+                qr_code,
+                phone_connected
+            )
+            .execute(&*self.pool)
+            .await?;
+        }
 
         Ok(())
     }

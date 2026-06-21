@@ -128,11 +128,10 @@ pub async fn generate_liquidations(
             i.amount, 
             i.commission, 
             p.title as property_title, 
-            c.first_name || ' ' || c.last_name as owner_name 
+            NULL as owner_name 
         FROM invoices i
         JOIN contracts ct ON i.contract_id = ct.id
         JOIN properties p ON ct.property_id = p.id
-        JOIN clients c ON p.owner_id = c.id
         WHERE i.tenant_id = $1 AND i.status = 'PAID'
         "#
     )

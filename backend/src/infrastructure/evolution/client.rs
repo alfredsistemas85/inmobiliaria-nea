@@ -148,7 +148,8 @@ impl EvolutionClient {
         let payload = json!({
             "instanceName": instance_name,
             "token": self.api_key,
-            "qrcode": true
+            "qrcode": true,
+            "integration": "WHATSAPP-BAILEYS"
         });
 
         let resp = self

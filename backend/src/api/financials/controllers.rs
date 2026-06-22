@@ -112,7 +112,7 @@ struct LiquidationRecord {
     amount: Decimal,
     commission: Option<Decimal>,
     property_title: String,
-    owner_name: Option<String>,
+    owner_name: String,
 }
 
 pub async fn generate_liquidations(
@@ -128,7 +128,7 @@ pub async fn generate_liquidations(
             i.amount, 
             i.commission, 
             p.title as property_title, 
-            NULL::TEXT as owner_name 
+            ''::TEXT as owner_name 
         FROM invoices i
         JOIN contracts ct ON i.contract_id = ct.id
         JOIN properties p ON ct.property_id = p.id
@@ -138,13 +138,16 @@ pub async fn generate_liquidations(
     .bind(tenant_id)
     .fetch_all(&*pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|e| {
+        tracing::error!("Database error in generate_liquidations: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     let liquidations: Vec<Liquidation> = records.into_iter().map(|rec| {
         let amt = rec.amount;
         let comm = rec.commission.unwrap_or_default();
         Liquidation {
-            owner_name: rec.owner_name.unwrap_or_default(),
+            owner_name: rec.owner_name,
             property_title: rec.property_title,
             total_collected: amt,
             commission_deducted: comm,

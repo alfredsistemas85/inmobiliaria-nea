@@ -155,6 +155,8 @@ impl EvolutionClient {
             .client
             .post(&url)
             .header("apikey", &self.api_key)
+            .header("apiKey", &self.api_key)
+            .header("Authorization", format!("Bearer {}", self.api_key))
             .json(&payload)
             .send()
             .await
@@ -222,6 +224,8 @@ impl EvolutionClient {
             .client
             .delete(&url)
             .header("apikey", &self.api_key)
+            .header("apiKey", &self.api_key)
+            .header("Authorization", format!("Bearer {}", self.api_key))
             .send()
             .await
             .map_err(|e| e.to_string())?;

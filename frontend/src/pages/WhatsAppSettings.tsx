@@ -16,9 +16,10 @@ export default function WhatsAppSettings() {
     try {
       const res = await whatsappService.getInstanceStatus()
       setInstance(res)
-      if (res?.status === 'CONNECTING' && res?.qr_code) {
+      const statusUpper = res?.status?.toUpperCase()
+      if (statusUpper === 'CONNECTING' && res?.qr_code) {
         setQrCode(res.qr_code)
-      } else if (res?.status === 'OPEN') {
+      } else if (statusUpper === 'OPEN') {
         setQrCode(null)
       }
     } catch (err: any) {
@@ -135,13 +136,13 @@ export default function WhatsAppSettings() {
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Estado</p>
                 <div className="flex items-center gap-2">
-                  <span className={`inline-block h-2.5 w-2.5 rounded-full ${instance.status === 'OPEN' ? 'bg-green-500' : instance.status === 'CONNECTING' ? 'bg-amber-500' : 'bg-red-500'}`}></span>
-                  <span className="font-semibold">{instance.status || 'Desconocido'}</span>
+                  <span className={`inline-block h-2.5 w-2.5 rounded-full ${instance.status?.toUpperCase() === 'OPEN' ? 'bg-green-500' : instance.status?.toUpperCase() === 'CONNECTING' ? 'bg-amber-500' : 'bg-red-500'}`}></span>
+                  <span className="font-semibold">{instance.status?.toUpperCase() || 'DESCONOCIDO'}</span>
                 </div>
               </div>
             </div>
 
-            {instance.status === 'OPEN' ? (
+            {instance.status?.toUpperCase() === 'OPEN' ? (
               <div className="flex flex-col items-center justify-center py-8 text-center space-y-4">
                 <div className="h-16 w-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
                   <Smartphone className="h-8 w-8" />

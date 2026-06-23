@@ -15,15 +15,15 @@ use super::storage::SupabaseStorage;
 pub struct Document {
     pub id: Uuid,
     pub tenant_id: Uuid,
-    pub uploaded_by: Uuid,
+    pub uploaded_by: Option<Uuid>,
     pub entity_type: String,
     pub entity_id: Uuid,
     pub file_name: String,
-    pub file_size: i64,
+    pub file_size: Option<i64>,
     pub mime_type: String,
-    pub storage_path: String,
-    pub version: i32,
-    pub created_at: DateTime<Utc>,
+    pub storage_path: Option<String>,
+    pub version: Option<i32>,
+    pub created_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Deserialize)]
@@ -113,7 +113,10 @@ pub async fn list_entity_documents(
     .bind(entity_id)
     .fetch_all(&*pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|e| {
+        tracing::error!("DB error en list_entity_documents: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     Ok(Json(docs))
 }

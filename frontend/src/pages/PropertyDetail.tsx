@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, MapPin, Bed, Bath, Maximize, Edit, Trash2, CalendarDays, CheckCircle2, Loader2, AlertCircle, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -12,6 +12,8 @@ export default function PropertyDetail() {
   const [property, setProperty] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const navigate = useNavigate()
+
 
   useEffect(() => {
     if (id) {
@@ -30,6 +32,19 @@ export default function PropertyDetail() {
       setLoading(false)
     }
   }
+
+  const handleDelete = async () => {
+    if (!confirm('¿Estás seguro de eliminar esta propiedad?')) return
+    try {
+      setLoading(true)
+      await propertiesService.delete(id!)
+      navigate('/properties')
+    } catch (err: any) {
+      setError(err.message || 'Error al eliminar propiedad')
+      setLoading(false)
+    }
+  }
+
 
   if (loading) {
     return (
@@ -77,7 +92,7 @@ export default function PropertyDetail() {
               Editar
             </Link>
           </Button>
-          <Button variant="destructive" size="sm" className="hidden sm:flex items-center gap-2">
+          <Button variant="destructive" size="sm" className="hidden sm:flex items-center gap-2" onClick={handleDelete}>
             <Trash2 className="h-4 w-4" />
             Eliminar
           </Button>

@@ -49,39 +49,69 @@ export const propertiesService = {
     });
   },
   uploadImage: async (id: string, file: File) => {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    // Para FormData, el browser asigna el Content-Type multipart/form-data con boundary.
-    // No seteamos Content-Type manualmente.
     const token = localStorage.getItem('token');
-    const headers: any = {};
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    const response = await fetch(`${API_URL}/api/properties/${id}/images`, {
+
+    // 1. Obtener URL firmada
+    const res = await fetch(`${API_URL}/api/documents/upload-url`, {
       method: 'POST',
-      headers,
-      body: formData,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        file_name: file.name,
+        file_size: file.size,
+        mime_type: file.type || 'image/jpeg',
+        entity_type: 'property',
+        entity_id: id
+      })
     });
-    if (!response.ok) throw new Error('Error al subir imagen');
-    return response.json().catch(() => null);
+
+    if (!res.ok) throw new Error('Error al generar url de subida de imagen');
+    const { upload_url } = await res.json();
+
+    // 2. Subir directo a Supabase
+    const uploadRes = await fetch(upload_url, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type || 'image/jpeg' },
+      body: file
+    });
+
+    if (!uploadRes.ok) throw new Error('Error al subir imagen a storage');
+    return { success: true };
   },
   uploadDocument: async (id: string, file: File) => {
-    const formData = new FormData();
-    formData.append('file', file);
-
     const token = localStorage.getItem('token');
-    const headers: any = {};
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    const response = await fetch(`${API_URL}/api/properties/${id}/documents`, {
+
+    // 1. Obtener URL firmada
+    const res = await fetch(`${API_URL}/api/documents/upload-url`, {
       method: 'POST',
-      headers,
-      body: formData,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        file_name: file.name,
+        file_size: file.size,
+        mime_type: file.type || 'application/octet-stream',
+        entity_type: 'property',
+        entity_id: id
+      })
     });
-    if (!response.ok) throw new Error('Error al subir documento');
-    return response.json().catch(() => null);
+
+    if (!res.ok) throw new Error('Error al generar url de subida de documento');
+    const { upload_url } = await res.json();
+
+    // 2. Subir directo a Supabase
+    const uploadRes = await fetch(upload_url, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      body: file
+    });
+
+    if (!uploadRes.ok) throw new Error('Error al subir documento a storage');
+    return { success: true };
   },
 };

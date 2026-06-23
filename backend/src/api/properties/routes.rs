@@ -1,6 +1,5 @@
 use super::controllers::{
     create_property, delete_property, get_property, list_properties, update_property,
-    upload_document, upload_image,
 };
 use crate::core::rbac::middleware::require_tenant_admin;
 use crate::core::tenant::middleware::tenant_middleware;
@@ -23,20 +22,6 @@ pub fn router(
     let admin_routes = Router::new()
         .route("/", post(create_property))
         .route("/:id", put(update_property).delete(delete_property))
-        .route(
-            "/:id/images",
-            post(upload_image).route_layer(middleware::from_fn_with_state(
-                rl_state.clone(),
-                crate::core::security::rate_limit::upload_images_rate_limit,
-            )),
-        )
-        .route(
-            "/:id/documents",
-            post(upload_document).route_layer(middleware::from_fn_with_state(
-                rl_state,
-                crate::core::security::rate_limit::upload_docs_rate_limit,
-            )),
-        )
         .route_layer(middleware::from_fn(require_tenant_admin));
 
     Router::new()

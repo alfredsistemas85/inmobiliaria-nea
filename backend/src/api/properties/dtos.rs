@@ -40,6 +40,7 @@ pub struct PropertyResponseDto {
     pub status: Option<String>,
     pub features: Option<Value>,
     pub views: Option<i64>,
+    pub images: Option<Vec<Value>>,
 }
 
 impl From<crate::models::property::Property> for PropertyResponseDto {
@@ -61,6 +62,7 @@ impl From<crate::models::property::Property> for PropertyResponseDto {
             status: prop.status,
             features: prop.features.map(|j| j.0),
             views: None,
+            images: None,
         }
     }
 }

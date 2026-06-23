@@ -1,1 +1,0 @@
--- dummy migration to fix sqlx migrate run

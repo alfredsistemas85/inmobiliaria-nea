@@ -253,6 +253,7 @@ async fn main() {
         ))
         .layer(axum::middleware::from_fn(security_headers_middleware))
         .layer(axum::Extension(Arc::new(redis_client.clone())))
+        .layer(axum::extract::DefaultBodyLimit::max(50 * 1024 * 1024))
         .layer(cors);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));

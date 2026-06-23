@@ -214,6 +214,7 @@ async fn process_lead_followups(pool: Arc<sqlx::PgPool>) -> Result<u64, sqlx::Er
         FROM leads
         WHERE status = 'NUEVO' 
           AND created_at <= CURRENT_TIMESTAMP - INTERVAL '24 hours'
+          AND updated_at <= CURRENT_TIMESTAMP - INTERVAL '24 hours'
           AND deleted_at IS NULL
         FOR UPDATE SKIP LOCKED
         LIMIT 20
@@ -236,10 +237,11 @@ async fn process_lead_followups(pool: Arc<sqlx::PgPool>) -> Result<u64, sqlx::Er
             "Tienes un lead en estado NUEVO por más de 24 horas. ¡Es hora de hacer seguimiento!",
         ).await;
 
-        // Optionally update a "last_reminded_at" flag to avoid spamming every 10 seconds.
-        // As a simple fix, we'll change the status to 'CONTACTADO' to avoid immediate requeue
+        // INC-025: Instead of changing the status to 'CONTACTADO', we update 'updated_at' 
+        // to avoid spamming the reminder every 10 seconds, pushing the next reminder 24hs later
+        // unless the status is manually changed.
         sqlx::query!(
-            "UPDATE leads SET status = 'CONTACTADO' WHERE id = $1",
+            "UPDATE leads SET updated_at = CURRENT_TIMESTAMP WHERE id = $1",
             lead.id
         )
         .execute(&mut *tx)

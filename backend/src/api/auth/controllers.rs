@@ -19,21 +19,47 @@ use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
 
+/// Minimum password length for new passwords
+const MIN_PASSWORD_LENGTH: usize = 8;
+
+fn validate_password(password: &str) -> Result<(), StatusCode> {
+    if password.len() < MIN_PASSWORD_LENGTH {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    // Require at least one digit and one letter
+    let has_letter = password.chars().any(|c| c.is_alphabetic());
+    let has_digit = password.chars().any(|c| c.is_ascii_digit());
+    if !has_letter || !has_digit {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    Ok(())
+}
+
 pub async fn login(
     State(pool): State<Arc<PgPool>>,
     Json(payload): Json<LoginRequest>,
 ) -> Result<Json<AuthResponse>, StatusCode> {
-    let superadmin_email = std::env::var("SUPERADMIN_EMAIL").unwrap_or_else(|_| "agentech.nea@gmail.com".to_string());
+    // INC-001: No fallback — SUPERADMIN_EMAIL must be configured
+    let superadmin_email = match std::env::var("SUPERADMIN_EMAIL") {
+        Ok(email) if !email.is_empty() => email,
+        _ => {
+            tracing::error!("SUPERADMIN_EMAIL env var is not set — superadmin login disabled");
+            String::new()
+        }
+    };
     
-    if payload.identifier == superadmin_email {
+    if !superadmin_email.is_empty() && payload.identifier == superadmin_email {
         let superadmin_password = std::env::var("SUPERADMIN_PASSWORD").unwrap_or_default();
-        if !superadmin_password.is_empty() && payload.password == superadmin_password {
+        // INC-002: Use constant-time comparison via hash verification instead of plaintext
+        let superadmin_hash = hash_password(&superadmin_password)
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        if !superadmin_password.is_empty() && verify_password(&payload.password, &superadmin_hash).unwrap_or(false) {
             let access_token = generate_jwt(Uuid::nil(), None, "super_admin", true)
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
             let refresh_token = generate_refresh_jwt(Uuid::nil(), None, "super_admin", true)
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
                 
-            tracing::info!("LOGIN_SUCCESS: super_admin hardcoded");
+            tracing::info!("LOGIN_SUCCESS: super_admin");
             return Ok(Json(AuthResponse {
                 access_token,
                 refresh_token,
@@ -63,7 +89,7 @@ pub async fn login(
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
             
         if let Some(tenant) = tenant {
-            let row = sqlx::query(
+            let user = sqlx::query_as::<_, crate::models::user::User>(
                 r#"SELECT u.id, u.tenant_id, u.role, u.email, u.password_hash, u.first_name, u.last_name, u.is_active, u.email_verified_at, u.verification_token, u.verification_sent_at, u.email_type, u.onboarding_token, u.onboarding_token_expires_at, u.created_at, u.updated_at
                    FROM users u
                    WHERE u.tenant_id = $1 AND u.role = 'ADMIN_INMOBILIARIA' AND u.deleted_at IS NULL LIMIT 1"#
@@ -73,30 +99,7 @@ pub async fn login(
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
             
-            if let Some(r) = row {
-                use sqlx::Row;
-                let user = crate::models::user::User {
-                    id: r.try_get("id").unwrap(),
-                    tenant_id: r.try_get("tenant_id").unwrap(),
-                    role: r.try_get("role").unwrap(),
-                    email: r.try_get("email").unwrap(),
-                    password_hash: r.try_get("password_hash").unwrap(),
-                    first_name: r.try_get("first_name").unwrap(),
-                    last_name: r.try_get("last_name").unwrap(),
-                    is_active: r.try_get("is_active").unwrap(),
-                    email_verified_at: r.try_get("email_verified_at").unwrap(),
-                    verification_token: r.try_get("verification_token").unwrap(),
-                    verification_sent_at: r.try_get("verification_sent_at").unwrap(),
-                    email_type: r.try_get("email_type").unwrap(),
-                    onboarding_token: r.try_get("onboarding_token").unwrap(),
-                    onboarding_token_expires_at: r.try_get("onboarding_token_expires_at").unwrap(),
-                    created_at: r.try_get("created_at").unwrap(),
-                    updated_at: r.try_get("updated_at").unwrap(),
-                };
-                Some(user)
-            } else {
-                None
-            }
+            user
         } else {
             None
         }
@@ -289,8 +292,24 @@ pub async fn me(
     Err(StatusCode::UNAUTHORIZED)
 }
 
-pub async fn logout() -> Result<StatusCode, StatusCode> {
-    tracing::info!("LOGOUT: logout requested");
+pub async fn logout(
+    Extension(claims): Extension<Claims>,
+    Extension(redis_client): Extension<Arc<redis::Client>>,
+) -> Result<StatusCode, StatusCode> {
+    // INC-020: Blacklist the access token in Redis until it expires
+    let ttl = claims.exp as i64 - chrono::Utc::now().timestamp();
+    if ttl > 0 {
+        if let Ok(mut conn) = redis_client.get_multiplexed_async_connection().await {
+            let key = format!("blacklist:token:{}", claims.sub);
+            let _: Result<(), _> = redis::cmd("SETEX")
+                .arg(&key)
+                .arg(ttl)
+                .arg("1")
+                .query_async(&mut conn)
+                .await;
+        }
+    }
+    tracing::info!("LOGOUT: user_id={} token blacklisted", claims.sub);
     Ok(StatusCode::OK)
 }
 
@@ -312,15 +331,33 @@ pub async fn change_password(
 
     if let Some(user) = user {
         if verify_password(&payload.current_password, &user.password_hash).unwrap_or(false) {
+            // INC-015: Validate new password strength
+            validate_password(&payload.new_password)?;
+
             let new_hash = hash_password(&payload.new_password)
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-            sqlx::query("UPDATE users SET password_hash = $1 WHERE id = $2")
-                .bind(new_hash)
-                .bind(user.id)
-                .execute(&*pool)
-                .await
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            // INC-003: Add tenant_id filter to prevent cross-tenant IDOR
+            let result = if let Some(tenant_id) = claims.tenant_id {
+                sqlx::query("UPDATE users SET password_hash = $1 WHERE id = $2 AND tenant_id = $3")
+                    .bind(&new_hash)
+                    .bind(user.id)
+                    .bind(tenant_id)
+                    .execute(&*pool)
+                    .await
+                    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+            } else {
+                sqlx::query("UPDATE users SET password_hash = $1 WHERE id = $2 AND tenant_id IS NULL")
+                    .bind(&new_hash)
+                    .bind(user.id)
+                    .execute(&*pool)
+                    .await
+                    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+            };
+
+            if result.rows_affected() == 0 {
+                return Err(StatusCode::FORBIDDEN);
+            }
 
             tracing::info!(
                 "PASSWORD_CHANGED: user_id={} tenant_id={:?}",
@@ -383,6 +420,8 @@ pub async fn setup_password(
             }
         }
 
+        // INC-015: Validate new password strength
+        validate_password(&payload.password)?;
         let new_hash = hash_password(&payload.password).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
         sqlx::query("UPDATE users SET password_hash = $1, onboarding_token = NULL, onboarding_token_expires_at = NULL, email_verified_at = CURRENT_TIMESTAMP WHERE id = $2")

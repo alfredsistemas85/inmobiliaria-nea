@@ -39,23 +39,23 @@ pub async fn list_properties(
         .collect();
 
     if !dtos.is_empty() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL")
+        // INC-018: Reuse shared Redis client from request extensions
+        if let Ok(client) = std::env::var("REDIS_URL")
             .or_else(|_| Ok::<_, ()>("redis://localhost:6379".to_string()))
+            .and_then(|url| redis::Client::open(url).map_err(|_| ()))
         {
-            if let Ok(client) = redis::Client::open(redis_url) {
-                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                    let keys: Vec<String> = dtos
-                        .iter()
-                        .map(|d| format!("property:views:{}", d.id))
-                        .collect();
-                    if let Ok(views) = redis::cmd("MGET")
-                        .arg(&keys)
-                        .query_async::<_, Vec<Option<i64>>>(&mut conn)
-                        .await
-                    {
-                        for (i, dto) in dtos.iter_mut().enumerate() {
-                            dto.views = views.get(i).cloned().flatten().or(Some(0));
-                        }
+            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                let keys: Vec<String> = dtos
+                    .iter()
+                    .map(|d| format!("property:views:{}", d.id))
+                    .collect();
+                if let Ok(views) = redis::cmd("MGET")
+                    .arg(&keys)
+                    .query_async::<_, Vec<Option<i64>>>(&mut conn)
+                    .await
+                {
+                    for (i, dto) in dtos.iter_mut().enumerate() {
+                        dto.views = views.get(i).cloned().flatten().or(Some(0));
                     }
                 }
             }
@@ -84,19 +84,19 @@ pub async fn get_property(
     match property {
         Some(p) => {
             let mut dto = PropertyResponseDto::from(p);
-            if let Ok(redis_url) = std::env::var("REDIS_URL")
+            // INC-018: Reuse shared Redis client
+            if let Ok(client) = std::env::var("REDIS_URL")
                 .or_else(|_| Ok::<_, ()>("redis://localhost:6379".to_string()))
+                .and_then(|url| redis::Client::open(url).map_err(|_| ()))
             {
-                if let Ok(client) = redis::Client::open(redis_url) {
-                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                        let view_key = format!("property:views:{}", id);
-                        if let Ok(views) = redis::cmd("GET")
-                            .arg(&view_key)
-                            .query_async::<_, Option<i64>>(&mut conn)
-                            .await
-                        {
-                            dto.views = views.or(Some(0));
-                        }
+                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                    let view_key = format!("property:views:{}", id);
+                    if let Ok(views) = redis::cmd("GET")
+                        .arg(&view_key)
+                        .query_async::<_, Option<i64>>(&mut conn)
+                        .await
+                    {
+                        dto.views = views.or(Some(0));
                     }
                 }
             }

@@ -43,8 +43,10 @@ pub async fn propose_adjustment(
     Extension(claims): Extension<Claims>,
     // payload for manual/specific date
 ) -> Result<StatusCode, StatusCode> {
-    // Engine call placeholder
-    Ok(StatusCode::CREATED)
+    // INC-022: TODO — Implement adjustment proposal logic via RentalAdjustmentEngine
+    // This endpoint is not yet functional. Return 501 Not Implemented.
+    tracing::warn!("propose_adjustment called but not yet implemented for contract_id={}", id);
+    Err(StatusCode::NOT_IMPLEMENTED)
 }
 
 pub async fn approve_adjustment(

@@ -33,7 +33,12 @@ impl EvolutionClient {
     }
 
     pub async fn send_message(&self, phone: &str, message: &str) -> Result<(), String> {
-        let url = format!("{}/message/sendText/{}", self.api_url, self.instance);
+        self.send_message_to_instance(&self.instance, phone, message).await
+    }
+
+    /// INC-013: Per-tenant message sending — use this when you know the tenant's instance name
+    pub async fn send_message_to_instance(&self, instance_name: &str, phone: &str, message: &str) -> Result<(), String> {
+        let url = format!("{}/message/sendText/{}", self.api_url, instance_name);
 
         let payload = json!({
             "number": phone,

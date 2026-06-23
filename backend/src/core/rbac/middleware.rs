@@ -40,6 +40,7 @@ mod tests {
             sub: Uuid::new_v4(),
             tenant_id,
             role: role.to_string(),
+            email_verified: true,
             exp: 9999999999,
             token_type: "access".to_string(),
         });

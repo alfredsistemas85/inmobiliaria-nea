@@ -128,10 +128,11 @@ pub async fn generate_liquidations(
             i.amount, 
             i.commission, 
             p.title as property_title, 
-            ''::TEXT as owner_name 
+            COALESCE(cl.first_name || ' ' || cl.last_name, cl.first_name, cl.last_name, 'Desconocido') as owner_name 
         FROM invoices i
         JOIN contracts ct ON i.contract_id = ct.id
         JOIN properties p ON ct.property_id = p.id
+        LEFT JOIN clients cl ON p.owner_id = cl.id
         WHERE i.tenant_id = $1 AND i.status = 'PAID'
         "#
     )

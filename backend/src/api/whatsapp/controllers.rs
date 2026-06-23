@@ -147,6 +147,20 @@ pub async fn webhook(
     Path(tenant_id): Path<Uuid>,
     Json(payload): Json<WebhookPayload>,
 ) -> Result<StatusCode, StatusCode> {
+    // INC-004: Validate that the tenant_id has a registered WhatsApp instance
+    let has_instance = sqlx::query!(
+        "SELECT id FROM whatsapp_instances WHERE tenant_id = $1 LIMIT 1",
+        tenant_id
+    )
+    .fetch_optional(&*pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if has_instance.is_none() {
+        tracing::warn!("WEBHOOK_REJECTED: no WhatsApp instance for tenant_id={}", tenant_id);
+        return Err(StatusCode::FORBIDDEN);
+    }
+
     if let Some(event) = &payload.event {
         if event == "messages.upsert" {
             if let Some(data) = payload.data {

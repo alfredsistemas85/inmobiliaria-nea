@@ -25,7 +25,8 @@ pub async fn list_contracts(
         r#"SELECT id, tenant_id, property_id, start_date, end_date, 
            original_rent_amount, current_rent_amount, adjustment_method, adjustment_frequency,
            automation_mode, fixed_percentage, first_notification_days, second_notification_days, third_notification_days, requires_manual_approval, next_adjustment_date, last_adjustment_date, status
-           FROM contracts WHERE tenant_id = $1"#
+           FROM contracts WHERE tenant_id = $1 AND deleted_at IS NULL
+           ORDER BY created_at DESC"#
     )
     .bind(tenant_id)
     .fetch_all(&*pool)

@@ -123,6 +123,16 @@ async fn security_headers_middleware(req: Request, next: Next) -> Response {
         "permissions-policy",
         axum::http::HeaderValue::from_static("camera=(), microphone=(), geolocation=()"),
     );
+    // INC-019: Content Security Policy
+    headers.insert(
+        "content-security-policy",
+        axum::http::HeaderValue::from_static("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:"),
+    );
+    // INC-039: HTTP Strict Transport Security
+    headers.insert(
+        "strict-transport-security",
+        axum::http::HeaderValue::from_static("max-age=63072000; includeSubDomains; preload"),
+    );
     response
 }
 
@@ -141,8 +151,13 @@ async fn main() {
     tracing::info!("Iniciando SaaS Inmobiliarias NEA Backend...");
 
     let db_url = env::var("DATABASE_URL").expect("DATABASE_URL debe estar configurada");
+    // INC-010: Increase pool size for production multi-tenant workloads
+    let max_conns: u32 = env::var("DB_MAX_CONNECTIONS")
+        .unwrap_or_else(|_| "20".to_string())
+        .parse()
+        .unwrap_or(20);
     let pool = PgPoolOptions::new()
-        .max_connections(5)
+        .max_connections(max_conns)
         .connect(&db_url)
         .await
         .expect("Error al conectar a PostgreSQL");
@@ -178,8 +193,9 @@ async fn main() {
                 }
             },
         ))
-        .allow_methods(tower_http::cors::Any)
-        .allow_headers(tower_http::cors::Any);
+        // INC-009: Restrict CORS to specific methods and headers
+        .allow_methods([axum::http::Method::GET, axum::http::Method::POST, axum::http::Method::PUT, axum::http::Method::DELETE, axum::http::Method::PATCH, axum::http::Method::OPTIONS])
+        .allow_headers([axum::http::header::AUTHORIZATION, axum::http::header::CONTENT_TYPE, axum::http::header::ACCEPT]);
 
     let health_router = Router::new()
         .route("/health", get(health_check))
@@ -188,8 +204,14 @@ async fn main() {
             redis_client: Arc::new(redis_client.clone()),
         });
 
-    let app = Router::new()
-        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
+    // INC-007: Only expose Swagger UI in non-production environments
+    let is_production = env::var("APP_ENV").unwrap_or_default() == "production";
+
+    let mut app = Router::new();
+    if !is_production {
+        app = app.merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()));
+    }
+    let app = app
         .nest("/api", health_router)
         .nest(
             "/api/auth",
@@ -246,14 +268,16 @@ async fn main() {
             "/api/calendar",
             api::calendar::router(shared_pool.clone()),
         )
-        .nest_service("/uploads", ServeDir::new("uploads"))
+        // INC-008: Removed static file serving for uploads — use authenticated endpoints instead
+        // .nest_service("/uploads", ServeDir::new("uploads"))
         .layer(axum::middleware::from_fn_with_state(
             shared_pool.clone(),
             core::system_errors::error_logging_middleware,
         ))
         .layer(axum::middleware::from_fn(security_headers_middleware))
         .layer(axum::Extension(Arc::new(redis_client.clone())))
-        .layer(axum::extract::DefaultBodyLimit::max(50 * 1024 * 1024))
+        // INC-033: Reduce body limit from 50MB to 10MB
+        .layer(axum::extract::DefaultBodyLimit::max(10 * 1024 * 1024))
         .layer(cors);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));

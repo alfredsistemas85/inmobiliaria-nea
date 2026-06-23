@@ -1,7 +1,7 @@
-use backend::infrastructure::database::whatsapp::WhatsAppRepository;
+
 use sqlx::PgPool;
 use std::env;
-use std::sync::Arc;
+
 use uuid::Uuid;
 use dotenvy::dotenv;
 

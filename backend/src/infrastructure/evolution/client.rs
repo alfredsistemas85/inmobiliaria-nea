@@ -20,7 +20,7 @@ impl EvolutionClient {
         let instance = env::var("EVOLUTION_INSTANCE").unwrap_or_else(|_| "default".to_string());
 
         let client = Client::builder()
-            .timeout(Duration::from_secs(10))
+            .timeout(Duration::from_secs(60))
             .build()
             .expect("Failed to build HTTP client for Evolution");
 

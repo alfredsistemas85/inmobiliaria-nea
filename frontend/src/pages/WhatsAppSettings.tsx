@@ -30,12 +30,22 @@ export default function WhatsAppSettings() {
   }
 
   useEffect(() => {
-    loadStatus()
-    // Polling cada 5 segundos si estamos en un estado que puede cambiar (conectando, escaneando QR, etc.)
-    const interval = setInterval(() => {
-      loadStatus()
-    }, 5000)
-    return () => clearInterval(interval)
+    let isMounted = true
+    let timeoutId: NodeJS.Timeout
+
+    const pollStatus = async () => {
+      await loadStatus()
+      if (isMounted) {
+        timeoutId = setTimeout(pollStatus, 5000)
+      }
+    }
+
+    pollStatus()
+
+    return () => {
+      isMounted = false
+      if (timeoutId) clearTimeout(timeoutId)
+    }
   }, [])
 
   const handleCreate = async () => {

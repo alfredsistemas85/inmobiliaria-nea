@@ -162,7 +162,11 @@ export default function WhatsAppSettings() {
                   <>
                     <p className="text-muted-foreground text-sm">Escanea este código QR con tu WhatsApp</p>
                     <div className="bg-white p-4 rounded-xl border border-border inline-block shadow-sm">
-                      <img src={`data:image/png;base64,${qrCode}`} alt="QR Code" className="w-64 h-64 object-contain" />
+                      <img 
+                        src={qrCode?.startsWith('data:image') ? qrCode : `data:image/png;base64,${qrCode}`} 
+                        alt="QR Code" 
+                        className="w-64 h-64 object-contain" 
+                      />
                     </div>
                     <Button variant="outline" onClick={handleGetQr} disabled={loading}>
                       <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />

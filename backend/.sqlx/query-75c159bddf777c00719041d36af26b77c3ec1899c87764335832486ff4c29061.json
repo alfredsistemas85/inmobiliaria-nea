@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT entity_id, storage_path \n            FROM documents \n            WHERE entity_id = ANY($1) AND entity_type = 'property' AND deleted_at IS NULL AND mime_type LIKE 'image/%'\n            ORDER BY created_at ASC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "entity_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "storage_path",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "75c159bddf777c00719041d36af26b77c3ec1899c87764335832486ff4c29061"
+}

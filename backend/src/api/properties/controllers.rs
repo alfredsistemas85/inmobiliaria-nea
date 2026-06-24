@@ -22,7 +22,7 @@ pub async fn list_properties(
     Extension(tenant): Extension<TenantId>,
     Query(params): Query<PaginationParams>,
 ) -> Result<Json<PaginatedResponse<PropertyResponseDto>>, StatusCode> {
-    let repo = PropertyRepository::new(pool);
+    let repo = PropertyRepository::new(pool.clone());
     let limit = params.limit.unwrap_or(20);
     let offset = params.offset.unwrap_or(0);
     let q = params.q.as_deref();
@@ -60,6 +60,42 @@ pub async fn list_properties(
                 }
             }
         }
+
+        // Fetch images for all listed properties
+        let property_ids: Vec<Uuid> = dtos.iter().map(|d| d.id).collect();
+        let docs = sqlx::query!(
+            r#"
+            SELECT entity_id, storage_path 
+            FROM documents 
+            WHERE entity_id = ANY($1) AND entity_type = 'property' AND deleted_at IS NULL AND mime_type LIKE 'image/%'
+            ORDER BY created_at ASC
+            "#,
+            &property_ids
+        )
+        .fetch_all(&*pool)
+        .await
+        .unwrap_or_default();
+
+        if !docs.is_empty() {
+            let supabase_url = std::env::var("SUPABASE_URL").unwrap_or_default();
+            let bucket_name = std::env::var("SUPABASE_DOCUMENTS_BUCKET").unwrap_or_else(|_| "certificados".to_string());
+            
+            for dto in dtos.iter_mut() {
+                let images_json: Vec<serde_json::Value> = docs.iter()
+                    .filter(|d| d.entity_id == dto.id)
+                    .filter_map(|d| {
+                        let path = &d.storage_path;
+                        Some(serde_json::json!({
+                            "url": format!("{}/storage/v1/object/public/{}/{}", supabase_url, bucket_name, path)
+                        }))
+                    })
+                    .collect();
+                    
+                if !images_json.is_empty() {
+                    dto.images = Some(images_json);
+                }
+            }
+        }
     }
 
     Ok(Json(PaginatedResponse {
@@ -75,7 +111,7 @@ pub async fn get_property(
     Path(id): Path<Uuid>,
     Extension(tenant): Extension<TenantId>,
 ) -> Result<Json<PropertyResponseDto>, StatusCode> {
-    let repo = PropertyRepository::new(pool);
+    let repo = PropertyRepository::new(pool.clone());
     let property = repo
         .find_by_id(id, tenant.0)
         .await
@@ -100,6 +136,28 @@ pub async fn get_property(
                     }
                 }
             }
+
+            // Populate images from documents table
+            let docs = sqlx::query!(
+                "SELECT storage_path FROM documents WHERE entity_id = $1 AND entity_type = 'property' AND deleted_at IS NULL AND mime_type LIKE 'image/%' ORDER BY created_at ASC",
+                id
+            )
+            .fetch_all(&*pool)
+            .await
+            .unwrap_or_default();
+
+            if !docs.is_empty() {
+                let supabase_url = std::env::var("SUPABASE_URL").unwrap_or_default();
+                let bucket_name = std::env::var("SUPABASE_DOCUMENTS_BUCKET").unwrap_or_else(|_| "certificados".to_string());
+                let images_json: Vec<serde_json::Value> = docs.into_iter().filter_map(|d| {
+                    let path = &d.storage_path;
+                    Some(serde_json::json!({
+                        "url": format!("{}/storage/v1/object/public/{}/{}", supabase_url, bucket_name, path)
+                    }))
+                }).collect();
+                dto.images = Some(images_json);
+            }
+
             Ok(Json(dto))
         }
         None => Err(StatusCode::NOT_FOUND),

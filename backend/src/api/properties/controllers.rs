@@ -77,19 +77,17 @@ pub async fn list_properties(
         .unwrap_or_default();
 
         if !docs.is_empty() {
-            let supabase_url = std::env::var("SUPABASE_URL").unwrap_or_default();
-            let bucket_name = std::env::var("SUPABASE_DOCUMENTS_BUCKET").unwrap_or_else(|_| "certificados".to_string());
+            let storage = crate::api::documents::storage::SupabaseStorage::new();
             
             for dto in dtos.iter_mut() {
-                let images_json: Vec<serde_json::Value> = docs.iter()
-                    .filter(|d| d.entity_id == dto.id)
-                    .filter_map(|d| {
-                        let path = &d.storage_path;
-                        Some(serde_json::json!({
-                            "url": format!("{}/storage/v1/object/public/{}/{}", supabase_url, bucket_name, path)
-                        }))
-                    })
-                    .collect();
+                let mut images_json = Vec::new();
+                for d in docs.iter().filter(|d| d.entity_id == dto.id) {
+                    if let Ok(signed_url) = storage.create_download_url(&d.storage_path, 3600).await {
+                        images_json.push(serde_json::json!({
+                            "url": signed_url
+                        }));
+                    }
+                }
                     
                 if !images_json.is_empty() {
                     dto.images = Some(images_json);
@@ -147,14 +145,15 @@ pub async fn get_property(
             .unwrap_or_default();
 
             if !docs.is_empty() {
-                let supabase_url = std::env::var("SUPABASE_URL").unwrap_or_default();
-                let bucket_name = std::env::var("SUPABASE_DOCUMENTS_BUCKET").unwrap_or_else(|_| "certificados".to_string());
-                let images_json: Vec<serde_json::Value> = docs.into_iter().filter_map(|d| {
-                    let path = &d.storage_path;
-                    Some(serde_json::json!({
-                        "url": format!("{}/storage/v1/object/public/{}/{}", supabase_url, bucket_name, path)
-                    }))
-                }).collect();
+                let storage = crate::api::documents::storage::SupabaseStorage::new();
+                let mut images_json = Vec::new();
+                for d in docs {
+                    if let Ok(signed_url) = storage.create_download_url(&d.storage_path, 3600).await {
+                        images_json.push(serde_json::json!({
+                            "url": signed_url
+                        }));
+                    }
+                }
                 dto.images = Some(images_json);
             }
 

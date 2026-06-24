@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE leads SET status = 'CONTACTADO' WHERE id = $1",
+  "query": "UPDATE leads SET updated_at = CURRENT_TIMESTAMP WHERE id = $1",
   "describe": {
     "columns": [],
     "parameters": {
@@ -10,5 +10,5 @@
     },
     "nullable": []
   },
-  "hash": "394a2d37daab29d312ae22920a251fece682852b14218258b74581c691cf749e"
+  "hash": "8626478df8d02eafdb17f704646b27178e73a8e1c7885144e3aa6af37f669f1f"
 }

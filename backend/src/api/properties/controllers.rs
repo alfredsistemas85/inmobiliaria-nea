@@ -13,7 +13,7 @@ use axum::{
     Extension,
 };
 use sqlx::types::Json as SqlxJson;
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -63,28 +63,32 @@ pub async fn list_properties(
 
         // Fetch images for all listed properties
         let property_ids: Vec<Uuid> = dtos.iter().map(|d| d.id).collect();
-        let docs = sqlx::query!(
+        let rows = sqlx::query(
             r#"
             SELECT id, entity_id, storage_path 
             FROM documents 
             WHERE entity_id = ANY($1) AND entity_type = 'property' AND deleted_at IS NULL AND mime_type LIKE 'image/%'
             ORDER BY created_at ASC
-            "#,
-            &property_ids
+            "#
         )
+        .bind(&property_ids)
         .fetch_all(&*pool)
         .await
         .unwrap_or_default();
 
-        if !docs.is_empty() {
+        if !rows.is_empty() {
             let api_url = std::env::var("API_URL").unwrap_or_else(|_| "".to_string());
             
             for dto in dtos.iter_mut() {
                 let mut images_json = Vec::new();
-                for d in docs.iter().filter(|d| d.entity_id == dto.id) {
-                    images_json.push(serde_json::json!({
-                        "url": format!("{}/api/documents/{}/view", api_url, d.id)
-                    }));
+                for r in &rows {
+                    let r_entity_id: Uuid = r.try_get("entity_id").unwrap_or_default();
+                    if r_entity_id == dto.id {
+                        let r_id: Uuid = r.try_get("id").unwrap_or_default();
+                        images_json.push(serde_json::json!({
+                            "url": format!("{}/api/documents/{}/view", api_url, r_id)
+                        }));
+                    }
                 }
                     
                 if !images_json.is_empty() {
@@ -134,20 +138,21 @@ pub async fn get_property(
             }
 
             // Populate images from documents table
-            let docs = sqlx::query!(
-                "SELECT id, storage_path FROM documents WHERE entity_id = $1 AND entity_type = 'property' AND deleted_at IS NULL AND mime_type LIKE 'image/%' ORDER BY created_at ASC",
-                id
+            let rows = sqlx::query(
+                "SELECT id, storage_path FROM documents WHERE entity_id = $1 AND entity_type = 'property' AND deleted_at IS NULL AND mime_type LIKE 'image/%' ORDER BY created_at ASC"
             )
+            .bind(id)
             .fetch_all(&*pool)
             .await
             .unwrap_or_default();
 
-            if !docs.is_empty() {
+            if !rows.is_empty() {
                 let api_url = std::env::var("API_URL").unwrap_or_else(|_| "".to_string());
                 let mut images_json = Vec::new();
-                for d in docs {
+                for r in rows {
+                    let r_id: Uuid = r.try_get("id").unwrap_or_default();
                     images_json.push(serde_json::json!({
-                        "url": format!("{}/api/documents/{}/view", api_url, d.id)
+                        "url": format!("{}/api/documents/{}/view", api_url, r_id)
                     }));
                 }
                 dto.images = Some(images_json);

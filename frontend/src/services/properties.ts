@@ -60,7 +60,7 @@ export const propertiesService = {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        file_name: file.name,
+        file_name: file.name.replace(/[^a-zA-Z0-9.-]/g, '_'),
         file_size: file.size,
         mime_type: file.type || 'image/jpeg',
         entity_type: 'property',
@@ -93,7 +93,7 @@ export const propertiesService = {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        file_name: file.name,
+        file_name: file.name.replace(/[^a-zA-Z0-9.-]/g, '_'),
         file_size: file.size,
         mime_type: file.type || 'application/octet-stream',
         entity_type: 'property',

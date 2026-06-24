@@ -27,8 +27,8 @@ impl SupabaseStorage {
     pub fn new() -> Self {
         let supabase_url = env::var("SUPABASE_URL").unwrap_or_default();
         let service_role_key = env::var("SUPABASE_SERVICE_ROLE_KEY").unwrap_or_default();
-        // default bucket is "documents"
-        let bucket_name = env::var("SUPABASE_DOCUMENTS_BUCKET").unwrap_or_else(|_| "documents".to_string());
+        // default bucket changed to "certificados" based on Supabase setup
+        let bucket_name = env::var("SUPABASE_DOCUMENTS_BUCKET").unwrap_or_else(|_| "certificados".to_string());
 
         Self {
             client: Client::new(),

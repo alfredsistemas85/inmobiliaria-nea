@@ -188,3 +188,36 @@ pub async fn delete_document(
 
     Ok(StatusCode::OK)
 }
+
+pub async fn view_document(
+    State(pool): State<Arc<PgPool>>,
+    Path(id): Path<Uuid>,
+) -> Result<axum::response::Response, StatusCode> {
+    let path_row = sqlx::query("SELECT storage_path, mime_type FROM documents WHERE id = $1 AND deleted_at IS NULL")
+        .bind(id)
+        .fetch_optional(&*pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    let storage_path: String = path_row.try_get("storage_path").unwrap_or_default();
+    let mime_type: String = path_row.try_get("mime_type").unwrap_or_else(|_| "application/octet-stream".to_string());
+    
+    let storage = SupabaseStorage::new();
+    let url = storage.create_download_url(&storage_path, 3600).await.map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+
+    let client = reqwest::Client::new();
+    let res = client.get(&url).send().await.map_err(|_| StatusCode::BAD_GATEWAY)?;
+    
+    if !res.status().is_success() {
+        return Err(StatusCode::BAD_GATEWAY);
+    }
+    
+    let bytes = res.bytes().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    
+    axum::response::Response::builder()
+        .header("Content-Type", mime_type)
+        .header("Cache-Control", "public, max-age=31536000")
+        .body(axum::body::Body::from(bytes))
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}

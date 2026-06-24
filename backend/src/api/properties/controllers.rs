@@ -65,7 +65,7 @@ pub async fn list_properties(
         let property_ids: Vec<Uuid> = dtos.iter().map(|d| d.id).collect();
         let docs = sqlx::query!(
             r#"
-            SELECT entity_id, storage_path 
+            SELECT id, entity_id, storage_path 
             FROM documents 
             WHERE entity_id = ANY($1) AND entity_type = 'property' AND deleted_at IS NULL AND mime_type LIKE 'image/%'
             ORDER BY created_at ASC
@@ -77,16 +77,14 @@ pub async fn list_properties(
         .unwrap_or_default();
 
         if !docs.is_empty() {
-            let storage = crate::api::documents::storage::SupabaseStorage::new();
+            let api_url = std::env::var("API_URL").unwrap_or_else(|_| "".to_string());
             
             for dto in dtos.iter_mut() {
                 let mut images_json = Vec::new();
                 for d in docs.iter().filter(|d| d.entity_id == dto.id) {
-                    if let Ok(signed_url) = storage.create_download_url(&d.storage_path, 3600).await {
-                        images_json.push(serde_json::json!({
-                            "url": signed_url
-                        }));
-                    }
+                    images_json.push(serde_json::json!({
+                        "url": format!("{}/api/documents/{}/view", api_url, d.id)
+                    }));
                 }
                     
                 if !images_json.is_empty() {
@@ -137,7 +135,7 @@ pub async fn get_property(
 
             // Populate images from documents table
             let docs = sqlx::query!(
-                "SELECT storage_path FROM documents WHERE entity_id = $1 AND entity_type = 'property' AND deleted_at IS NULL AND mime_type LIKE 'image/%' ORDER BY created_at ASC",
+                "SELECT id, storage_path FROM documents WHERE entity_id = $1 AND entity_type = 'property' AND deleted_at IS NULL AND mime_type LIKE 'image/%' ORDER BY created_at ASC",
                 id
             )
             .fetch_all(&*pool)
@@ -145,14 +143,12 @@ pub async fn get_property(
             .unwrap_or_default();
 
             if !docs.is_empty() {
-                let storage = crate::api::documents::storage::SupabaseStorage::new();
+                let api_url = std::env::var("API_URL").unwrap_or_else(|_| "".to_string());
                 let mut images_json = Vec::new();
                 for d in docs {
-                    if let Ok(signed_url) = storage.create_download_url(&d.storage_path, 3600).await {
-                        images_json.push(serde_json::json!({
-                            "url": signed_url
-                        }));
-                    }
+                    images_json.push(serde_json::json!({
+                        "url": format!("{}/api/documents/{}/view", api_url, d.id)
+                    }));
                 }
                 dto.images = Some(images_json);
             }

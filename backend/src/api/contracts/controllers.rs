@@ -47,8 +47,8 @@ pub async fn create_contract(
 
     let contract = sqlx::query_as::<_, Contract>(
         r#"
-        INSERT INTO contracts (tenant_id, property_id, start_date, end_date, original_rent_amount, current_rent_amount, adjustment_method, adjustment_frequency, automation_mode, fixed_percentage, first_notification_days)
-        VALUES ($1, $2, $3, $4, $5, $5, $6, $7, $8, $9, $10)
+        INSERT INTO contracts (tenant_id, property_id, start_date, end_date, original_rent_amount, current_rent_amount, rent_amount, adjustment_method, adjustment_frequency, automation_mode, fixed_percentage, first_notification_days)
+        VALUES ($1, $2, $3, $4, $5, $5, $5, $6, $7, $8, $9, $10)
         RETURNING id, tenant_id, property_id, start_date, end_date, original_rent_amount, current_rent_amount, adjustment_method, adjustment_frequency, automation_mode, fixed_percentage, first_notification_days, second_notification_days, third_notification_days, requires_manual_approval, next_adjustment_date, last_adjustment_date, status
         "#
     )

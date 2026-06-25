@@ -24,7 +24,7 @@ pub struct ProposeAdjustmentDto {
 
 #[derive(Deserialize)]
 pub struct ApproveAdjustmentDto {
-    pub new_amount: Decimal, // Permite modificar el valor antes de aprobar
+    pub new_amount: Option<Decimal>, // Permite modificar el valor antes de aprobar; null = usar monto calculado
     pub notes: Option<String>,
 }
 

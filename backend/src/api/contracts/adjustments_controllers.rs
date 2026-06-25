@@ -55,9 +55,26 @@ pub async fn approve_adjustment(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<ApproveAdjustmentDto>,
 ) -> Result<StatusCode, StatusCode> {
+    // Si new_amount es None (aprobación sin cambio), obtenemos el monto calculado del registro existente
+    let new_amount = match payload.new_amount {
+        Some(amount) => amount,
+        None => {
+            #[derive(sqlx::FromRow)]
+            struct AdjAmount { new_amount: rust_decimal::Decimal }
+            sqlx::query_as::<_, AdjAmount>(
+                "SELECT new_amount FROM rent_adjustments WHERE id = $1"
+            )
+            .bind(adj_id)
+            .fetch_one(&*pool)
+            .await
+            .map(|r| r.new_amount)
+            .map_err(|_| StatusCode::NOT_FOUND)?
+        }
+    };
+
     let engine = RentalAdjustmentEngine::new(pool);
     
-    engine.approve_adjustment(adj_id, claims.sub, payload.new_amount, payload.notes)
+    engine.approve_adjustment(adj_id, claims.sub, new_amount, payload.notes)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -123,7 +140,7 @@ pub async fn list_pending_adjustments(
             ra.id as adjustment_id,
             ra.contract_id,
             c.id::text as contract_number,
-            COALESCE(cl.first_name || ' ' || cl.last_name, '') as tenant_name,
+            COALESCE(u.first_name || ' ' || u.last_name, u.email, '') as tenant_name,
             ra.previous_amount as current_rent,
             ra.percentage_applied as adjustment_percent,
             ra.new_amount as new_rent,
@@ -131,7 +148,7 @@ pub async fn list_pending_adjustments(
             ra.created_at
         FROM rent_adjustments ra
         JOIN contracts c ON ra.contract_id = c.id
-        LEFT JOIN clients cl ON c.tenant_user_id = cl.id
+        LEFT JOIN users u ON c.tenant_user_id = u.id
         WHERE ra.tenant_id = $1 AND ra.status = 'PENDING'
         ORDER BY ra.effective_date ASC
         "#

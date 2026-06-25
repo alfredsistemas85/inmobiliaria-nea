@@ -5,6 +5,7 @@ use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, Clone, sqlx::Type)]
 #[sqlx(type_name = "adjustment_method", rename_all = "SCREAMING_SNAKE_CASE")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum AdjustmentMethod {
     Manual,
     FixedPercentage,
@@ -16,6 +17,7 @@ pub enum AdjustmentMethod {
 
 #[derive(Serialize, Deserialize, Debug, Clone, sqlx::Type)]
 #[sqlx(type_name = "adjustment_frequency", rename_all = "SCREAMING_SNAKE_CASE")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum AdjustmentFrequency {
     Monthly,
     Bimonthly,
@@ -36,6 +38,7 @@ pub enum AdjustmentStatus {
 
 #[derive(Serialize, Deserialize, Debug, Clone, sqlx::Type)]
 #[sqlx(type_name = "automation_mode", rename_all = "SCREAMING_SNAKE_CASE")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum AutomationMode {
     Manual,
     Semiautomatic,

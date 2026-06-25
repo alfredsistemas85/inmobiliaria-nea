@@ -64,7 +64,10 @@ pub async fn create_contract(
     .bind(payload.notification_days_before)
     .fetch_one(&mut *tx)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|e| {
+        tracing::error!("Error insertando contrato en BD: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     use chrono::Datelike;
     let mut current_date = payload.start_date;

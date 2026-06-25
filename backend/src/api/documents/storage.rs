@@ -88,7 +88,7 @@ impl SupabaseStorage {
         
         if let Some(mut signed) = data.signed_url {
             if signed.starts_with("/") {
-                signed = format!("{}{}", self.supabase_url, signed);
+                signed = format!("{}/storage/v1{}", self.supabase_url, signed);
             }
             Ok(signed)
         } else {

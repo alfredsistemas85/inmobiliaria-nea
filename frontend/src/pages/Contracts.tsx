@@ -141,6 +141,34 @@ export default function Contracts() {
     setForm(prev => ({ ...prev, [name]: value }))
   }
 
+  const handleDownloadPdf = async (contractId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/contracts/${contractId}/pdf`, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('No se pudo descargar el PDF');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `contrato_${contractId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+    } catch (err) {
+      console.error(err);
+      showToast('Error al descargar el PDF', 'error');
+    }
+  }
+
   const handleSubmitContract = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormError('')
@@ -316,7 +344,7 @@ export default function Contracts() {
                             variant="ghost"
                             size="sm"
                             className="gap-2 text-muted-foreground hover:text-foreground"
-                            onClick={() => window.open(`${API_URL}/api/contracts/${c.id}/pdf`, '_blank')}
+                            onClick={() => handleDownloadPdf(c.id)}
                           >
                             <Download className="h-4 w-4" /> PDF
                           </Button>

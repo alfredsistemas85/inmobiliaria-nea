@@ -53,75 +53,41 @@ pub async fn get_stats(
 ) -> Result<Json<DashboardStats>, StatusCode> {
     let tenant_id = claims.tenant_id.ok_or(StatusCode::FORBIDDEN)?;
 
-    let total_clients: (i64,) =
-        sqlx::query_as("SELECT COUNT(*) FROM clients WHERE tenant_id = $1 AND deleted_at IS NULL")
-            .bind(tenant_id)
-            .fetch_one(&*pool)
-            .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let f_total_clients = sqlx::query_as::<_, (i64,)>("SELECT COUNT(*) FROM clients WHERE tenant_id = $1 AND deleted_at IS NULL")
+        .bind(tenant_id).fetch_one(&*pool);
 
-    let total_properties: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM properties WHERE tenant_id = $1 AND deleted_at IS NULL",
-    )
-    .bind(tenant_id)
-    .fetch_one(&*pool)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let f_total_properties = sqlx::query_as::<_, (i64,)>("SELECT COUNT(*) FROM properties WHERE tenant_id = $1 AND deleted_at IS NULL")
+        .bind(tenant_id).fetch_one(&*pool);
 
-    let new_leads: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM leads WHERE tenant_id = $1 AND status = 'NUEVO' AND deleted_at IS NULL")
-        .bind(tenant_id)
-        .fetch_one(&*pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let f_new_leads = sqlx::query_as::<_, (i64,)>("SELECT COUNT(*) FROM leads WHERE tenant_id = $1 AND status = 'NUEVO' AND deleted_at IS NULL")
+        .bind(tenant_id).fetch_one(&*pool);
 
-    let upcoming_appointments: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM appointments WHERE tenant_id = $1 AND scheduled_at >= CURRENT_TIMESTAMP AND deleted_at IS NULL")
-        .bind(tenant_id)
-        .fetch_one(&*pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let f_upcoming_appointments = sqlx::query_as::<_, (i64,)>("SELECT COUNT(*) FROM appointments WHERE tenant_id = $1 AND scheduled_at >= CURRENT_TIMESTAMP AND deleted_at IS NULL")
+        .bind(tenant_id).fetch_one(&*pool);
 
-    let active_whatsapp_conversations: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM conversations WHERE tenant_id = $1 AND status = 'OPEN' AND deleted_at IS NULL")
-        .bind(tenant_id)
-        .fetch_one(&*pool)
-        .await
-        .unwrap_or((0,));
+    let f_active_whatsapp = sqlx::query_as::<_, (i64,)>("SELECT COUNT(*) FROM conversations WHERE tenant_id = $1 AND status = 'OPEN' AND deleted_at IS NULL")
+        .bind(tenant_id).fetch_one(&*pool);
 
-    let leads_this_month: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM leads WHERE tenant_id = $1 AND date_trunc('month', created_at) = date_trunc('month', CURRENT_TIMESTAMP) AND deleted_at IS NULL")
-        .bind(tenant_id)
-        .fetch_one(&*pool)
-        .await
-        .unwrap_or((0,));
+    let f_leads_month = sqlx::query_as::<_, (i64,)>("SELECT COUNT(*) FROM leads WHERE tenant_id = $1 AND date_trunc('month', created_at) = date_trunc('month', CURRENT_TIMESTAMP) AND deleted_at IS NULL")
+        .bind(tenant_id).fetch_one(&*pool);
 
-    let conversions_this_month: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM audit_logs WHERE tenant_id = $1 AND entity_type = 'lead' AND action = 'UPDATE_LEAD' AND date_trunc('month', created_at) = date_trunc('month', CURRENT_TIMESTAMP)")
-        .bind(tenant_id)
-        .fetch_one(&*pool)
-        .await
-        .unwrap_or((0,));
+    let f_conversions_month = sqlx::query_as::<_, (i64,)>("SELECT COUNT(*) FROM audit_logs WHERE tenant_id = $1 AND entity_type = 'lead' AND action = 'UPDATE_LEAD' AND date_trunc('month', created_at) = date_trunc('month', CURRENT_TIMESTAMP)")
+        .bind(tenant_id).fetch_one(&*pool);
 
-    let leads_by_status: Vec<LeadStatusCount> = sqlx::query_as::<_, LeadStatusCount>(
-        "SELECT status, COUNT(*) as count FROM leads WHERE tenant_id = $1 AND deleted_at IS NULL GROUP BY status"
-    )
-    .bind(tenant_id)
-    .fetch_all(&*pool)
-    .await
-    .unwrap_or_default();
+    let f_leads_status = sqlx::query_as::<_, LeadStatusCount>("SELECT status, COUNT(*) as count FROM leads WHERE tenant_id = $1 AND deleted_at IS NULL GROUP BY status")
+        .bind(tenant_id).fetch_all(&*pool);
 
-    let conversations_by_agent: Vec<AgentConversationCount> =
-        sqlx::query_as::<_, AgentConversationCount>(
-            r#"
+    let f_conv_agent = sqlx::query_as::<_, AgentConversationCount>(
+        r#"
         SELECT COALESCE(u.first_name, 'Sin Asignar') as agent_name, COUNT(c.id) as count 
         FROM conversations c 
         LEFT JOIN users u ON c.assigned_user_id = u.id 
         WHERE c.tenant_id = $1 AND c.deleted_at IS NULL 
         GROUP BY u.first_name
-        "#,
-        )
-        .bind(tenant_id)
-        .fetch_all(&*pool)
-        .await
-        .unwrap_or_default();
+        "#
+    ).bind(tenant_id).fetch_all(&*pool);
 
-    let conversions_by_month: Vec<MonthlyConversion> = sqlx::query_as::<_, MonthlyConversion>(
+    let f_conv_month = sqlx::query_as::<_, MonthlyConversion>(
         r#"
         SELECT TO_CHAR(created_at, 'YYYY-MM') as month, COUNT(*) as count 
         FROM audit_logs 
@@ -130,11 +96,44 @@ pub async fn get_stats(
         ORDER BY month ASC
         LIMIT 6
         "#
-    )
-    .bind(tenant_id)
-    .fetch_all(&*pool)
-    .await
-    .unwrap_or_default();
+    ).bind(tenant_id).fetch_all(&*pool);
+
+    let (
+        res_total_clients,
+        res_total_properties,
+        res_new_leads,
+        res_upcoming_appointments,
+        res_active_whatsapp,
+        res_leads_month,
+        res_conversions_month,
+        res_leads_status,
+        res_conv_agent,
+        res_conv_month
+    ) = tokio::join!(
+        f_total_clients,
+        f_total_properties,
+        f_new_leads,
+        f_upcoming_appointments,
+        f_active_whatsapp,
+        f_leads_month,
+        f_conversions_month,
+        f_leads_status,
+        f_conv_agent,
+        f_conv_month
+    );
+
+    let total_clients = res_total_clients.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let total_properties = res_total_properties.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let new_leads = res_new_leads.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let upcoming_appointments = res_upcoming_appointments.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    
+    let active_whatsapp_conversations = res_active_whatsapp.unwrap_or((0,));
+    let leads_this_month = res_leads_month.unwrap_or((0,));
+    let conversions_this_month = res_conversions_month.unwrap_or((0,));
+    
+    let leads_by_status = res_leads_status.unwrap_or_default();
+    let conversations_by_agent = res_conv_agent.unwrap_or_default();
+    let conversions_by_month = res_conv_month.unwrap_or_default();
 
     Ok(Json(DashboardStats {
         total_clients: total_clients.0,

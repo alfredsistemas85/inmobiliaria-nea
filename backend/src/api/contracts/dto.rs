@@ -2,7 +2,7 @@ use chrono::NaiveDate;
 use rust_decimal::Decimal;
 use serde::Deserialize;
 use uuid::Uuid;
-use super::models::{AdjustmentMethod, AdjustmentFrequency, AutomationMode};
+use super::models::{AdjustmentMethod, AdjustmentFrequency, AutomationMode, ContractType, ContractDestination, ParticipantRole, GuaranteeType};
 
 #[derive(Deserialize)]
 pub struct CreateContractDto {
@@ -15,6 +15,55 @@ pub struct CreateContractDto {
     pub automation_mode: Option<AutomationMode>,
     pub fixed_percentage: Option<Decimal>,
     pub notification_days_before: Option<i32>,
+}
+
+#[derive(Deserialize)]
+pub struct ParticipantGuaranteeDto {
+    pub guarantee_type: GuaranteeType,
+    pub income_amount: Option<Decimal>,
+    pub employer: Option<String>,
+    pub guarantee_details: Option<String>,
+    pub observations: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct ContractParticipantDto {
+    pub client_id: Uuid,
+    pub p_role: ParticipantRole,
+    pub percentage: Option<Decimal>,
+    pub is_main: Option<bool>,
+    pub display_order: Option<i32>,
+    pub observations: Option<String>,
+    pub guarantees: Option<Vec<ParticipantGuaranteeDto>>,
+}
+
+#[derive(Deserialize)]
+pub struct CreateContractDtoV2 {
+    pub property_id: Uuid,
+    pub start_date: NaiveDate,
+    pub end_date: NaiveDate,
+    pub original_rent_amount: Decimal,
+    pub adjustment_method: Option<AdjustmentMethod>,
+    pub adjustment_frequency: Option<AdjustmentFrequency>,
+    pub automation_mode: Option<AutomationMode>,
+    pub fixed_percentage: Option<Decimal>,
+    pub notification_days_before: Option<i32>,
+    
+    // New fields
+    pub c_type: Option<ContractType>,
+    pub c_destination: Option<ContractDestination>,
+    pub jurisdiction: Option<String>,
+    pub city: Option<String>,
+    pub province: Option<String>,
+    pub currency: Option<String>,
+    pub deposit_amount: Option<Decimal>,
+    pub commission_amount: Option<Decimal>,
+    pub fees_amount: Option<Decimal>,
+    pub taxes_payer: Option<String>,
+    pub services_payer: Option<String>,
+    pub observations: Option<String>,
+
+    pub participants: Vec<ContractParticipantDto>,
 }
 
 #[derive(Deserialize)]

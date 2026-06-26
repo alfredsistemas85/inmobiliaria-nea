@@ -15,6 +15,7 @@ use crate::core::tenant::middleware::tenant_middleware;
 pub fn router(pool: Arc<PgPool>) -> Router {
     Router::new()
         .route("/", get(controllers::list_contracts).post(controllers::create_contract))
+        .route("/v2", post(controllers::create_contract_v2))
         .route("/:id/pdf", get(controllers::generate_contract_pdf))
         .route("/adjustments/pending", get(adjustments_controllers::list_pending_adjustments))
         .route("/:id/adjustments", get(adjustments_controllers::list_adjustments))

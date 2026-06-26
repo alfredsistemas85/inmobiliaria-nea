@@ -55,6 +55,62 @@ pub enum InstallmentStatus {
     Cancelled,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, sqlx::Type)]
+#[sqlx(type_name = "contract_status", rename_all = "SCREAMING_SNAKE_CASE")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ContractStatus {
+    Draft,
+    PendingSignature,
+    Signed,
+    Active,
+    Suspended,
+    Finished,
+    Terminated,
+    Annulled,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, sqlx::Type)]
+#[sqlx(type_name = "contract_type", rename_all = "SCREAMING_SNAKE_CASE")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ContractType {
+    Housing,
+    Commercial,
+    Temporary,
+    Professional,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, sqlx::Type)]
+#[sqlx(type_name = "contract_destination", rename_all = "SCREAMING_SNAKE_CASE")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ContractDestination {
+    Habitational,
+    Commercial,
+    Mixed,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, sqlx::Type)]
+#[sqlx(type_name = "participant_role", rename_all = "SCREAMING_SNAKE_CASE")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ParticipantRole {
+    Landlord,
+    Tenant,
+    Guarantor,
+    Attorney,
+    Witness,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, sqlx::Type)]
+#[sqlx(type_name = "guarantee_type", rename_all = "SCREAMING_SNAKE_CASE")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum GuaranteeType {
+    Property,
+    Payslip,
+    SuretyBond,
+    Bank,
+    Mixed,
+    Other,
+}
+
 #[derive(Serialize, sqlx::FromRow, Clone)]
 pub struct Contract {
     pub id: Uuid,
@@ -74,7 +130,48 @@ pub struct Contract {
     pub requires_manual_approval: Option<bool>,
     pub next_adjustment_date: Option<NaiveDate>,
     pub last_adjustment_date: Option<NaiveDate>,
+    pub status: Option<ContractStatus>,
+    
+    // Phase 1 New Fields
+    pub contract_number: Option<String>,
+    pub c_type: Option<ContractType>,
+    pub c_destination: Option<ContractDestination>,
+    pub jurisdiction: Option<String>,
+    pub city: Option<String>,
+    pub province: Option<String>,
+    pub currency: Option<String>,
+    pub deposit_amount: Option<Decimal>,
+    pub commission_amount: Option<Decimal>,
+    pub fees_amount: Option<Decimal>,
+    pub taxes_payer: Option<String>,
+    pub services_payer: Option<String>,
+    pub observations: Option<String>,
+}
+
+#[derive(Serialize, sqlx::FromRow, Clone)]
+pub struct ContractParticipant {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub contract_id: Uuid,
+    pub client_id: Uuid,
+    pub p_role: ParticipantRole,
+    pub percentage: Option<Decimal>,
+    pub is_main: Option<bool>,
+    pub display_order: Option<i32>,
+    pub observations: Option<String>,
+}
+
+#[derive(Serialize, sqlx::FromRow, Clone)]
+pub struct ParticipantGuarantee {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub participant_id: Uuid,
+    pub guarantee_type: GuaranteeType,
     pub status: Option<String>,
+    pub income_amount: Option<Decimal>,
+    pub employer: Option<String>,
+    pub guarantee_details: Option<String>,
+    pub observations: Option<String>,
 }
 
 #[derive(Serialize, sqlx::FromRow)]

@@ -305,9 +305,7 @@ pub async fn run_reminders(State(pool): State<Arc<PgPool>>) -> Result<StatusCode
     for row in rows {
         let phone = row.phone;
         let name = row.first_name.unwrap_or_else(|| "Cliente".to_string());
-        let property = row
-            .property_title
-            .unwrap_or_else(|| "la propiedad".to_string());
+        let property = row.property_title;
         let time = row.scheduled_at.format("%Y-%m-%d %H:%M").to_string();
 
         let message = format!(

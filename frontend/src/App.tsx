@@ -2,30 +2,32 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { DashboardLayout } from '@/layouts/DashboardLayout'
 import { SuperAdminLayout } from '@/layouts/SuperAdminLayout'
 
-// Pages
-import Login from '@/pages/Login'
-import Dashboard from '@/pages/Dashboard'
-import Properties from '@/pages/Properties'
-import PropertyDetail from '@/pages/PropertyDetail'
-import PropertyForm from '@/pages/PropertyForm'
-import Clients from '@/pages/Clients'
-import Leads from '@/pages/Leads'
-import Appointments from '@/pages/Appointments'
-import WhatsApp from '@/pages/WhatsApp'
-import Reports from '@/pages/Reports'
-import Users from '@/pages/Users'
-import Settings from '@/pages/Settings'
-import Contracts from '@/pages/Contracts'
-import Financials from '@/pages/Financials'
-import Documents from '@/pages/Documents'
+import { Suspense, lazy } from 'react'
 
-// SuperAdmin Pages
-import SuperAdminDashboard from '@/pages/superadmin/Dashboard'
-import SuperAdminTenants from '@/pages/superadmin/TenantsList'
-import SuperAdminTenantDetail from '@/pages/superadmin/TenantDetail'
-import SuperAdminSupport from '@/pages/superadmin/Support'
-import SuperAdminMonitoring from '@/pages/superadmin/Monitoring'
-import SuperAdminSettings from '@/pages/superadmin/Settings'
+// Pages (Lazy loaded)
+const Login = lazy(() => import('@/pages/Login'))
+const Dashboard = lazy(() => import('@/pages/Dashboard'))
+const Properties = lazy(() => import('@/pages/Properties'))
+const PropertyDetail = lazy(() => import('@/pages/PropertyDetail'))
+const PropertyForm = lazy(() => import('@/pages/PropertyForm'))
+const Clients = lazy(() => import('@/pages/Clients'))
+const Leads = lazy(() => import('@/pages/Leads'))
+const Appointments = lazy(() => import('@/pages/Appointments'))
+const WhatsApp = lazy(() => import('@/pages/WhatsApp'))
+const Reports = lazy(() => import('@/pages/Reports'))
+const Users = lazy(() => import('@/pages/Users'))
+const Settings = lazy(() => import('@/pages/Settings'))
+const Contracts = lazy(() => import('@/pages/Contracts'))
+const Financials = lazy(() => import('@/pages/Financials'))
+const Documents = lazy(() => import('@/pages/Documents'))
+
+// SuperAdmin Pages (Lazy loaded)
+const SuperAdminDashboard = lazy(() => import('@/pages/superadmin/Dashboard'))
+const SuperAdminTenants = lazy(() => import('@/pages/superadmin/TenantsList'))
+const SuperAdminTenantDetail = lazy(() => import('@/pages/superadmin/TenantDetail'))
+const SuperAdminSupport = lazy(() => import('@/pages/superadmin/Support'))
+const SuperAdminMonitoring = lazy(() => import('@/pages/superadmin/Monitoring'))
+const SuperAdminSettings = lazy(() => import('@/pages/superadmin/Settings'))
 
 /**
  * Guard de autenticación.
@@ -61,16 +63,17 @@ function RequireSuperAdmin({ children }: { children: React.ReactNode }) {
 
 
 
-import VerifyEmail from '@/pages/VerifyEmail'
-import Onboarding from '@/pages/Onboarding'
+const VerifyEmail = lazy(() => import('@/pages/VerifyEmail'))
+const Onboarding = lazy(() => import('@/pages/Onboarding'))
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
-        <Routes>
-          {/* Root Redirect */}
+        <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" /></div>}>
+          <Routes>
+            {/* Root Redirect */}
           <Route path="/" element={<Navigate to="/login" replace />} />
 
           <Route path="/login" element={<Login />} />
@@ -123,6 +126,7 @@ function App() {
         {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </Suspense>
       </BrowserRouter>
     </ErrorBoundary>
   )

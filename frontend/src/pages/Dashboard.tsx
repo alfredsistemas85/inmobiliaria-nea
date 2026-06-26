@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, Home, CalendarDays, DollarSign, MessageCircle, BarChart3 } from 'lucide-react'
 import { dashboardService, DashboardStats, DashboardActivity } from '@/services/dashboard'
@@ -21,34 +21,29 @@ import {
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8']
 
 export default function Dashboard() {
-  const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [activity, setActivity] = useState<DashboardActivity[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const {
+    data: stats,
+    isLoading: loadingStats,
+    error: errorStats,
+    refetch: refetchStats
+  } = useQuery({
+    queryKey: ['dashboard', 'stats'],
+    queryFn: dashboardService.getStats
+  })
 
-  const loadData = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const [statsRes, activityRes] = await Promise.all([
-        dashboardService.getStats(),
-        dashboardService.getActivity(),
-      ])
-      // La API puede retornar null si hay redirección por 401
-      if (!statsRes) throw new Error('No se pudieron cargar las métricas. Verifica tu sesión.')
-      setStats(statsRes)
-      setActivity(Array.isArray(activityRes) ? activityRes : [])
-    } catch (err: any) {
-      console.error('Error loading dashboard data:', err)
-      setError(err.message || 'Error al cargar el dashboard')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const {
+    data: activityRes,
+    isLoading: loadingActivity,
+    error: errorActivity,
+    refetch: refetchActivity
+  } = useQuery({
+    queryKey: ['dashboard', 'activity'],
+    queryFn: dashboardService.getActivity
+  })
 
-  useEffect(() => {
-    loadData()
-  }, [])
+  const activity = Array.isArray(activityRes) ? activityRes : []
+  const loading = loadingStats || loadingActivity
+  const error = errorStats || errorActivity
 
   if (loading) {
     return (
@@ -64,10 +59,10 @@ export default function Dashboard() {
       <div className="flex flex-col items-center justify-center p-12 gap-4">
         <div className="p-4 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-md text-center max-w-md">
           <p className="font-semibold mb-1">Error al cargar el dashboard</p>
-          <p className="text-sm">{error || 'No se recibieron datos del servidor'}</p>
+          <p className="text-sm">{(error as any)?.message || 'No se recibieron datos del servidor'}</p>
         </div>
         <button
-          onClick={loadData}
+          onClick={() => { refetchStats(); refetchActivity(); }}
           className="px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
         >
           Reintentar

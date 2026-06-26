@@ -1,19 +1,19 @@
+use crate::core::security::jwt::Claims;
 use axum::{
     extract::{Query, State},
     http::StatusCode,
-    response::{Redirect, IntoResponse},
-    Json, Extension,
+    response::{IntoResponse, Redirect},
+    Extension, Json,
+};
+use oauth2::{
+    basic::BasicClient, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, RedirectUrl,
+    Scope, TokenResponse, TokenUrl,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
+use std::env;
 use std::sync::Arc;
 use uuid::Uuid;
-use std::env;
-use crate::core::security::jwt::Claims;
-use oauth2::{
-    basic::BasicClient, AuthUrl, ClientId, ClientSecret, CsrfToken, RedirectUrl,
-    Scope, TokenResponse, TokenUrl, AuthorizationCode,
-};
 
 #[derive(Serialize)]
 pub struct CalendarStatusResponse {
@@ -31,28 +31,34 @@ pub struct AuthRequest {
 fn get_google_env() -> Option<(String, String, String)> {
     let client_id = env::var("GOOGLE_CLIENT_ID").ok()?;
     let client_secret = env::var("GOOGLE_CLIENT_SECRET").ok()?;
-    let redirect_url = env::var("GOOGLE_REDIRECT_URI").unwrap_or_else(|_| "http://localhost:3000/api/calendar/google/callback".to_string());
+    let redirect_url = env::var("GOOGLE_REDIRECT_URI")
+        .unwrap_or_else(|_| "http://localhost:3000/api/calendar/google/callback".to_string());
     Some((client_id, client_secret, redirect_url))
 }
 
-pub async fn google_connect(
-    Extension(claims): Extension<Claims>,
-) -> Result<Redirect, StatusCode> {
-    let (client_id, client_secret, redirect_url) = get_google_env().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+pub async fn google_connect(Extension(claims): Extension<Claims>) -> Result<Redirect, StatusCode> {
+    let (client_id, client_secret, redirect_url) =
+        get_google_env().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
 
     let client = BasicClient::new(ClientId::new(client_id))
         .set_client_secret(ClientSecret::new(client_secret))
-        .set_auth_uri(AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".to_string()).unwrap())
+        .set_auth_uri(
+            AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".to_string()).unwrap(),
+        )
         .set_token_uri(TokenUrl::new("https://oauth2.googleapis.com/token".to_string()).unwrap())
         .set_redirect_uri(RedirectUrl::new(redirect_url).unwrap());
 
     // We can encode the tenant_id and user_id in the state, or use a redis session.
     // For simplicity, we just pass the user token or encode it in state.
-    
+
     let (auth_url, _csrf_token) = client
         .authorize_url(CsrfToken::new_random)
-        .add_scope(Scope::new("https://www.googleapis.com/auth/calendar".to_string()))
-        .add_scope(Scope::new("https://www.googleapis.com/auth/userinfo.email".to_string()))
+        .add_scope(Scope::new(
+            "https://www.googleapis.com/auth/calendar".to_string(),
+        ))
+        .add_scope(Scope::new(
+            "https://www.googleapis.com/auth/userinfo.email".to_string(),
+        ))
         .add_extra_param("state", &claims.sub.to_string())
         .add_extra_param("access_type", "offline")
         .add_extra_param("prompt", "consent")
@@ -65,11 +71,14 @@ pub async fn google_callback(
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<AuthRequest>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let (client_id, client_secret, redirect_url) = get_google_env().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let (client_id, client_secret, redirect_url) =
+        get_google_env().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
 
     let client = BasicClient::new(ClientId::new(client_id))
         .set_client_secret(ClientSecret::new(client_secret))
-        .set_auth_uri(AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".to_string()).unwrap())
+        .set_auth_uri(
+            AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".to_string()).unwrap(),
+        )
         .set_token_uri(TokenUrl::new("https://oauth2.googleapis.com/token".to_string()).unwrap())
         .set_redirect_uri(RedirectUrl::new(redirect_url).unwrap());
     // The state contains the user_id (UUID)
@@ -87,7 +96,9 @@ pub async fn google_callback(
         })?;
 
     let access_token = token_result.access_token().secret().clone();
-    let refresh_token = token_result.refresh_token().map(|t: &oauth2::RefreshToken| t.secret().clone());
+    let refresh_token = token_result
+        .refresh_token()
+        .map(|t: &oauth2::RefreshToken| t.secret().clone());
 
     // Obtenemos el tenant_id del usuario
     let tenant_id: Uuid = sqlx::query_scalar("SELECT tenant_id FROM users WHERE id = $1")
@@ -115,8 +126,12 @@ pub async fn google_callback(
 
     // Redirect to frontend Integrations page
     // Podría ser configurable
-    let frontend_url = env::var("FRONTEND_URL").unwrap_or_else(|_| "http://localhost:5173".to_string());
-    Ok(Redirect::to(&format!("{}/dashboard/settings?integration=success", frontend_url)))
+    let frontend_url =
+        env::var("FRONTEND_URL").unwrap_or_else(|_| "http://localhost:5173".to_string());
+    Ok(Redirect::to(&format!(
+        "{}/dashboard/settings?integration=success",
+        frontend_url
+    )))
 }
 
 pub async fn get_status(

@@ -1,4 +1,6 @@
-use super::controllers::{change_password, login, logout, me, refresh, verify_email, setup_password};
+use super::controllers::{
+    change_password, login, logout, me, refresh, setup_password, verify_email,
+};
 use crate::core::tenant::middleware::tenant_middleware;
 use axum::{
     middleware,
@@ -32,11 +34,17 @@ pub fn router(
         .route("/logout", post(logout))
         .route(
             "/me",
-            get(me).route_layer(middleware::from_fn_with_state(pool.clone(), tenant_middleware)),
+            get(me).route_layer(middleware::from_fn_with_state(
+                pool.clone(),
+                tenant_middleware,
+            )),
         )
         .route(
             "/change-password",
-            post(change_password).route_layer(middleware::from_fn_with_state(pool.clone(), tenant_middleware)),
+            post(change_password).route_layer(middleware::from_fn_with_state(
+                pool.clone(),
+                tenant_middleware,
+            )),
         )
         .with_state(pool)
 }

@@ -1,9 +1,9 @@
 use crate::api::contracts::dto::CreateContractDtoV2;
 use crate::api::contracts::models::Contract;
-use sqlx::{PgPool, Connection};
+use chrono::Datelike;
+use sqlx::{Connection, PgPool};
 use std::sync::Arc;
 use uuid::Uuid;
-use chrono::Datelike;
 
 pub struct ContractRepository {
     pool: Arc<PgPool>,
@@ -67,7 +67,7 @@ impl ContractRepository {
 
         for participant_dto in payload.participants {
             let participant_id = uuid::Uuid::new_v4();
-            
+
             sqlx::query(
                 r#"
                 INSERT INTO contract_participants (
@@ -186,10 +186,15 @@ impl ContractRepository {
         while current_date < payload.end_date {
             let mut year = current_date.year();
             let mut month = current_date.month();
-            
-            let due_day = if payload.start_date.day() > 10 { payload.start_date.day() } else { 10 };
-            let due_date = chrono::NaiveDate::from_ymd_opt(year, month, due_day).unwrap_or(current_date);
-            
+
+            let due_day = if payload.start_date.day() > 10 {
+                payload.start_date.day()
+            } else {
+                10
+            };
+            let due_date =
+                chrono::NaiveDate::from_ymd_opt(year, month, due_day).unwrap_or(current_date);
+
             sqlx::query(
                 "INSERT INTO contract_installments (id, tenant_id, contract_id, due_date, amount, status) VALUES ($1, $2, $3, $4, $5, 'PENDING')"
             )
@@ -211,18 +216,28 @@ impl ContractRepository {
             } else {
                 month += 1;
             }
-            
-            let next_day = if current_date.day() > 28 { 28 } else { current_date.day() };
+
+            let next_day = if current_date.day() > 28 {
+                28
+            } else {
+                current_date.day()
+            };
             current_date = chrono::NaiveDate::from_ymd_opt(year, month, next_day)
                 .unwrap_or_else(|| chrono::NaiveDate::from_ymd_opt(year, month, 1).unwrap());
         }
 
-        tx.commit().await.map_err(|_| "Error en commit".to_string())?;
+        tx.commit()
+            .await
+            .map_err(|_| "Error en commit".to_string())?;
 
         Ok(contract)
     }
 
-    pub async fn get_contract(&self, tenant_id: Uuid, contract_id: Uuid) -> Result<serde_json::Value, String> {
+    pub async fn get_contract(
+        &self,
+        tenant_id: Uuid,
+        contract_id: Uuid,
+    ) -> Result<serde_json::Value, String> {
         // Query utilizing JOIN and jsonb_agg to avoid N+1 queries.
         let row: (serde_json::Value,) = sqlx::query_as(
             r#"

@@ -1,32 +1,63 @@
-pub mod controllers;
-pub mod models;
-pub mod dto;
 pub mod adjustments_controllers;
+pub mod controllers;
+pub mod dto;
+pub mod models;
 pub mod templates_controllers;
 
+use crate::core::tenant::middleware::tenant_middleware;
 use axum::{
+    middleware,
     routing::{get, post},
     Router,
-    middleware,
 };
-use std::sync::Arc;
 use sqlx::PgPool;
-use crate::core::tenant::middleware::tenant_middleware;
+use std::sync::Arc;
 
 pub fn router(pool: Arc<PgPool>) -> Router {
     Router::new()
-        .route("/", get(controllers::list_contracts).post(controllers::create_contract))
+        .route(
+            "/",
+            get(controllers::list_contracts).post(controllers::create_contract),
+        )
         .route("/v2", post(controllers::create_contract_v2))
         .route("/v2/:id", get(controllers::get_contract_v2))
-        .route("/v2/contract-templates", get(templates_controllers::list_templates).post(templates_controllers::create_template))
-        .route("/v2/contract-templates/:id", get(templates_controllers::get_template).delete(templates_controllers::delete_template))
+        .route("/v2/:id/pdf", get(controllers::generate_contract_pdf_v2))
+        .route(
+            "/v2/contract-templates",
+            get(templates_controllers::list_templates).post(templates_controllers::create_template),
+        )
+        .route(
+            "/v2/contract-templates/:id",
+            get(templates_controllers::get_template).delete(templates_controllers::delete_template),
+        )
         .route("/:id/pdf", get(controllers::generate_contract_pdf))
-        .route("/adjustments/pending", get(adjustments_controllers::list_pending_adjustments))
-        .route("/:id/adjustments", get(adjustments_controllers::list_adjustments))
-        .route("/:id/installments", get(adjustments_controllers::list_installments))
-        .route("/:id/adjustments/propose", post(adjustments_controllers::propose_adjustment))
-        .route("/adjustments/:adj_id/approve", post(adjustments_controllers::approve_adjustment))
-        .route("/adjustments/:adj_id/reject", post(adjustments_controllers::reject_adjustment))
-        .route_layer(middleware::from_fn_with_state(pool.clone(), tenant_middleware))
+        .route(
+            "/adjustments/pending",
+            get(adjustments_controllers::list_pending_adjustments),
+        )
+        .route(
+            "/:id/adjustments",
+            get(adjustments_controllers::list_adjustments),
+        )
+        .route(
+            "/:id/installments",
+            get(adjustments_controllers::list_installments),
+        )
+        .route(
+            "/:id/adjustments/propose",
+            post(adjustments_controllers::propose_adjustment),
+        )
+        .route(
+            "/adjustments/:adj_id/approve",
+            post(adjustments_controllers::approve_adjustment),
+        )
+        .route(
+            "/adjustments/:adj_id/reject",
+            post(adjustments_controllers::reject_adjustment),
+        )
+        .route_layer(middleware::from_fn_with_state(
+            pool.clone(),
+            tenant_middleware,
+        ))
         .with_state(pool)
 }

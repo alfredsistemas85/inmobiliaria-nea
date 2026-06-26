@@ -1,6 +1,7 @@
 pub mod appointments;
 pub mod audit;
 pub mod clients;
+pub mod contracts;
 pub mod leads;
 pub mod notifications;
 pub mod properties;
@@ -9,4 +10,3 @@ pub mod roles;
 pub mod tenants;
 pub mod users;
 pub mod whatsapp;
-pub mod contracts;

@@ -1,5 +1,5 @@
-use std::env;
 use sqlx::PgPool;
+use std::env;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -8,9 +8,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pool = PgPool::connect(&db_url).await?;
 
     println!("Running sqlx::migrate! on live DB...");
-    let result = sqlx::migrate!("./migrations")
-        .run(&pool)
-        .await;
+    let result = sqlx::migrate!("./migrations").run(&pool).await;
 
     match result {
         Ok(_) => println!("Migrations completed successfully on live DB!"),

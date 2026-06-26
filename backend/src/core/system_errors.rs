@@ -1,3 +1,4 @@
+use crate::core::security::jwt::Claims;
 use axum::{
     extract::{Request, State},
     middleware::Next,
@@ -6,7 +7,6 @@ use axum::{
 use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
-use crate::core::security::jwt::Claims;
 
 #[derive(Debug)]
 pub enum AppError {
@@ -23,7 +23,7 @@ pub async fn error_logging_middleware(
 ) -> Response {
     let method = req.method().to_string();
     let uri = req.uri().to_string();
-    
+
     // Extract tenant_id if available in claims
     let mut tenant_id: Option<Uuid> = None;
     if let Some(claims) = req.extensions().get::<Claims>() {
@@ -37,11 +37,11 @@ pub async fn error_logging_middleware(
         tracing::error!("500 Interceptado en middleware: {} {}", method, uri);
 
         // We could extract the body if needed, but since it's already consumed,
-        // it's tricky without a custom body wrapper. 
+        // it's tricky without a custom body wrapper.
         // We will just log the occurrence.
-        
+
         let error_msg = format!("HTTP {} - Server Error", status.as_u16());
-        
+
         let pool_clone = pool.clone();
         tokio::spawn(async move {
             let _ = sqlx::query(

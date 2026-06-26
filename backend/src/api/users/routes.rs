@@ -14,6 +14,9 @@ pub fn router(pool: Arc<PgPool>) -> Router {
         .route("/", get(list_users).post(create_user))
         .route("/:id", get(get_user).put(update_user).delete(delete_user))
         .route_layer(middleware::from_fn(require_tenant_admin))
-        .route_layer(middleware::from_fn_with_state(pool.clone(), tenant_middleware))
+        .route_layer(middleware::from_fn_with_state(
+            pool.clone(),
+            tenant_middleware,
+        ))
         .with_state(pool)
 }

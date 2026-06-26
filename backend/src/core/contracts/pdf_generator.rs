@@ -22,7 +22,13 @@ pub struct CertificateData {
 
 #[async_trait]
 pub trait PdfGenerator: Send + Sync {
-    async fn generate_adjustment_certificate(&self, data: CertificateData) -> Result<Vec<u8>, String>;
+    async fn generate_adjustment_certificate(
+        &self,
+        data: CertificateData,
+    ) -> Result<Vec<u8>, String>;
+
+    async fn generate_legal_contract(
+        &self,
+        contract_data: serde_json::Value,
+    ) -> Result<Vec<u8>, String>;
 }
-
-

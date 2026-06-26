@@ -1,7 +1,7 @@
-use std::env;
-use sqlx::PgPool;
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
+use sqlx::PgPool;
+use std::env;
+use uuid::Uuid;
 
 #[derive(sqlx::FromRow, Debug)]
 pub struct Document {

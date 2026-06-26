@@ -1,7 +1,7 @@
+use chrono::Utc;
 use sqlx::PgPool;
 use std::sync::Arc;
-use tracing::{info, error, warn};
-use chrono::Utc;
+use tracing::{error, info, warn};
 
 use crate::core::contracts::adjustment_engine::RentalAdjustmentEngine;
 use crate::core::system_errors::AppError;
@@ -23,10 +23,15 @@ pub struct SchedulerMetrics {
 
 impl RentalAdjustmentScheduler {
     pub fn new(pool: Arc<PgPool>, engine: Arc<RentalAdjustmentEngine>) -> Self {
-        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+        let redis_url =
+            std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
         let redis_client = redis::Client::open(redis_url).ok();
-        
-        Self { pool, engine, redis_client }
+
+        Self {
+            pool,
+            engine,
+            redis_client,
+        }
     }
 
     pub async fn process_daily_adjustments(&self) -> Result<SchedulerMetrics, AppError> {
@@ -46,10 +51,14 @@ impl RentalAdjustmentScheduler {
                     .query_async(&mut con)
                     .await
                     .unwrap_or(false);
-                
+
                 if !is_set {
                     info!("Scheduler already ran today according to Redis lock. Skipping.");
-                    return Ok(SchedulerMetrics { contracts_checked: 0, adjustments_generated: 0, execution_time_ms: 0 });
+                    return Ok(SchedulerMetrics {
+                        contracts_checked: 0,
+                        adjustments_generated: 0,
+                        execution_time_ms: 0,
+                    });
                 }
             }
         }
@@ -65,7 +74,11 @@ impl RentalAdjustmentScheduler {
 
         if pg_lock.rows_affected() == 0 {
             info!("Scheduler already ran today according to PostgreSQL lock. Skipping.");
-            return Ok(SchedulerMetrics { contracts_checked: 0, adjustments_generated: 0, execution_time_ms: 0 });
+            return Ok(SchedulerMetrics {
+                contracts_checked: 0,
+                adjustments_generated: 0,
+                execution_time_ms: 0,
+            });
         }
 
         info!("Starting daily rent adjustments processing for {}", today);
@@ -93,19 +106,28 @@ impl RentalAdjustmentScheduler {
         .await
         .map_err(|_| AppError::InternalServerError)?;
 
-        info!("Found {} candidate contracts for adjustment", candidates.len());
+        info!(
+            "Found {} candidate contracts for adjustment",
+            candidates.len()
+        );
 
-        let automatic_enabled = std::env::var("ENABLE_AUTOMATIC_ADJUSTMENTS").unwrap_or_else(|_| "false".to_string()) == "true";
+        let automatic_enabled = std::env::var("ENABLE_AUTOMATIC_ADJUSTMENTS")
+            .unwrap_or_else(|_| "false".to_string())
+            == "true";
 
         let mut adjustments_generated = 0;
 
         for contract in &candidates {
             if let Some(date) = contract.next_adjustment_date {
-                match self.engine.propose_system_adjustment(contract.id, date, &contract.adjustment_method).await {
+                match self
+                    .engine
+                    .propose_system_adjustment(contract.id, date, &contract.adjustment_method)
+                    .await
+                {
                     Ok(adj_id) => {
                         info!("Generated proposal {} for contract {}", adj_id, contract.id);
                         adjustments_generated += 1;
-                        
+
                         // Automatic Approval Logic
                         if contract.automation_mode == "AUTOMATIC" && automatic_enabled {
                             // If index data is missing, we leave it PENDING_INDEX_DATA, else we can approve it.
@@ -116,7 +138,10 @@ impl RentalAdjustmentScheduler {
                         }
                     }
                     Err(e) => {
-                        warn!("Failed to propose adjustment for contract {}: {:?}", contract.id, e);
+                        warn!(
+                            "Failed to propose adjustment for contract {}: {:?}",
+                            contract.id, e
+                        );
                     }
                 }
             }

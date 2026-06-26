@@ -1,19 +1,19 @@
-use super::dto::{ProposeAdjustmentDto, ApproveAdjustmentDto, RollbackAdjustmentDto};
-use crate::api::contracts::models::{RentAdjustment, ContractInstallment};
-use serde::{Deserialize, Serialize};
-use rust_decimal::Decimal;
-use chrono::NaiveDate;
+use super::dto::{ApproveAdjustmentDto, ProposeAdjustmentDto, RollbackAdjustmentDto};
+use crate::api::contracts::models::{ContractInstallment, RentAdjustment};
 use crate::core::contracts::adjustment_engine::RentalAdjustmentEngine;
+use crate::core::security::jwt::Claims;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Json, Extension,
+    Extension, Json,
 };
+use chrono::NaiveDate;
+use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
-use crate::core::security::jwt::Claims;
 
 // This would be injected via AppState in a real scenario
 // For now, we instantiate it directly or expect it in State
@@ -45,7 +45,10 @@ pub async fn propose_adjustment(
 ) -> Result<StatusCode, StatusCode> {
     // INC-022: TODO — Implement adjustment proposal logic via RentalAdjustmentEngine
     // This endpoint is not yet functional. Return 501 Not Implemented.
-    tracing::warn!("propose_adjustment called but not yet implemented for contract_id={}", id);
+    tracing::warn!(
+        "propose_adjustment called but not yet implemented for contract_id={}",
+        id
+    );
     Err(StatusCode::NOT_IMPLEMENTED)
 }
 
@@ -60,21 +63,22 @@ pub async fn approve_adjustment(
         Some(amount) => amount,
         None => {
             #[derive(sqlx::FromRow)]
-            struct AdjAmount { new_amount: rust_decimal::Decimal }
-            sqlx::query_as::<_, AdjAmount>(
-                "SELECT new_amount FROM rent_adjustments WHERE id = $1"
-            )
-            .bind(adj_id)
-            .fetch_one(&*pool)
-            .await
-            .map(|r| r.new_amount)
-            .map_err(|_| StatusCode::NOT_FOUND)?
+            struct AdjAmount {
+                new_amount: rust_decimal::Decimal,
+            }
+            sqlx::query_as::<_, AdjAmount>("SELECT new_amount FROM rent_adjustments WHERE id = $1")
+                .bind(adj_id)
+                .fetch_one(&*pool)
+                .await
+                .map(|r| r.new_amount)
+                .map_err(|_| StatusCode::NOT_FOUND)?
         }
     };
 
     let engine = RentalAdjustmentEngine::new(pool);
-    
-    engine.approve_adjustment(adj_id, claims.sub, new_amount, payload.notes)
+
+    engine
+        .approve_adjustment(adj_id, claims.sub, new_amount, payload.notes)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -88,8 +92,9 @@ pub async fn reject_adjustment(
     Json(payload): Json<RollbackAdjustmentDto>, // Reusing the same dto shape with `reason`
 ) -> Result<StatusCode, StatusCode> {
     let engine = RentalAdjustmentEngine::new(pool);
-    
-    engine.reject_adjustment(adj_id, claims.sub, payload.reason)
+
+    engine
+        .reject_adjustment(adj_id, claims.sub, payload.reason)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -151,24 +156,27 @@ pub async fn list_pending_adjustments(
         LEFT JOIN users u ON c.tenant_user_id = u.id
         WHERE ra.tenant_id = $1 AND ra.status = 'PENDING'
         ORDER BY ra.effective_date ASC
-        "#
+        "#,
     )
     .bind(tenant_id)
     .fetch_all(&*pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    let items = records.into_iter().map(|r| PendingAdjustmentDto {
-        adjustment_id: r.adjustment_id,
-        contract_id: r.contract_id,
-        contract_number: r.contract_number,
-        tenant_name: r.tenant_name.unwrap_or_default(),
-        current_rent: r.current_rent,
-        adjustment_percent: r.adjustment_percent,
-        new_rent: r.new_rent,
-        effective_date: r.effective_date,
-        created_at: r.created_at,
-    }).collect::<Vec<_>>();
+    let items = records
+        .into_iter()
+        .map(|r| PendingAdjustmentDto {
+            adjustment_id: r.adjustment_id,
+            contract_id: r.contract_id,
+            contract_number: r.contract_number,
+            tenant_name: r.tenant_name.unwrap_or_default(),
+            current_rent: r.current_rent,
+            adjustment_percent: r.adjustment_percent,
+            new_rent: r.new_rent,
+            effective_date: r.effective_date,
+            created_at: r.created_at,
+        })
+        .collect::<Vec<_>>();
 
     let total = items.len() as i64;
 

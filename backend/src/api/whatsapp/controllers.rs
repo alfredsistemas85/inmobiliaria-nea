@@ -157,7 +157,10 @@ pub async fn webhook(
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     if has_instance.is_none() {
-        tracing::warn!("WEBHOOK_REJECTED: no WhatsApp instance for tenant_id={}", tenant_id);
+        tracing::warn!(
+            "WEBHOOK_REJECTED: no WhatsApp instance for tenant_id={}",
+            tenant_id
+        );
         return Err(StatusCode::FORBIDDEN);
     }
 

@@ -1,16 +1,15 @@
-
 use sqlx::PgPool;
 use std::env;
 
-use uuid::Uuid;
 use dotenvy::dotenv;
+use uuid::Uuid;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
     let db_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let pool = PgPool::connect(&db_url).await?;
-    
+
     println!("Connected to database. Testing WhatsApp query...");
     let tenant_id = Uuid::nil(); // arbitrary for syntax check
     let res = sqlx::query!(
@@ -19,7 +18,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     )
     .fetch_optional(&pool)
     .await;
-    
+
     match res {
         Ok(_) => println!("WhatsApp query succeeded."),
         Err(e) => println!("WhatsApp query failed: {:?}", e),

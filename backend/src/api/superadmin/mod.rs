@@ -1,9 +1,9 @@
-pub mod monitoring;
-pub mod support;
-pub mod subscriptions;
 pub mod dashboard;
-pub mod tenants;
+pub mod monitoring;
 pub mod scheduler;
+pub mod subscriptions;
+pub mod support;
+pub mod tenants;
 
 use axum::Router;
 use sqlx::PgPool;

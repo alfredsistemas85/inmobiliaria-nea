@@ -1,13 +1,14 @@
 use crate::{
     api::auth::dtos::{
-        AuthResponse, ChangePasswordRequest, LoginRequest, MeResponse, RefreshRequest, VerifyEmailRequest,
+        AuthResponse, ChangePasswordRequest, LoginRequest, MeResponse, RefreshRequest,
+        VerifyEmailRequest,
     },
     core::security::{
         jwt::{generate_jwt, generate_refresh_jwt, verify_refresh_jwt, Claims},
         masking::mask_email,
         password::{hash_password, verify_password},
     },
-    infrastructure::database::{users::UserRepository, tenants::TenantRepository},
+    infrastructure::database::{tenants::TenantRepository, users::UserRepository},
 };
 use axum::{
     extract::{Json, State},
@@ -47,18 +48,20 @@ pub async fn login(
             String::new()
         }
     };
-    
+
     if !superadmin_email.is_empty() && payload.identifier == superadmin_email {
         let superadmin_password = std::env::var("SUPERADMIN_PASSWORD").unwrap_or_default();
         // INC-002: Use constant-time comparison via hash verification instead of plaintext
-        let superadmin_hash = hash_password(&superadmin_password)
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        if !superadmin_password.is_empty() && verify_password(&payload.password, &superadmin_hash).unwrap_or(false) {
+        let superadmin_hash =
+            hash_password(&superadmin_password).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        if !superadmin_password.is_empty()
+            && verify_password(&payload.password, &superadmin_hash).unwrap_or(false)
+        {
             let access_token = generate_jwt(Uuid::nil(), None, "super_admin", true)
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
             let refresh_token = generate_refresh_jwt(Uuid::nil(), None, "super_admin", true)
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-                
+
             tracing::info!("LOGIN_SUCCESS: super_admin");
             return Ok(Json(AuthResponse {
                 access_token,
@@ -76,7 +79,7 @@ pub async fn login(
     }
 
     let repo = UserRepository::new(pool.clone());
-    
+
     let user_data = if payload.identifier.contains('@') {
         repo.find_with_role_by_email(&payload.identifier)
             .await
@@ -87,7 +90,7 @@ pub async fn login(
             .find_by_cuit(&payload.identifier)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-            
+
         if let Some(tenant) = tenant {
             let user = sqlx::query_as::<_, crate::models::user::User>(
                 r#"SELECT u.id, u.tenant_id, u.role, u.email, u.password_hash, u.first_name, u.last_name, u.is_active, u.email_verified_at, u.verification_token, u.verification_sent_at, u.email_type, u.onboarding_token, u.onboarding_token_expires_at, u.created_at, u.updated_at
@@ -98,7 +101,7 @@ pub async fn login(
             .fetch_optional(&*pool)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-            
+
             user
         } else {
             None
@@ -124,7 +127,8 @@ pub async fn login(
             if let Some(tenant_id) = user.tenant_id {
                 let tenant_repo = TenantRepository::new(pool.clone());
                 if let Ok(Some(tenant)) = tenant_repo.find_by_id(tenant_id).await {
-                    if tenant.status.as_deref() != Some("ACTIVE") || tenant.is_active != Some(true) {
+                    if tenant.status.as_deref() != Some("ACTIVE") || tenant.is_active != Some(true)
+                    {
                         tracing::warn!("LOGIN_BLOCKED_INACTIVE_TENANT: tenant_id={:?}", tenant_id);
                         return Err(StatusCode::FORBIDDEN);
                     }
@@ -136,8 +140,9 @@ pub async fn login(
             let email_verified = true;
             let access_token = generate_jwt(user.id, user.tenant_id, &role, email_verified)
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-            let refresh_token = generate_refresh_jwt(user.id, user.tenant_id, &role, email_verified)
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            let refresh_token =
+                generate_refresh_jwt(user.id, user.tenant_id, &role, email_verified)
+                    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
             tracing::info!(
                 "LOGIN_SUCCESS: user_id={} tenant_id={:?} identifier={} email={}",
@@ -204,10 +209,7 @@ pub async fn refresh(
         };
 
         if user.email_verified_at.is_none() {
-            tracing::warn!(
-                "TOKEN_REFRESH_BLOCKED_UNVERIFIED: user_id={}",
-                user.id
-            );
+            tracing::warn!("TOKEN_REFRESH_BLOCKED_UNVERIFIED: user_id={}", user.id);
             return Err(StatusCode::FORBIDDEN);
         }
 
@@ -226,8 +228,9 @@ pub async fn refresh(
         let email_verified = true;
         let access_token = generate_jwt(user.id, user.tenant_id, &role, email_verified)
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        let new_refresh_token = generate_refresh_jwt(user.id, user.tenant_id, &role, email_verified)
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let new_refresh_token =
+            generate_refresh_jwt(user.id, user.tenant_id, &role, email_verified)
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
         tracing::info!(
             "TOKEN_REFRESH_SUCCESS: user_id={} tenant_id={:?}",
@@ -255,7 +258,8 @@ pub async fn me(
     Extension(claims): Extension<Claims>,
 ) -> Result<Json<MeResponse>, StatusCode> {
     if claims.role == "super_admin" && claims.sub == Uuid::nil() {
-        let superadmin_email = std::env::var("SUPERADMIN_EMAIL").unwrap_or_else(|_| "agentech.nea@gmail.com".to_string());
+        let superadmin_email = std::env::var("SUPERADMIN_EMAIL")
+            .unwrap_or_else(|_| "agentech.nea@gmail.com".to_string());
         return Ok(Json(MeResponse {
             id: Uuid::nil(),
             email: superadmin_email,
@@ -347,12 +351,14 @@ pub async fn change_password(
                     .await
                     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
             } else {
-                sqlx::query("UPDATE users SET password_hash = $1 WHERE id = $2 AND tenant_id IS NULL")
-                    .bind(&new_hash)
-                    .bind(user.id)
-                    .execute(&*pool)
-                    .await
-                    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+                sqlx::query(
+                    "UPDATE users SET password_hash = $1 WHERE id = $2 AND tenant_id IS NULL",
+                )
+                .bind(&new_hash)
+                .bind(user.id)
+                .execute(&*pool)
+                .await
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
             };
 
             if result.rows_affected() == 0 {
@@ -384,17 +390,20 @@ pub async fn verify_email(
         repo.update_email_verification(u.id)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-            
+
         if let Some(tid) = u.tenant_id {
             let tenant_repo = TenantRepository::new(pool.clone());
-            tenant_repo.update_status(tid, "ACTIVE").await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            tenant_repo
+                .update_status(tid, "ACTIVE")
+                .await
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
             tracing::info!("TENANT_ACTIVATED: tenant_id={:?}", tid);
         }
-        
+
         tracing::info!("EMAIL_VERIFIED: user_id={}", u.id);
         return Ok(StatusCode::OK);
     }
-    
+
     tracing::warn!("EMAIL_VERIFICATION_FAILED: invalid or missing token");
     Err(StatusCode::BAD_REQUEST)
 }
@@ -403,16 +412,22 @@ pub async fn setup_password(
     State(pool): State<Arc<PgPool>>,
     Json(payload): Json<crate::api::auth::dtos::SetupPasswordRequest>,
 ) -> Result<StatusCode, StatusCode> {
-    let row = sqlx::query("SELECT id, onboarding_token_expires_at FROM users WHERE onboarding_token = $1")
-        .bind(&payload.token)
-        .fetch_optional(&*pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let row = sqlx::query(
+        "SELECT id, onboarding_token_expires_at FROM users WHERE onboarding_token = $1",
+    )
+    .bind(&payload.token)
+    .fetch_optional(&*pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     if let Some(r) = row {
         use sqlx::Row;
-        let id: Uuid = r.try_get("id").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        let expires_at: Option<chrono::DateTime<chrono::Utc>> = r.try_get("onboarding_token_expires_at").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let id: Uuid = r
+            .try_get("id")
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let expires_at: Option<chrono::DateTime<chrono::Utc>> = r
+            .try_get("onboarding_token_expires_at")
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
         if let Some(expires) = expires_at {
             if chrono::Utc::now() > expires {
@@ -422,7 +437,8 @@ pub async fn setup_password(
 
         // INC-015: Validate new password strength
         validate_password(&payload.password)?;
-        let new_hash = hash_password(&payload.password).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let new_hash =
+            hash_password(&payload.password).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
         sqlx::query("UPDATE users SET password_hash = $1, onboarding_token = NULL, onboarding_token_expires_at = NULL, email_verified_at = CURRENT_TIMESTAMP WHERE id = $2")
             .bind(new_hash)

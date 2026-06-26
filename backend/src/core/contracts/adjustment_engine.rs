@@ -1,9 +1,9 @@
+use crate::core::system_errors::AppError;
+use chrono::{NaiveDate, Utc};
+use rust_decimal::Decimal;
 use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
-use chrono::{NaiveDate, Utc};
-use rust_decimal::Decimal;
-use crate::core::system_errors::AppError;
 
 pub struct RentalAdjustmentEngine {
     pool: Arc<PgPool>,
@@ -21,7 +21,11 @@ impl RentalAdjustmentEngine {
         Self { pool }
     }
 
-    pub async fn calculate_new_amount(&self, contract_id: Uuid, proposed_index_value: Option<Decimal>) -> Result<Decimal, AppError> {
+    pub async fn calculate_new_amount(
+        &self,
+        contract_id: Uuid,
+        proposed_index_value: Option<Decimal>,
+    ) -> Result<Decimal, AppError> {
         #[derive(sqlx::FromRow)]
         struct ContractData {
             current_rent_amount: Option<Decimal>,
@@ -38,23 +42,27 @@ impl RentalAdjustmentEngine {
         .map_err(|_| AppError::NotFoundError)?;
 
         let current_amount = contract.current_rent_amount.unwrap_or(Decimal::new(0, 0));
-        let method = contract.adjustment_method.unwrap_or(crate::api::contracts::models::AdjustmentMethod::Manual);
+        let method = contract
+            .adjustment_method
+            .unwrap_or(crate::api::contracts::models::AdjustmentMethod::Manual);
 
         let new_amount = match method {
-            crate::api::contracts::models::AdjustmentMethod::Manual | crate::api::contracts::models::AdjustmentMethod::Custom => {
+            crate::api::contracts::models::AdjustmentMethod::Manual
+            | crate::api::contracts::models::AdjustmentMethod::Custom => {
                 proposed_index_value.unwrap_or(current_amount)
-            },
+            }
             crate::api::contracts::models::AdjustmentMethod::FixedPercentage => {
                 let percentage = contract.fixed_percentage.unwrap_or(Decimal::new(0, 0));
                 current_amount + (current_amount * percentage / Decimal::new(100, 0))
-            },
+            }
             _ => {
                 let provider = crate::core::contracts::index_provider::get_provider();
                 let today = chrono::Utc::now().naive_utc().date();
                 match provider.get_index(method.clone(), today, today).await {
                     Ok(calc) => {
-                        current_amount + (current_amount * calc.variation_percent / Decimal::new(100, 0))
-                    },
+                        current_amount
+                            + (current_amount * calc.variation_percent / Decimal::new(100, 0))
+                    }
                     Err(_) => current_amount,
                 }
             }
@@ -63,8 +71,18 @@ impl RentalAdjustmentEngine {
         Ok(new_amount)
     }
 
-    pub async fn approve_adjustment(&self, adjustment_id: Uuid, approved_by: Uuid, new_amount: Decimal, notes: Option<String>) -> Result<(), AppError> {
-        let mut tx = self.pool.begin().await.map_err(|_: sqlx::Error| AppError::InternalServerError)?;
+    pub async fn approve_adjustment(
+        &self,
+        adjustment_id: Uuid,
+        approved_by: Uuid,
+        new_amount: Decimal,
+        notes: Option<String>,
+    ) -> Result<(), AppError> {
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|_: sqlx::Error| AppError::InternalServerError)?;
 
         // 1. Update rent_adjustment status to APPROVED
         let adj_record = sqlx::query_as::<_, AdjRecord>(
@@ -73,7 +91,7 @@ impl RentalAdjustmentEngine {
             SET status = 'APPROVED', new_amount = $1, approved_by = $2, approved_at = $3, notes = $4
             WHERE id = $5 AND status = 'PENDING'
             RETURNING contract_id, previous_amount, tenant_id
-            "#
+            "#,
         )
         .bind(new_amount)
         .bind(approved_by)
@@ -90,7 +108,7 @@ impl RentalAdjustmentEngine {
             UPDATE contracts
             SET current_rent_amount = $1, last_adjustment_date = CURRENT_DATE
             WHERE id = $2
-            "#
+            "#,
         )
         .bind(new_amount)
         .bind(adj_record.contract_id)
@@ -104,7 +122,7 @@ impl RentalAdjustmentEngine {
             UPDATE contract_installments
             SET amount = $1, updated_at = CURRENT_TIMESTAMP
             WHERE contract_id = $2 AND status = 'PENDING' AND due_date >= CURRENT_DATE
-            "#
+            "#,
         )
         .bind(new_amount)
         .bind(adj_record.contract_id)
@@ -131,7 +149,9 @@ impl RentalAdjustmentEngine {
         .await
         .map_err(|_: sqlx::Error| AppError::InternalServerError)?;
 
-        tx.commit().await.map_err(|_: sqlx::Error| AppError::InternalServerError)?;
+        tx.commit()
+            .await
+            .map_err(|_: sqlx::Error| AppError::InternalServerError)?;
 
         // 5. Queue event for PDF generation and WhatsApp notification
         let event = crate::core::contracts::events::RentAdjustmentApproved {
@@ -143,14 +163,24 @@ impl RentalAdjustmentEngine {
 
         let pool_clone = self.pool.clone();
         tokio::spawn(async move {
-            crate::core::contracts::events::handle_rent_adjustment_approved(event, pool_clone).await;
+            crate::core::contracts::events::handle_rent_adjustment_approved(event, pool_clone)
+                .await;
         });
 
         Ok(())
     }
 
-    pub async fn reject_adjustment(&self, adjustment_id: Uuid, user_id: Uuid, reason: String) -> Result<(), AppError> {
-        let mut tx = self.pool.begin().await.map_err(|_: sqlx::Error| AppError::InternalServerError)?;
+    pub async fn reject_adjustment(
+        &self,
+        adjustment_id: Uuid,
+        user_id: Uuid,
+        reason: String,
+    ) -> Result<(), AppError> {
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|_: sqlx::Error| AppError::InternalServerError)?;
 
         let adj_record = sqlx::query_as::<_, AdjRecord>(
             r#"
@@ -158,7 +188,7 @@ impl RentalAdjustmentEngine {
             SET status = 'REJECTED', rollback_reason = $1
             WHERE id = $2 AND status = 'PENDING'
             RETURNING contract_id, previous_amount, tenant_id
-            "#
+            "#,
         )
         .bind(&reason)
         .bind(adjustment_id)
@@ -184,13 +214,24 @@ impl RentalAdjustmentEngine {
         .await
         .map_err(|_: sqlx::Error| AppError::InternalServerError)?;
 
-        tx.commit().await.map_err(|_: sqlx::Error| AppError::InternalServerError)?;
+        tx.commit()
+            .await
+            .map_err(|_: sqlx::Error| AppError::InternalServerError)?;
 
         Ok(())
     }
 
-    pub async fn propose_system_adjustment(&self, contract_id: Uuid, effective_date: NaiveDate, method: &str) -> Result<Uuid, AppError> {
-        let mut tx = self.pool.begin().await.map_err(|_| AppError::InternalServerError)?;
+    pub async fn propose_system_adjustment(
+        &self,
+        contract_id: Uuid,
+        effective_date: NaiveDate,
+        method: &str,
+    ) -> Result<Uuid, AppError> {
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|_| AppError::InternalServerError)?;
 
         #[derive(sqlx::FromRow)]
         struct ContractRecord {
@@ -199,8 +240,12 @@ impl RentalAdjustmentEngine {
         }
 
         let contract_record = sqlx::query_as::<_, ContractRecord>(
-            "SELECT tenant_id, current_rent_amount FROM contracts WHERE id = $1"
-        ).bind(contract_id).fetch_one(&mut *tx).await.map_err(|_| AppError::NotFoundError)?;
+            "SELECT tenant_id, current_rent_amount FROM contracts WHERE id = $1",
+        )
+        .bind(contract_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|_| AppError::NotFoundError)?;
 
         let adjustment_method = match method {
             "IPC" => crate::api::contracts::models::AdjustmentMethod::Ipc,
@@ -212,16 +257,19 @@ impl RentalAdjustmentEngine {
         };
 
         let provider = crate::core::contracts::index_provider::get_provider();
-        let index_calc = provider.get_index(adjustment_method, effective_date, effective_date).await;
+        let index_calc = provider
+            .get_index(adjustment_method, effective_date, effective_date)
+            .await;
 
         let (status, new_amount, percentage_applied) = match index_calc {
             Ok(calc) => {
-                let new_amt = contract_record.current_rent_amount.unwrap_or(Decimal::new(0,0)) * (Decimal::new(1,0) + calc.variation_percent);
+                let new_amt = contract_record
+                    .current_rent_amount
+                    .unwrap_or(Decimal::new(0, 0))
+                    * (Decimal::new(1, 0) + calc.variation_percent);
                 ("PENDING", new_amt, Some(calc.variation_percent))
-            },
-            Err(_) => {
-                ("PENDING_INDEX_DATA", Decimal::new(0, 0), None)
             }
+            Err(_) => ("PENDING_INDEX_DATA", Decimal::new(0, 0), None),
         };
 
         let adjustment_id = Uuid::new_v4();
@@ -246,21 +294,33 @@ impl RentalAdjustmentEngine {
         .map_err(|_| AppError::InternalServerError)?;
 
         let msg = if status == "PENDING_INDEX_DATA" {
-            format!("No fue posible obtener el índice para el contrato {}.", contract_id)
+            format!(
+                "No fue posible obtener el índice para el contrato {}.",
+                contract_id
+            )
         } else {
-            format!("Existe un ajuste de alquiler pendiente de revisión para el contrato {}.", contract_id)
+            format!(
+                "Existe un ajuste de alquiler pendiente de revisión para el contrato {}.",
+                contract_id
+            )
         };
 
         let _ = sqlx::query(
-            "INSERT INTO notifications (tenant_id, message, type) VALUES ($1, $2, 'SYSTEM_ALERT')"
-        ).bind(contract_record.tenant_id).bind(msg).execute(&mut *tx).await; 
+            "INSERT INTO notifications (tenant_id, message, type) VALUES ($1, $2, 'SYSTEM_ALERT')",
+        )
+        .bind(contract_record.tenant_id)
+        .bind(msg)
+        .execute(&mut *tx)
+        .await;
 
         let _ = sqlx::query(
             "INSERT INTO audit_logs (tenant_id, user_id, contract_id, action, old_data, new_data, method)
              VALUES ($1, $2, $3, 'ADJUSTMENT_PROPOSAL_CREATED', '{}', '{}', 'SYSTEM')"
         ).bind(contract_record.tenant_id).bind(Uuid::nil()).bind(contract_id).execute(&mut *tx).await;
 
-        tx.commit().await.map_err(|_| AppError::InternalServerError)?;
+        tx.commit()
+            .await
+            .map_err(|_| AppError::InternalServerError)?;
 
         Ok(adjustment_id)
     }
@@ -273,15 +333,23 @@ impl RentalAdjustmentEngine {
         }
 
         let record = sqlx::query_as::<_, StatusRecord>(
-            "SELECT new_amount, status::text FROM rent_adjustments WHERE id = $1"
+            "SELECT new_amount, status::text FROM rent_adjustments WHERE id = $1",
         )
         .bind(adjustment_id)
-        .fetch_one(&*self.pool).await.map_err(|_| AppError::NotFoundError)?;
-            
+        .fetch_one(&*self.pool)
+        .await
+        .map_err(|_| AppError::NotFoundError)?;
+
         if record.status != "PENDING" {
             return Err(AppError::BadRequest("Not pending".to_string()));
         }
 
-        self.approve_adjustment(adjustment_id, Uuid::nil(), record.new_amount, Some("Auto-approved by system".to_string())).await
+        self.approve_adjustment(
+            adjustment_id,
+            Uuid::nil(),
+            record.new_amount,
+            Some("Auto-approved by system".to_string()),
+        )
+        .await
     }
 }

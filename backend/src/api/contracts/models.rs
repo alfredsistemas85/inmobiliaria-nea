@@ -1,4 +1,4 @@
-use chrono::{NaiveDate, DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -16,7 +16,10 @@ pub enum AdjustmentMethod {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, sqlx::Type)]
-#[sqlx(type_name = "adjustment_frequency", rename_all = "SCREAMING_SNAKE_CASE")]
+#[sqlx(
+    type_name = "adjustment_frequency",
+    rename_all = "SCREAMING_SNAKE_CASE"
+)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum AdjustmentFrequency {
     Monthly,
@@ -80,7 +83,10 @@ pub enum ContractType {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, sqlx::Type)]
-#[sqlx(type_name = "contract_destination", rename_all = "SCREAMING_SNAKE_CASE")]
+#[sqlx(
+    type_name = "contract_destination",
+    rename_all = "SCREAMING_SNAKE_CASE"
+)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ContractDestination {
     Habitational,
@@ -131,7 +137,7 @@ pub struct Contract {
     pub next_adjustment_date: Option<NaiveDate>,
     pub last_adjustment_date: Option<NaiveDate>,
     pub status: Option<ContractStatus>,
-    
+
     // Phase 1 New Fields
     pub contract_number: Option<String>,
     pub c_type: Option<ContractType>,

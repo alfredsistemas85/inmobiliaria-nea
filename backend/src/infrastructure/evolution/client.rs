@@ -33,11 +33,17 @@ impl EvolutionClient {
     }
 
     pub async fn send_message(&self, phone: &str, message: &str) -> Result<(), String> {
-        self.send_message_to_instance(&self.instance, phone, message).await
+        self.send_message_to_instance(&self.instance, phone, message)
+            .await
     }
 
     /// INC-013: Per-tenant message sending — use this when you know the tenant's instance name
-    pub async fn send_message_to_instance(&self, instance_name: &str, phone: &str, message: &str) -> Result<(), String> {
+    pub async fn send_message_to_instance(
+        &self,
+        instance_name: &str,
+        phone: &str,
+        message: &str,
+    ) -> Result<(), String> {
         let url = format!("{}/message/sendText/{}", self.api_url, instance_name);
 
         let payload = json!({
@@ -95,7 +101,13 @@ impl EvolutionClient {
         }
     }
 
-    pub async fn send_media(&self, phone: &str, message: &str, media_url: &str, file_name: &str) -> Result<(), String> {
+    pub async fn send_media(
+        &self,
+        phone: &str,
+        message: &str,
+        media_url: &str,
+        file_name: &str,
+    ) -> Result<(), String> {
         let url = format!("{}/message/sendMedia/{}", self.api_url, self.instance);
 
         let payload = json!({
@@ -125,14 +137,18 @@ impl EvolutionClient {
                     } else {
                         let status = resp.status();
                         let text = resp.text().await.unwrap_or_default();
-                        
+
                         if status.is_client_error() && status != StatusCode::TOO_MANY_REQUESTS {
                             return Err(format!(
                                 "Client error sending WhatsApp media: {} - {}",
                                 status, text
                             ));
                         }
-                        tracing::warn!("Failed to send WhatsApp media. Status: {}. Response: {}", status, text);
+                        tracing::warn!(
+                            "Failed to send WhatsApp media. Status: {}. Response: {}",
+                            status,
+                            text
+                        );
                     }
                 }
                 Err(e) => tracing::warn!("Network error sending WhatsApp media: {}", e),

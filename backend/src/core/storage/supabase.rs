@@ -1,8 +1,8 @@
+use super::StorageProvider;
 use async_trait::async_trait;
 use reqwest::Client;
 use serde_json::json;
 use std::env;
-use super::StorageProvider;
 
 #[derive(Clone)]
 pub struct SupabaseStorageProvider {
@@ -31,8 +31,10 @@ impl StorageProvider for SupabaseStorageProvider {
         content_type: &str,
     ) -> Result<String, String> {
         let endpoint = format!("{}/storage/v1/object/{}/{}", self.url, bucket, path);
-        
-        let res = self.client.post(&endpoint)
+
+        let res = self
+            .client
+            .post(&endpoint)
             .header("apikey", &self.service_key)
             .header("Authorization", format!("Bearer {}", self.service_key))
             .header("Content-Type", content_type)
@@ -57,12 +59,14 @@ impl StorageProvider for SupabaseStorageProvider {
         expires_in_seconds: u32,
     ) -> Result<String, String> {
         let endpoint = format!("{}/storage/v1/object/sign/{}/{}", self.url, bucket, path);
-        
+
         let payload = json!({
             "expiresIn": expires_in_seconds
         });
 
-        let res = self.client.post(&endpoint)
+        let res = self
+            .client
+            .post(&endpoint)
             .header("apikey", &self.service_key)
             .header("Authorization", format!("Bearer {}", self.service_key))
             .json(&payload)
@@ -83,7 +87,7 @@ impl StorageProvider for SupabaseStorageProvider {
         }
 
         let data: SignResponse = res.json().await.map_err(|e| e.to_string())?;
-        
+
         Ok(format!("{}{}", self.url, data.signed_url))
     }
 }

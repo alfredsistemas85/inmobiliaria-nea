@@ -5,7 +5,7 @@ pub mod lead;
 pub mod notification;
 pub mod property;
 pub mod role;
+pub mod subscription;
 pub mod tenant;
 pub mod user;
 pub mod whatsapp;
-pub mod subscription;

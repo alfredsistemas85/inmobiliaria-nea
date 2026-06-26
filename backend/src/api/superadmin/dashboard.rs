@@ -1,13 +1,8 @@
-use axum::{
-    extract::State,
-    http::StatusCode,
-    routing::get,
-    Extension, Json, Router,
-};
+use crate::core::security::jwt::Claims;
+use axum::{extract::State, http::StatusCode, routing::get, Extension, Json, Router};
 use serde::Serialize;
 use sqlx::PgPool;
 use std::sync::Arc;
-use crate::core::security::jwt::Claims;
 
 #[derive(Serialize)]
 pub struct SuperadminDashboardStats {
@@ -40,50 +35,60 @@ async fn get_stats(
         .await
         .unwrap_or((0,));
 
-    let basic_tenants: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM subscriptions WHERE plan_type = 'BASIC'")
-        .fetch_one(&*pool)
-        .await
-        .unwrap_or((0,));
+    let basic_tenants: (i64,) =
+        sqlx::query_as("SELECT COUNT(*) FROM subscriptions WHERE plan_type = 'BASIC'")
+            .fetch_one(&*pool)
+            .await
+            .unwrap_or((0,));
 
-    let pro_tenants: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM subscriptions WHERE plan_type = 'PRO'")
-        .fetch_one(&*pool)
-        .await
-        .unwrap_or((0,));
+    let pro_tenants: (i64,) =
+        sqlx::query_as("SELECT COUNT(*) FROM subscriptions WHERE plan_type = 'PRO'")
+            .fetch_one(&*pool)
+            .await
+            .unwrap_or((0,));
 
-    let trial_tenants: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM subscriptions WHERE status = 'TRIAL'")
-        .fetch_one(&*pool)
-        .await
-        .unwrap_or((0,));
+    let trial_tenants: (i64,) =
+        sqlx::query_as("SELECT COUNT(*) FROM subscriptions WHERE status = 'TRIAL'")
+            .fetch_one(&*pool)
+            .await
+            .unwrap_or((0,));
 
-    let active_tenants: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM subscriptions WHERE status = 'ACTIVE'")
-        .fetch_one(&*pool)
-        .await
-        .unwrap_or((0,));
+    let active_tenants: (i64,) =
+        sqlx::query_as("SELECT COUNT(*) FROM subscriptions WHERE status = 'ACTIVE'")
+            .fetch_one(&*pool)
+            .await
+            .unwrap_or((0,));
 
-    let suspended_tenants: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM subscriptions WHERE status = 'SUSPENDED'")
-        .fetch_one(&*pool)
-        .await
-        .unwrap_or((0,));
+    let suspended_tenants: (i64,) =
+        sqlx::query_as("SELECT COUNT(*) FROM subscriptions WHERE status = 'SUSPENDED'")
+            .fetch_one(&*pool)
+            .await
+            .unwrap_or((0,));
 
-    let cancelled_tenants: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM subscriptions WHERE status = 'CANCELLED'")
-        .fetch_one(&*pool)
-        .await
-        .unwrap_or((0,));
+    let cancelled_tenants: (i64,) =
+        sqlx::query_as("SELECT COUNT(*) FROM subscriptions WHERE status = 'CANCELLED'")
+            .fetch_one(&*pool)
+            .await
+            .unwrap_or((0,));
 
-    // Calculate MRR roughly based on active PRO/BASIC plans. Suppose BASIC=15000, PRO=45000 
+    // Calculate MRR roughly based on active PRO/BASIC plans. Suppose BASIC=15000, PRO=45000
     // This is just an estimate as requested by the spec
     let basic_price = 15000.0;
     let pro_price = 45000.0;
 
-    let active_basic: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM subscriptions WHERE plan_type = 'BASIC' AND status = 'ACTIVE'")
-        .fetch_one(&*pool)
-        .await
-        .unwrap_or((0,));
+    let active_basic: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM subscriptions WHERE plan_type = 'BASIC' AND status = 'ACTIVE'",
+    )
+    .fetch_one(&*pool)
+    .await
+    .unwrap_or((0,));
 
-    let active_pro: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM subscriptions WHERE plan_type = 'PRO' AND status = 'ACTIVE'")
-        .fetch_one(&*pool)
-        .await
-        .unwrap_or((0,));
+    let active_pro: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM subscriptions WHERE plan_type = 'PRO' AND status = 'ACTIVE'",
+    )
+    .fetch_one(&*pool)
+    .await
+    .unwrap_or((0,));
 
     let mrr_estimado = (active_basic.0 as f64 * basic_price) + (active_pro.0 as f64 * pro_price);
 
@@ -103,6 +108,9 @@ async fn get_stats(
 pub fn router(pool: Arc<PgPool>) -> Router {
     Router::new()
         .route("/stats", get(get_stats))
-        .route_layer(axum::middleware::from_fn_with_state(pool.clone(), crate::core::tenant::middleware::tenant_middleware))
+        .route_layer(axum::middleware::from_fn_with_state(
+            pool.clone(),
+            crate::core::tenant::middleware::tenant_middleware,
+        ))
         .with_state(pool)
 }

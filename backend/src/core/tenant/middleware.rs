@@ -5,11 +5,11 @@ use axum::{
     http::StatusCode,
     middleware::Next,
     response::{IntoResponse, Response},
-    Json, Extension,
+    Extension, Json,
 };
-use std::sync::Arc;
-use sqlx::PgPool;
 use serde_json::json;
+use sqlx::PgPool;
+use std::sync::Arc;
 
 pub async fn tenant_middleware(
     State(pool): State<Arc<PgPool>>,
@@ -27,7 +27,7 @@ pub async fn tenant_middleware(
         match verify_jwt(token) {
             Ok(claims) => {
                 req.extensions_mut().insert(claims.clone());
-                
+
                 if claims.role == "super_admin" || claims.role == "SUPERADMIN" {
                     return Ok(next.run(req).await);
                 }
@@ -37,8 +37,14 @@ pub async fn tenant_middleware(
                     let mut cached_status = None;
 
                     // 1. Try Redis
-                    if let Ok(mut redis_conn) = redis_client.get_multiplexed_async_connection().await {
-                        if let Ok(st) = redis::cmd("GET").arg(&redis_key).query_async::<_, Option<String>>(&mut redis_conn).await {
+                    if let Ok(mut redis_conn) =
+                        redis_client.get_multiplexed_async_connection().await
+                    {
+                        if let Ok(st) = redis::cmd("GET")
+                            .arg(&redis_key)
+                            .query_async::<_, Option<String>>(&mut redis_conn)
+                            .await
+                        {
                             cached_status = st;
                         }
                     }
@@ -47,14 +53,26 @@ pub async fn tenant_middleware(
                         Some(st) => st,
                         None => {
                             // 2. Fallback to PostgreSQL
-                            let sub = sqlx::query!("SELECT status::text FROM subscriptions WHERE tenant_id = $1", tenant_id)
-                                .fetch_optional(&*pool).await.map_err(|_: sqlx::Error| StatusCode::INTERNAL_SERVER_ERROR)?;
-                            
+                            let sub = sqlx::query!(
+                                "SELECT status::text FROM subscriptions WHERE tenant_id = $1",
+                                tenant_id
+                            )
+                            .fetch_optional(&*pool)
+                            .await
+                            .map_err(|_: sqlx::Error| StatusCode::INTERNAL_SERVER_ERROR)?;
+
                             let st = sub.and_then(|s| s.status).unwrap_or_default();
-                            
+
                             // Try to save to cache without blocking
-                            if let Ok(mut redis_conn) = redis_client.get_multiplexed_async_connection().await {
-                                let _: Result<(), _> = redis::cmd("SETEX").arg(&redis_key).arg(300).arg(&st).query_async(&mut redis_conn).await;
+                            if let Ok(mut redis_conn) =
+                                redis_client.get_multiplexed_async_connection().await
+                            {
+                                let _: Result<(), _> = redis::cmd("SETEX")
+                                    .arg(&redis_key)
+                                    .arg(300)
+                                    .arg(&st)
+                                    .query_async(&mut redis_conn)
+                                    .await;
                             }
                             st
                         }
@@ -80,6 +98,6 @@ pub async fn tenant_middleware(
             Err(_) => return Err(StatusCode::UNAUTHORIZED),
         }
     }
-    
+
     Err(StatusCode::UNAUTHORIZED)
 }

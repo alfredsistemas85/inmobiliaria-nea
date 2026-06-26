@@ -1,10 +1,10 @@
+use super::controllers;
 use axum::{
     routing::{get, post},
     Router,
 };
-use std::sync::Arc;
 use sqlx::PgPool;
-use super::controllers;
+use std::sync::Arc;
 
 pub fn routes(pool: Arc<PgPool>) -> Router {
     Router::new()

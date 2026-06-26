@@ -194,8 +194,19 @@ async fn main() {
             },
         ))
         // INC-009: Restrict CORS to specific methods and headers
-        .allow_methods([axum::http::Method::GET, axum::http::Method::POST, axum::http::Method::PUT, axum::http::Method::DELETE, axum::http::Method::PATCH, axum::http::Method::OPTIONS])
-        .allow_headers([axum::http::header::AUTHORIZATION, axum::http::header::CONTENT_TYPE, axum::http::header::ACCEPT]);
+        .allow_methods([
+            axum::http::Method::GET,
+            axum::http::Method::POST,
+            axum::http::Method::PUT,
+            axum::http::Method::DELETE,
+            axum::http::Method::PATCH,
+            axum::http::Method::OPTIONS,
+        ])
+        .allow_headers([
+            axum::http::header::AUTHORIZATION,
+            axum::http::header::CONTENT_TYPE,
+            axum::http::header::ACCEPT,
+        ]);
 
     let health_router = Router::new()
         .route("/health", get(health_check))
@@ -209,7 +220,8 @@ async fn main() {
 
     let mut app = Router::new();
     if !is_production {
-        app = app.merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()));
+        app = app
+            .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()));
     }
     let app = app
         .nest("/api", health_router)
@@ -223,11 +235,20 @@ async fn main() {
             api::properties::router(shared_pool.clone(), rate_limit_state.clone()),
         )
         .nest("/api/tenants", api::tenants::router(shared_pool.clone()))
-        .nest("/api/admin/system", api::system::routes::router(shared_pool.clone()))
+        .nest(
+            "/api/admin/system",
+            api::system::routes::router(shared_pool.clone()),
+        )
         .nest("/api/roles", api::roles::router(shared_pool.clone()))
         .nest("/api/payments", api::payments::router(shared_pool.clone()))
-        .nest("/api/contracts", api::contracts::router(shared_pool.clone()))
-        .nest("/api/financials", api::financials::router(shared_pool.clone()))
+        .nest(
+            "/api/contracts",
+            api::contracts::router(shared_pool.clone()),
+        )
+        .nest(
+            "/api/financials",
+            api::financials::router(shared_pool.clone()),
+        )
         .nest(
             "/api/clients",
             api::clients::routes::router(shared_pool.clone()),
@@ -264,10 +285,7 @@ async fn main() {
             "/api/documents",
             api::documents::router(shared_pool.clone()),
         )
-        .nest(
-            "/api/calendar",
-            api::calendar::router(shared_pool.clone()),
-        )
+        .nest("/api/calendar", api::calendar::router(shared_pool.clone()))
         // INC-008: Removed static file serving for uploads — use authenticated endpoints instead
         // .nest_service("/uploads", ServeDir::new("uploads"))
         .layer(axum::middleware::from_fn_with_state(

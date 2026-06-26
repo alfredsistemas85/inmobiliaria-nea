@@ -1,12 +1,12 @@
 use sqlx::PgPool;
 use std::sync::Arc;
+use tracing::{error, info, warn};
 use uuid::Uuid;
-use tracing::{info, error, warn};
 
-use super::pdf_generator::{CertificateData, PdfGenerator};
 use super::genpdf_impl::GenPdfGenerator;
-use crate::core::storage::StorageProvider;
+use super::pdf_generator::{CertificateData, PdfGenerator};
 use crate::core::storage::supabase::SupabaseStorageProvider;
+use crate::core::storage::StorageProvider;
 use crate::infrastructure::evolution::client::EvolutionClient;
 use chrono::NaiveDate;
 use rust_decimal::Decimal;
@@ -20,7 +20,10 @@ pub struct RentAdjustmentApproved {
 }
 
 pub async fn handle_rent_adjustment_approved(event: RentAdjustmentApproved, pool: Arc<PgPool>) {
-    info!("Processing RentAdjustmentApproved event for adjustment {}", event.adjustment_id);
+    info!(
+        "Processing RentAdjustmentApproved event for adjustment {}",
+        event.adjustment_id
+    );
 
     // Fetch required details
     #[derive(sqlx::FromRow)]
@@ -96,40 +99,51 @@ pub async fn handle_rent_adjustment_approved(event: RentAdjustmentApproved, pool
     // 1. Generate PDF
     let font_dir = std::env::var("FONTS_DIR").unwrap_or_else(|_| "fonts".to_string());
     let pdf_gen_result = GenPdfGenerator::new(&font_dir);
-    
+
     if let Err(e) = pdf_gen_result {
         error!("Failed to initialize PDF Generator: {}", e);
         return;
     }
-    
+
     let pdf_generator = pdf_gen_result.unwrap();
 
-    let pdf_bytes = match pdf_generator.generate_adjustment_certificate(cert_data).await {
+    let pdf_bytes = match pdf_generator
+        .generate_adjustment_certificate(cert_data)
+        .await
+    {
         Ok(b) => b,
         Err(e) => {
-            error!("Failed to generate PDF for adjustment {}: {}", event.adjustment_id, e);
+            error!(
+                "Failed to generate PDF for adjustment {}: {}",
+                event.adjustment_id, e
+            );
             return;
         }
     };
-    
-    let _ = log_audit(&pool, event.tenant_id, event.user_id, event.contract_id, "PDF_GENERATED", serde_json::json!({"adjustment_id": event.adjustment_id})).await;
+
+    let _ = log_audit(
+        &pool,
+        event.tenant_id,
+        event.user_id,
+        event.contract_id,
+        "PDF_GENERATED",
+        serde_json::json!({"adjustment_id": event.adjustment_id}),
+    )
+    .await;
 
     // 2. Upload to Supabase Storage
     let storage_provider = SupabaseStorageProvider::new();
     let file_path = format!("{}/{}_adjustment.pdf", event.tenant_id, event.adjustment_id);
-    
-    let upload_result = storage_provider.upload_document(
-        "certificados",
-        &file_path,
-        pdf_bytes,
-        "application/pdf",
-    ).await;
+
+    let upload_result = storage_provider
+        .upload_document("certificados", &file_path, pdf_bytes, "application/pdf")
+        .await;
 
     if let Err(e) = upload_result {
         error!("Failed to upload PDF to storage: {}", e);
         return;
     }
-    
+
     let _ = sqlx::query(
         "INSERT INTO documents (tenant_id, uploaded_by, entity_type, entity_id, file_name, file_size, mime_type, storage_path, document_type, rent_adjustment_id) 
          VALUES ($1, $2, 'contract', $3, $4, $5, 'application/pdf', $6, 'ADJUSTMENT_CERTIFICATE', $7)"
@@ -143,33 +157,94 @@ pub async fn handle_rent_adjustment_approved(event: RentAdjustmentApproved, pool
     .bind(event.adjustment_id)
     .execute(&*pool).await;
 
-    let _ = log_audit(&pool, event.tenant_id, event.user_id, event.contract_id, "DOCUMENT_STORED", serde_json::json!({"path": file_path})).await;
+    let _ = log_audit(
+        &pool,
+        event.tenant_id,
+        event.user_id,
+        event.contract_id,
+        "DOCUMENT_STORED",
+        serde_json::json!({"path": file_path}),
+    )
+    .await;
 
     // 3. Generate Signed URL
-    let signed_url = match storage_provider.generate_signed_url("certificados", &file_path, 604800).await {
+    let signed_url = match storage_provider
+        .generate_signed_url("certificados", &file_path, 604800)
+        .await
+    {
         Ok(url) => url,
         Err(e) => {
             error!("Failed to generate signed URL: {}", e);
             return;
         }
     };
-    
-    let _ = log_audit(&pool, event.tenant_id, event.user_id, event.contract_id, "SIGNED_URL_CREATED", serde_json::json!({"expires_in": 604800})).await;
+
+    let _ = log_audit(
+        &pool,
+        event.tenant_id,
+        event.user_id,
+        event.contract_id,
+        "SIGNED_URL_CREATED",
+        serde_json::json!({"expires_in": 604800}),
+    )
+    .await;
 
     // 4. Send WhatsApp Notifications
     let whatsapp = EvolutionClient::new();
     let file_name = format!("Actualizacion_Alquiler_{}.pdf", record.effective_date);
-    
-    let new_amount_str = record.new_amount.unwrap_or(Decimal::new(0, 0)).to_string();
-    let tenant_msg = format!("Estimado {}, adjuntamos el certificado de actualización de su alquiler. Nuevo valor: ${}", tenant_name, new_amount_str);
-    let owner_msg = format!("Estimado {}, se ha procesado y notificado el ajuste de alquiler a su inquilino. Nuevo valor: ${}", owner_name, new_amount_str);
-    let agent_msg = format!("Actualización procesada exitosamente para el contrato {} (${})", event.contract_id, new_amount_str);
 
-    send_whatsapp_with_audit(&whatsapp, &pool, record.t_phone, &tenant_msg, &signed_url, &file_name, event.tenant_id, event.user_id, event.contract_id).await;
-    send_whatsapp_with_audit(&whatsapp, &pool, record.o_phone, &owner_msg, &signed_url, &file_name, event.tenant_id, event.user_id, event.contract_id).await;
-    send_whatsapp_with_audit(&whatsapp, &pool, record.agent_phone, &agent_msg, &signed_url, &file_name, event.tenant_id, event.user_id, event.contract_id).await;
-    
-    info!("Finished processing RentAdjustmentApproved event for {}", event.adjustment_id);
+    let new_amount_str = record.new_amount.unwrap_or(Decimal::new(0, 0)).to_string();
+    let tenant_msg = format!(
+        "Estimado {}, adjuntamos el certificado de actualización de su alquiler. Nuevo valor: ${}",
+        tenant_name, new_amount_str
+    );
+    let owner_msg = format!("Estimado {}, se ha procesado y notificado el ajuste de alquiler a su inquilino. Nuevo valor: ${}", owner_name, new_amount_str);
+    let agent_msg = format!(
+        "Actualización procesada exitosamente para el contrato {} (${})",
+        event.contract_id, new_amount_str
+    );
+
+    send_whatsapp_with_audit(
+        &whatsapp,
+        &pool,
+        record.t_phone,
+        &tenant_msg,
+        &signed_url,
+        &file_name,
+        event.tenant_id,
+        event.user_id,
+        event.contract_id,
+    )
+    .await;
+    send_whatsapp_with_audit(
+        &whatsapp,
+        &pool,
+        record.o_phone,
+        &owner_msg,
+        &signed_url,
+        &file_name,
+        event.tenant_id,
+        event.user_id,
+        event.contract_id,
+    )
+    .await;
+    send_whatsapp_with_audit(
+        &whatsapp,
+        &pool,
+        record.agent_phone,
+        &agent_msg,
+        &signed_url,
+        &file_name,
+        event.tenant_id,
+        event.user_id,
+        event.contract_id,
+    )
+    .await;
+
+    info!(
+        "Finished processing RentAdjustmentApproved event for {}",
+        event.adjustment_id
+    );
 }
 
 async fn send_whatsapp_with_audit(
@@ -187,10 +262,26 @@ async fn send_whatsapp_with_audit(
         if !p.is_empty() {
             match client.send_media(&p, msg, url, file_name).await {
                 Ok(_) => {
-                    let _ = log_audit(pool, tenant_id, user_id, contract_id, "WHATSAPP_SENT", serde_json::json!({"phone": p})).await;
+                    let _ = log_audit(
+                        pool,
+                        tenant_id,
+                        user_id,
+                        contract_id,
+                        "WHATSAPP_SENT",
+                        serde_json::json!({"phone": p}),
+                    )
+                    .await;
                 }
                 Err(e) => {
-                    let _ = log_audit(pool, tenant_id, user_id, contract_id, "WHATSAPP_FAILED", serde_json::json!({"phone": p, "error": e})).await;
+                    let _ = log_audit(
+                        pool,
+                        tenant_id,
+                        user_id,
+                        contract_id,
+                        "WHATSAPP_FAILED",
+                        serde_json::json!({"phone": p, "error": e}),
+                    )
+                    .await;
                 }
             }
         }
@@ -209,7 +300,7 @@ async fn log_audit(
         r#"
         INSERT INTO audit_logs (tenant_id, user_id, contract_id, action, old_data, new_data, method)
         VALUES ($1, $2, $3, $4, '{}', $5, 'SYSTEM')
-        "#
+        "#,
     )
     .bind(tenant_id)
     .bind(user_id)

@@ -32,7 +32,6 @@ impl TenantRepository {
         .await
     }
 
-
     pub async fn find_by_cuit(&self, cuit: &str) -> Result<Option<Tenant>, sqlx::Error> {
         sqlx::query_as::<_, Tenant>(
             r#"SELECT id, cuit, dni_responsable, first_name, last_name, business_name, address, phone, city, province, is_active, status, slug, created_at, updated_at 
@@ -67,14 +66,11 @@ impl TenantRepository {
     }
 
     pub async fn update_status(&self, id: Uuid, status: &str) -> Result<(), sqlx::Error> {
-        sqlx::query(
-            r#"UPDATE tenants SET status = $1 WHERE id = $2"#
-        )
-        .bind(status)
-        .bind(id)
-        .execute(&*self.pool)
-        .await?;
+        sqlx::query(r#"UPDATE tenants SET status = $1 WHERE id = $2"#)
+            .bind(status)
+            .bind(id)
+            .execute(&*self.pool)
+            .await?;
         Ok(())
     }
-
 }

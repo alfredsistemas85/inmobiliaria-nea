@@ -78,7 +78,7 @@ pub async fn list_properties(
 
         if !rows.is_empty() {
             let api_url = std::env::var("API_URL").unwrap_or_else(|_| "".to_string());
-            
+
             for dto in dtos.iter_mut() {
                 let mut images_json = Vec::new();
                 for r in &rows {
@@ -90,7 +90,7 @@ pub async fn list_properties(
                         }));
                     }
                 }
-                    
+
                 if !images_json.is_empty() {
                     dto.images = Some(images_json);
                 }
@@ -298,5 +298,3 @@ pub async fn update_property(
 
     Ok(Json(PropertyResponseDto::from(updated)))
 }
-
-

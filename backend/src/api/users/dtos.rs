@@ -1,7 +1,7 @@
+use crate::models::role::UserRole;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
-use crate::models::role::UserRole;
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateUserDto {

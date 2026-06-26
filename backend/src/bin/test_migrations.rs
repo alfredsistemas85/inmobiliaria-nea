@@ -1,5 +1,5 @@
-use std::env;
 use sqlx::{PgPool, Row};
+use std::env;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -19,7 +19,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let version: i64 = row.try_get("version").unwrap_or(0);
                 println!("- {}", version);
             }
-        },
+        }
         Err(e) => println!("Error querying _sqlx_migrations: {:?}", e),
     }
 

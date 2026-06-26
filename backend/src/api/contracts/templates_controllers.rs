@@ -1,22 +1,24 @@
-use axum::{
-    extract::{State, Path},
-    Json,
-    http::StatusCode,
-};
-use std::sync::Arc;
-use sqlx::PgPool;
 use axum::Extension;
+use axum::{
+    extract::{Path, State},
+    http::StatusCode,
+    Json,
+};
+use sqlx::PgPool;
+use std::sync::Arc;
 
-use crate::core::security::jwt::Claims;
-use super::models::{ContractTemplate, TemplateClause};
 use super::dto::CreateContractTemplateDto;
+use super::models::{ContractTemplate, TemplateClause};
+use crate::core::security::jwt::Claims;
 use uuid::Uuid;
 
 pub async fn list_templates(
     State(pool): State<Arc<PgPool>>,
     Extension(claims): Extension<Claims>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let tenant_id = claims.tenant_id.ok_or((StatusCode::BAD_REQUEST, "Missing tenant_id".to_string()))?;
+    let tenant_id = claims
+        .tenant_id
+        .ok_or((StatusCode::BAD_REQUEST, "Missing tenant_id".to_string()))?;
 
     let templates: Vec<ContractTemplate> = sqlx::query_as(
         "SELECT * FROM contract_templates WHERE tenant_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC"
@@ -37,9 +39,14 @@ pub async fn create_template(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<CreateContractTemplateDto>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let tenant_id = claims.tenant_id.ok_or((StatusCode::BAD_REQUEST, "Missing tenant_id".to_string()))?;
+    let tenant_id = claims
+        .tenant_id
+        .ok_or((StatusCode::BAD_REQUEST, "Missing tenant_id".to_string()))?;
 
-    let mut tx = pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     let template = sqlx::query_as::<_, ContractTemplate>(
         r#"
@@ -85,7 +92,12 @@ pub async fn create_template(
         })?;
     }
 
-    tx.commit().await.map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error en commit".to_string()))?;
+    tx.commit().await.map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Error en commit".to_string(),
+        )
+    })?;
 
     Ok(Json(serde_json::json!(template)))
 }
@@ -95,7 +107,9 @@ pub async fn get_template(
     Extension(claims): Extension<Claims>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let tenant_id = claims.tenant_id.ok_or((StatusCode::BAD_REQUEST, "Missing tenant_id".to_string()))?;
+    let tenant_id = claims
+        .tenant_id
+        .ok_or((StatusCode::BAD_REQUEST, "Missing tenant_id".to_string()))?;
 
     let row: (serde_json::Value,) = sqlx::query_as(
         r#"
@@ -109,7 +123,7 @@ pub async fn get_template(
         )
         FROM contract_templates t
         WHERE t.id = $1 AND t.tenant_id = $2 AND t.deleted_at IS NULL
-        "#
+        "#,
     )
     .bind(id)
     .bind(tenant_id)
@@ -125,7 +139,9 @@ pub async fn delete_template(
     Extension(claims): Extension<Claims>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let tenant_id = claims.tenant_id.ok_or((StatusCode::BAD_REQUEST, "Missing tenant_id".to_string()))?;
+    let tenant_id = claims
+        .tenant_id
+        .ok_or((StatusCode::BAD_REQUEST, "Missing tenant_id".to_string()))?;
 
     sqlx::query(
         "UPDATE contract_templates SET deleted_at = NOW(), deleted_by = $1 WHERE id = $2 AND tenant_id = $3"

@@ -1,6 +1,5 @@
 use backend::{
-    core::security::password::hash_password,
-    infrastructure::database::users::UserRepository,
+    core::security::password::hash_password, infrastructure::database::users::UserRepository,
 };
 use sqlx::PgPool;
 use std::sync::Arc;
@@ -19,8 +18,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .execute(&*pool).await?;
 
     // 3. Create superadmin@inmobiliaria.com
-    let superadmin_exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE email = 'superadmin@inmobiliaria.com')").fetch_one(&*pool).await?;
-    
+    let superadmin_exists: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM users WHERE email = 'superadmin@inmobiliaria.com')",
+    )
+    .fetch_one(&*pool)
+    .await?;
+
     if !superadmin_exists {
         sqlx::query(r#"
             INSERT INTO users (id, role, email, password_hash, first_name, last_name, is_active, email_verified_at)

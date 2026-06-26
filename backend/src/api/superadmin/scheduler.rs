@@ -1,17 +1,11 @@
-use axum::{
-    extract::State,
-    response::IntoResponse,
-    routing::post,
-    Router,
-    Json,
-};
+use crate::core::contracts::adjustment_engine::RentalAdjustmentEngine;
+use crate::core::system_errors::AppError;
+use crate::core::workers::adjustment_scheduler::RentalAdjustmentScheduler;
 use axum::http::StatusCode;
+use axum::{extract::State, response::IntoResponse, routing::post, Json, Router};
+use serde_json::json;
 use sqlx::PgPool;
 use std::sync::Arc;
-use crate::core::system_errors::AppError;
-use crate::core::contracts::adjustment_engine::RentalAdjustmentEngine;
-use crate::core::workers::adjustment_scheduler::RentalAdjustmentScheduler;
-use serde_json::json;
 
 pub fn router(pool: Arc<PgPool>) -> Router {
     Router::new()
@@ -25,7 +19,7 @@ pub async fn trigger_adjustments(
     // Audit execution
     let _ = sqlx::query(
         "INSERT INTO audit_logs (tenant_id, user_id, action, old_data, new_data, method)
-         VALUES ($1, $2, 'MANUAL_TRIGGER_EXECUTED', '{}', '{}', 'POST')"
+         VALUES ($1, $2, 'MANUAL_TRIGGER_EXECUTED', '{}', '{}', 'POST')",
     )
     .bind(uuid::Uuid::nil()) // Or superadmin ID if available
     .bind(uuid::Uuid::nil())

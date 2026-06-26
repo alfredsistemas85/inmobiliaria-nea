@@ -1,7 +1,7 @@
 use crate::api::contracts::models::AdjustmentMethod;
+use async_trait::async_trait;
 use chrono::NaiveDate;
 use rust_decimal::Decimal;
-use async_trait::async_trait;
 
 pub struct IndexCalculation {
     pub source: String,

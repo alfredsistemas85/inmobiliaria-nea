@@ -15,6 +15,9 @@ pub fn router(pool: Arc<PgPool>) -> Router {
         .route("/whatsapp", get(generate_whatsapp_report))
         .route("/clients", get(generate_clients_report))
         .route("/properties", get(generate_properties_report))
-        .route_layer(middleware::from_fn_with_state(pool.clone(), tenant_middleware))
+        .route_layer(middleware::from_fn_with_state(
+            pool.clone(),
+            tenant_middleware,
+        ))
         .with_state(pool)
 }

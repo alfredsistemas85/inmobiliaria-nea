@@ -31,9 +31,16 @@ async fn main() {
     let shared_pool = Arc::new(pool);
     tracing::info!("Worker conectado a PostgreSQL Exitosamente.");
 
-    let adjustment_engine = Arc::new(backend::core::contracts::adjustment_engine::RentalAdjustmentEngine::new(shared_pool.clone()));
-    let adjustment_scheduler = backend::core::workers::adjustment_scheduler::RentalAdjustmentScheduler::new(shared_pool.clone(), adjustment_engine.clone());
-
+    let adjustment_engine = Arc::new(
+        backend::core::contracts::adjustment_engine::RentalAdjustmentEngine::new(
+            shared_pool.clone(),
+        ),
+    );
+    let adjustment_scheduler =
+        backend::core::workers::adjustment_scheduler::RentalAdjustmentScheduler::new(
+            shared_pool.clone(),
+            adjustment_engine.clone(),
+        );
 
     loop {
         tracing::debug!("Worker tick...");
@@ -237,7 +244,7 @@ async fn process_lead_followups(pool: Arc<sqlx::PgPool>) -> Result<u64, sqlx::Er
             "Tienes un lead en estado NUEVO por más de 24 horas. ¡Es hora de hacer seguimiento!",
         ).await;
 
-        // INC-025: Instead of changing the status to 'CONTACTADO', we update 'updated_at' 
+        // INC-025: Instead of changing the status to 'CONTACTADO', we update 'updated_at'
         // to avoid spamming the reminder every 10 seconds, pushing the next reminder 24hs later
         // unless the status is manually changed.
         sqlx::query!(

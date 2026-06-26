@@ -1,3 +1,4 @@
+use crate::core::security::jwt::Claims;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -8,7 +9,6 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
-use crate::core::security::jwt::Claims;
 
 #[derive(Debug, Deserialize)]
 pub struct ChangePlanDto {
@@ -107,16 +107,17 @@ async fn change_plan(
         _ => return Err(StatusCode::BAD_REQUEST),
     };
 
-    let mut tx = pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    sqlx::query(
-        "UPDATE subscriptions SET plan_type = $1::plan_type WHERE tenant_id = $2"
-    )
-    .bind(plan_enum)
-    .bind(tenant_id)
-    .execute(&mut *tx)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    sqlx::query("UPDATE subscriptions SET plan_type = $1::plan_type WHERE tenant_id = $2")
+        .bind(plan_enum)
+        .bind(tenant_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     sqlx::query(
         r#"INSERT INTO audit_logs (tenant_id, user_id, action, entity_type, entity_id, new_data)
@@ -129,7 +130,9 @@ async fn change_plan(
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    tx.commit()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(StatusCode::OK)
 }
@@ -157,16 +160,17 @@ async fn set_status(
         _ => "SUBSCRIPTION_CHANGED",
     };
 
-    let mut tx = pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    sqlx::query(
-        "UPDATE subscriptions SET status = $1::subscription_status WHERE tenant_id = $2"
-    )
-    .bind(status_enum)
-    .bind(tenant_id)
-    .execute(&mut *tx)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    sqlx::query("UPDATE subscriptions SET status = $1::subscription_status WHERE tenant_id = $2")
+        .bind(status_enum)
+        .bind(tenant_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     sqlx::query(
         r#"INSERT INTO audit_logs (tenant_id, user_id, action, entity_type, entity_id, new_data)
@@ -180,7 +184,9 @@ async fn set_status(
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    tx.commit()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(StatusCode::OK)
 }
@@ -203,7 +209,10 @@ async fn extend_trial(
         return Err(StatusCode::BAD_REQUEST);
     };
 
-    let mut tx = pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     sqlx::query(
         "UPDATE subscriptions SET trial_ends_at = $1, status = 'TRIAL'::subscription_status WHERE tenant_id = $2"
@@ -225,7 +234,9 @@ async fn extend_trial(
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    tx.commit()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(StatusCode::OK)
 }
@@ -237,6 +248,9 @@ pub fn router(pool: Arc<PgPool>) -> Router {
         .route("/:tenant_id/plan", patch(change_plan))
         .route("/:tenant_id/status", patch(set_status))
         .route("/:tenant_id/trial", patch(extend_trial))
-        .route_layer(axum::middleware::from_fn_with_state(pool.clone(), crate::core::tenant::middleware::tenant_middleware))
+        .route_layer(axum::middleware::from_fn_with_state(
+            pool.clone(),
+            crate::core::tenant::middleware::tenant_middleware,
+        ))
         .with_state(pool)
 }

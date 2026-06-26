@@ -1,7 +1,7 @@
-use std::env;
-use sqlx::postgres::PgPoolOptions;
-use uuid::Uuid;
 use dotenvy::dotenv;
+use sqlx::postgres::PgPoolOptions;
+use std::env;
+use uuid::Uuid;
 
 #[derive(sqlx::FromRow, Debug)]
 struct DocumentRecord {
@@ -15,7 +15,7 @@ struct DocumentRecord {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
-    
+
     println!("=== AUDIT START ===");
     let db_url = env::var("DATABASE_URL").expect("DATABASE_URL missing");
     let pool = PgPoolOptions::new()
@@ -43,8 +43,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\nTesting Supabase Signed URL generation...");
     let supabase_url = env::var("SUPABASE_URL").unwrap_or_default();
     let service_role_key = env::var("SUPABASE_SERVICE_ROLE_KEY").unwrap_or_default();
-    let bucket_name = env::var("SUPABASE_DOCUMENTS_BUCKET").unwrap_or_else(|_| "certificados".to_string());
-    
+    let bucket_name =
+        env::var("SUPABASE_DOCUMENTS_BUCKET").unwrap_or_else(|_| "certificados".to_string());
+
     println!("Supabase URL: {}", supabase_url);
     println!("Bucket: {}", bucket_name);
 
@@ -55,10 +56,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let client = reqwest::Client::new();
     let path = docs[0].storage_path.as_deref().unwrap_or_default();
-    let url = format!("{}/storage/v1/object/sign/{}/{}", supabase_url, bucket_name, path);
+    let url = format!(
+        "{}/storage/v1/object/sign/{}/{}",
+        supabase_url, bucket_name, path
+    );
     println!("Requesting Signed URL from: {}", url);
 
-    let res = client.post(&url)
+    let res = client
+        .post(&url)
         .bearer_auth(&service_role_key)
         .header("apikey", &service_role_key)
         .json(&serde_json::json!({ "expiresIn": 3600 }))

@@ -1,15 +1,14 @@
 use crate::core::{security::jwt::Claims, utils::email_sender::send_email};
 use axum::{extract::Extension, http::StatusCode};
 
-pub async fn email_check(
-    Extension(claims): Extension<Claims>,
-) -> Result<StatusCode, StatusCode> {
+pub async fn email_check(Extension(claims): Extension<Claims>) -> Result<StatusCode, StatusCode> {
     if claims.role != "super_admin" {
         return Err(StatusCode::FORBIDDEN);
     }
 
-    let superadmin_email = std::env::var("SUPERADMIN_EMAIL").unwrap_or_else(|_| "agentech.nea@gmail.com".to_string());
-    
+    let superadmin_email =
+        std::env::var("SUPERADMIN_EMAIL").unwrap_or_else(|_| "agentech.nea@gmail.com".to_string());
+
     match send_email(
         &superadmin_email,
         "System Check: Email Provider",

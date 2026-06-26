@@ -67,7 +67,10 @@ pub async fn create_tenant(
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    let mut tx = pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let tenant_id = Uuid::new_v4();
     let user_id = Uuid::new_v4();
@@ -132,7 +135,9 @@ pub async fn create_tenant(
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    tx.commit()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     tracing::info!(
         "ONBOARDING EMAIL SIMULADO: Enviar a {} token: {}",
@@ -180,4 +185,3 @@ pub async fn update_tenant_status(
 
     Ok(StatusCode::OK)
 }
-

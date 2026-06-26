@@ -1,8 +1,11 @@
+use super::models::{
+    AdjustmentFrequency, AdjustmentMethod, AutomationMode, ContractDestination, ContractType,
+    GuaranteeType, ParticipantRole,
+};
 use chrono::NaiveDate;
 use rust_decimal::Decimal;
 use serde::Deserialize;
 use uuid::Uuid;
-use super::models::{AdjustmentMethod, AdjustmentFrequency, AutomationMode, ContractType, ContractDestination, ParticipantRole, GuaranteeType};
 
 #[derive(Deserialize)]
 pub struct CreateContractDto {
@@ -48,7 +51,7 @@ pub struct CreateContractDtoV2 {
     pub automation_mode: Option<AutomationMode>,
     pub fixed_percentage: Option<Decimal>,
     pub notification_days_before: Option<i32>,
-    
+
     // New fields
     pub c_type: Option<ContractType>,
     pub c_destination: Option<ContractDestination>,
@@ -133,7 +136,8 @@ mod tests {
     #[test]
     fn test_payload_icl_semester_semiautomatic() {
         // Payload EXACTO del screenshot (ICL, SEMESTER, SEMIAUTOMATIC, monto 950000)
-        check(r#"{
+        check(
+            r#"{
             "property_id": "00000000-0000-0000-0000-000000000001",
             "start_date": "2026-06-25",
             "end_date": "2028-06-25",
@@ -142,12 +146,15 @@ mod tests {
             "adjustment_frequency": "SEMESTER",
             "automation_mode": "SEMIAUTOMATIC",
             "notification_days_before": 30
-        }"#, "ICL+SEMESTER+SEMIAUTOMATIC");
+        }"#,
+            "ICL+SEMESTER+SEMIAUTOMATIC",
+        );
     }
 
     #[test]
     fn test_payload_ipc_quarterly_semiautomatic() {
-        check(r#"{
+        check(
+            r#"{
             "property_id": "00000000-0000-0000-0000-000000000001",
             "start_date": "2026-06-25",
             "end_date": "2028-06-25",
@@ -156,12 +163,15 @@ mod tests {
             "adjustment_frequency": "QUARTERLY",
             "automation_mode": "SEMIAUTOMATIC",
             "notification_days_before": 30
-        }"#, "IPC+QUARTERLY+SEMIAUTOMATIC");
+        }"#,
+            "IPC+QUARTERLY+SEMIAUTOMATIC",
+        );
     }
 
     #[test]
     fn test_payload_fixed_percentage() {
-        check(r#"{
+        check(
+            r#"{
             "property_id": "00000000-0000-0000-0000-000000000001",
             "start_date": "2026-06-25",
             "end_date": "2028-06-25",
@@ -171,12 +181,15 @@ mod tests {
             "automation_mode": "AUTOMATIC",
             "fixed_percentage": 10.5,
             "notification_days_before": 30
-        }"#, "FIXED_PERCENTAGE+ANNUAL+AUTOMATIC");
+        }"#,
+            "FIXED_PERCENTAGE+ANNUAL+AUTOMATIC",
+        );
     }
 
     #[test]
     fn test_payload_null_optionals() {
-        check(r#"{
+        check(
+            r#"{
             "property_id": "00000000-0000-0000-0000-000000000001",
             "start_date": "2026-06-25",
             "end_date": "2028-06-25",
@@ -185,12 +198,21 @@ mod tests {
             "adjustment_frequency": null,
             "automation_mode": null,
             "notification_days_before": null
-        }"#, "null optionals");
+        }"#,
+            "null optionals",
+        );
     }
 
     #[test]
     fn test_enum_all_adjustment_methods() {
-        for variant in &["MANUAL", "FIXED_PERCENTAGE", "IPC", "ICL", "CASA_PROPIA", "CUSTOM"] {
+        for variant in &[
+            "MANUAL",
+            "FIXED_PERCENTAGE",
+            "IPC",
+            "ICL",
+            "CASA_PROPIA",
+            "CUSTOM",
+        ] {
             let json = format!(
                 r#"{{"property_id":"00000000-0000-0000-0000-000000000001","start_date":"2026-06-25","end_date":"2028-06-25","original_rent_amount":100,"adjustment_method":"{}"}}"#,
                 variant
@@ -221,5 +243,3 @@ mod tests {
         }
     }
 }
-
-

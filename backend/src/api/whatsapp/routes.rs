@@ -25,7 +25,10 @@ pub fn router(pool: Arc<PgPool>) -> Router {
             get(list_messages).post(send_chat_message),
         )
         .route("/conversations/:id/take", post(take_conversation))
-        .route_layer(middleware::from_fn_with_state(pool.clone(), tenant_middleware))
+        .route_layer(middleware::from_fn_with_state(
+            pool.clone(),
+            tenant_middleware,
+        ))
         .with_state(pool.clone());
 
     let admin_routes = Router::new()
@@ -40,7 +43,10 @@ pub fn router(pool: Arc<PgPool>) -> Router {
         .route("/instance/logout", post(logout_instance))
         .route("/instance/disconnect", post(logout_instance))
         .route_layer(middleware::from_fn(require_tenant_admin))
-        .route_layer(middleware::from_fn_with_state(pool.clone(), tenant_middleware))
+        .route_layer(middleware::from_fn_with_state(
+            pool.clone(),
+            tenant_middleware,
+        ))
         .with_state(pool.clone());
 
     let webhook_routes = Router::new()
@@ -55,11 +61,9 @@ pub fn router(pool: Arc<PgPool>) -> Router {
         .merge(webhook_routes)
 }
 
-async fn require_webhook_secret(
-    req: Request,
-    next: Next,
-) -> Result<Response, StatusCode> {
-    let expected_secret = std::env::var("EVOLUTION_API_KEY").unwrap_or_else(|_| "apikey_evolution".to_string());
+async fn require_webhook_secret(req: Request, next: Next) -> Result<Response, StatusCode> {
+    let expected_secret =
+        std::env::var("EVOLUTION_API_KEY").unwrap_or_else(|_| "apikey_evolution".to_string());
     if let Some(auth_header) = req.headers().get("apikey") {
         if auth_header.to_str().unwrap_or_default() == expected_secret {
             return Ok(next.run(req).await);

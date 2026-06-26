@@ -1,17 +1,13 @@
 use crate::core::rbac::middleware::require_super_admin;
 use axum::{
-    extract::State,
-    http::StatusCode,
-    middleware,
-    response::IntoResponse,
-    routing::get,
-    Json, Router,
+    extract::State, http::StatusCode, middleware, response::IntoResponse, routing::get, Json,
+    Router,
 };
+use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 #[derive(Serialize, sqlx::FromRow)]
 pub struct SystemError {
@@ -46,6 +42,9 @@ pub fn router(pool: Arc<PgPool>) -> Router {
     Router::new()
         .route("/errors", get(get_system_errors))
         .route_layer(middleware::from_fn(require_super_admin))
-        .route_layer(middleware::from_fn_with_state(pool.clone(), crate::core::tenant::middleware::tenant_middleware))
+        .route_layer(middleware::from_fn_with_state(
+            pool.clone(),
+            crate::core::tenant::middleware::tenant_middleware,
+        ))
         .with_state(pool)
 }

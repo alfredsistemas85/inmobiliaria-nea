@@ -69,10 +69,7 @@ impl UserRepository {
         .await
     }
 
-    pub async fn find_with_role_by_email(
-        &self,
-        email: &str,
-    ) -> Result<Option<User>, sqlx::Error> {
+    pub async fn find_with_role_by_email(&self, email: &str) -> Result<Option<User>, sqlx::Error> {
         self.find_by_email(email).await
     }
 
@@ -88,7 +85,7 @@ impl UserRepository {
         sqlx::query(
             r#"UPDATE users 
                SET email_verified_at = CURRENT_TIMESTAMP, verification_token = NULL 
-               WHERE id = $1"#
+               WHERE id = $1"#,
         )
         .bind(id)
         .execute(&*self.pool)
@@ -96,7 +93,10 @@ impl UserRepository {
         Ok(())
     }
 
-    pub async fn find_by_verification_token(&self, token: &str) -> Result<Option<User>, sqlx::Error> {
+    pub async fn find_by_verification_token(
+        &self,
+        token: &str,
+    ) -> Result<Option<User>, sqlx::Error> {
         sqlx::query_as::<_, User>(
             r#"SELECT id, tenant_id, role, email, password_hash, first_name, last_name, is_active, email_verified_at, verification_token, verification_sent_at, email_type, onboarding_token, onboarding_token_expires_at, created_at, updated_at 
                FROM users WHERE verification_token = $1 AND deleted_at IS NULL"#

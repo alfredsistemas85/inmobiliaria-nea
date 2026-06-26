@@ -1,7 +1,6 @@
 use crate::{
     core::rbac::middleware::require_super_admin,
-    infrastructure::database::tenants::TenantRepository,
-    models::tenant::Tenant,
+    infrastructure::database::tenants::TenantRepository, models::tenant::Tenant,
 };
 use axum::{
     extract::{Path, State},
@@ -9,13 +8,13 @@ use axum::{
     middleware,
     response::IntoResponse,
     routing::{get, post, put},
-    Json, Router, Extension,
+    Extension, Json, Router,
 };
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 #[derive(Serialize)]
 pub struct TenantListItem {
@@ -87,10 +86,14 @@ async fn create_tenant(
 ) -> Result<Json<Tenant>, axum::response::Response> {
     let mut slug = payload.business_name.to_lowercase().replace(" ", "-");
     slug.retain(|c| c.is_ascii_alphanumeric() || c == '-');
-    
+
     let mut tx = pool.begin().await.map_err(|e| {
         tracing::error!("Failed to begin transaction: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "Error interno"}))).into_response()
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            axum::Json(serde_json::json!({"error": "Error interno"})),
+        )
+            .into_response()
     })?;
 
     let tenant = match sqlx::query_as::<_, Tenant>(
@@ -130,7 +133,7 @@ async fn create_tenant(
     };
 
     let trial_ends_at = Utc::now() + chrono::Duration::days(14);
-    
+
     if let Err(e) = sqlx::query(
         r#"INSERT INTO subscriptions (tenant_id, plan_type, status, trial_ends_at)
            VALUES ($1, 'BASIC'::plan_type, 'TRIAL'::subscription_status, $2)"#,
@@ -142,7 +145,11 @@ async fn create_tenant(
     {
         tracing::error!("Error creating subscription: {}", e);
         let _ = tx.rollback().await;
-        return Err((StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "Error interno"}))).into_response());
+        return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            axum::Json(serde_json::json!({"error": "Error interno"})),
+        )
+            .into_response());
     }
 
     let user_id = Uuid::new_v4();
@@ -171,8 +178,12 @@ async fn create_tenant(
         return Err((StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "Error al crear administrador"}))).into_response());
     }
 
-    let audit_user_id = if claims.sub == Uuid::nil() { None } else { Some(claims.sub) };
-    
+    let audit_user_id = if claims.sub == Uuid::nil() {
+        None
+    } else {
+        Some(claims.sub)
+    };
+
     if let Err(e) = sqlx::query(
         r#"INSERT INTO audit_logs (tenant_id, user_id, action, new_data)
            VALUES ($1, $2, 'TENANT_CREATED_BY_SUPERADMIN', $3)"#,
@@ -189,13 +200,21 @@ async fn create_tenant(
 
     if let Err(e) = tx.commit().await {
         tracing::error!("Error committing transaction: {}", e);
-        return Err((StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "Error interno"}))).into_response());
+        return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            axum::Json(serde_json::json!({"error": "Error interno"})),
+        )
+            .into_response());
     }
 
-    let frontend_url = std::env::var("FRONTEND_URL")
-        .unwrap_or_else(|_| "https://inmonea.agentech.ar".to_string());
+    let frontend_url =
+        std::env::var("FRONTEND_URL").unwrap_or_else(|_| "https://inmonea.agentech.ar".to_string());
     let magic_link = format!("{}/onboarding?token={}", frontend_url, onboarding_token);
-    tracing::info!("ONBOARDING EMAIL SIMULADO: Enviar a {} link: {}", payload.admin_email, magic_link);
+    tracing::info!(
+        "ONBOARDING EMAIL SIMULADO: Enviar a {} link: {}",
+        payload.admin_email,
+        magic_link
+    );
 
     // Send WhatsApp if phone is available
     if let Some(phone) = &payload.phone {
@@ -206,7 +225,9 @@ async fn create_tenant(
                 let evo_client = crate::infrastructure::evolution::client::EvolutionClient::new();
                 match evo_client.send_message(&p, &msg).await {
                     Ok(_) => tracing::info!("WhatsApp de onboarding enviado a {}", p),
-                    Err(e) => tracing::error!("Error enviando WhatsApp de onboarding a {}: {}", p, e),
+                    Err(e) => {
+                        tracing::error!("Error enviando WhatsApp de onboarding a {}: {}", p, e)
+                    }
                 }
             });
         }
@@ -239,7 +260,11 @@ async fn update_tenant_status(
         return Err(StatusCode::NOT_FOUND);
     }
 
-    tracing::info!("TENANT_STATUS_UPDATED: tenant_id={} new_status={}", id, payload.status);
+    tracing::info!(
+        "TENANT_STATUS_UPDATED: tenant_id={} new_status={}",
+        id,
+        payload.status
+    );
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -250,6 +275,9 @@ pub fn router(pool: Arc<PgPool>) -> Router {
         .route("/:id", get(get_tenant))
         .route("/:id/status", put(update_tenant_status))
         .route_layer(middleware::from_fn(require_super_admin))
-        .route_layer(middleware::from_fn_with_state(pool.clone(), crate::core::tenant::middleware::tenant_middleware))
+        .route_layer(middleware::from_fn_with_state(
+            pool.clone(),
+            crate::core::tenant::middleware::tenant_middleware,
+        ))
         .with_state(pool)
 }

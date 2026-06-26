@@ -1,15 +1,15 @@
+use super::storage::SupabaseStorage;
+use crate::core::security::jwt::Claims;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    Json, Extension,
+    Extension, Json,
 };
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Row};
 use std::sync::Arc;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use crate::core::security::jwt::Claims;
-use super::storage::SupabaseStorage;
 
 #[derive(Serialize, sqlx::FromRow)]
 pub struct Document {
@@ -50,13 +50,19 @@ pub async fn generate_upload_url(
     let tenant_id = claims.tenant_id.ok_or(StatusCode::BAD_REQUEST)?;
     let user_id = claims.sub;
 
-    let storage_path = format!("{}/{}/{}/{}", tenant_id, payload.entity_type, payload.entity_id, payload.file_name);
-    
+    let storage_path = format!(
+        "{}/{}/{}/{}",
+        tenant_id, payload.entity_type, payload.entity_id, payload.file_name
+    );
+
     let storage = SupabaseStorage::new();
-    let upload_url = storage.create_upload_url(&storage_path).await.map_err(|e| {
-        tracing::error!("Storage Error: {}", e);
-        StatusCode::SERVICE_UNAVAILABLE
-    })?;
+    let upload_url = storage
+        .create_upload_url(&storage_path)
+        .await
+        .map_err(|e| {
+            tracing::error!("Storage Error: {}", e);
+            StatusCode::SERVICE_UNAVAILABLE
+        })?;
 
     // Registrar en BD
     let doc = sqlx::query_as::<_, Document>(
@@ -144,7 +150,10 @@ pub async fn get_document(
     let storage_path: String = path_row.try_get("storage_path").unwrap_or_default();
 
     let storage = SupabaseStorage::new();
-    let url = storage.create_download_url(&storage_path, 3600).await.map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+    let url = storage
+        .create_download_url(&storage_path, 3600)
+        .await
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
 
     // Registrar log
     let _ = sqlx::query(
@@ -166,12 +175,14 @@ pub async fn delete_document(
 ) -> Result<StatusCode, StatusCode> {
     let tenant_id = claims.tenant_id.ok_or(StatusCode::BAD_REQUEST)?;
 
-    let result = sqlx::query("UPDATE documents SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2")
-        .bind(id)
-        .bind(tenant_id)
-        .execute(&*pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let result = sqlx::query(
+        "UPDATE documents SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2",
+    )
+    .bind(id)
+    .bind(tenant_id)
+    .execute(&*pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     if result.rows_affected() == 0 {
         return Err(StatusCode::NOT_FOUND);
@@ -193,28 +204,42 @@ pub async fn view_document(
     State(pool): State<Arc<PgPool>>,
     Path(id): Path<Uuid>,
 ) -> Result<axum::response::Response, StatusCode> {
-    let path_row = sqlx::query("SELECT storage_path, mime_type FROM documents WHERE id = $1 AND deleted_at IS NULL")
-        .bind(id)
-        .fetch_optional(&*pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .ok_or(StatusCode::NOT_FOUND)?;
+    let path_row = sqlx::query(
+        "SELECT storage_path, mime_type FROM documents WHERE id = $1 AND deleted_at IS NULL",
+    )
+    .bind(id)
+    .fetch_optional(&*pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+    .ok_or(StatusCode::NOT_FOUND)?;
 
     let storage_path: String = path_row.try_get("storage_path").unwrap_or_default();
-    let mime_type: String = path_row.try_get("mime_type").unwrap_or_else(|_| "application/octet-stream".to_string());
-    
+    let mime_type: String = path_row
+        .try_get("mime_type")
+        .unwrap_or_else(|_| "application/octet-stream".to_string());
+
     let storage = SupabaseStorage::new();
-    let url = storage.create_download_url(&storage_path, 3600).await.map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+    let url = storage
+        .create_download_url(&storage_path, 3600)
+        .await
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
 
     let client = reqwest::Client::new();
-    let res = client.get(&url).send().await.map_err(|_| StatusCode::BAD_GATEWAY)?;
-    
+    let res = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|_| StatusCode::BAD_GATEWAY)?;
+
     if !res.status().is_success() {
         return Err(StatusCode::BAD_GATEWAY);
     }
-    
-    let bytes = res.bytes().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    
+
+    let bytes = res
+        .bytes()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
     axum::response::Response::builder()
         .header("Content-Type", mime_type)
         .header("Cache-Control", "public, max-age=31536000")

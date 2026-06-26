@@ -55,14 +55,22 @@ pub async fn get_stats(
 
     let p1 = pool.clone();
     let f_total_clients = tokio::spawn(async move {
-        sqlx::query_as::<_, (i64,)>("SELECT COUNT(*) FROM clients WHERE tenant_id = $1 AND deleted_at IS NULL")
-            .bind(tenant_id).fetch_one(&*p1).await
+        sqlx::query_as::<_, (i64,)>(
+            "SELECT COUNT(*) FROM clients WHERE tenant_id = $1 AND deleted_at IS NULL",
+        )
+        .bind(tenant_id)
+        .fetch_one(&*p1)
+        .await
     });
 
     let p2 = pool.clone();
     let f_total_properties = tokio::spawn(async move {
-        sqlx::query_as::<_, (i64,)>("SELECT COUNT(*) FROM properties WHERE tenant_id = $1 AND deleted_at IS NULL")
-            .bind(tenant_id).fetch_one(&*p2).await
+        sqlx::query_as::<_, (i64,)>(
+            "SELECT COUNT(*) FROM properties WHERE tenant_id = $1 AND deleted_at IS NULL",
+        )
+        .bind(tenant_id)
+        .fetch_one(&*p2)
+        .await
     });
 
     let p3 = pool.clone();
@@ -110,8 +118,11 @@ pub async fn get_stats(
             LEFT JOIN users u ON c.assigned_user_id = u.id 
             WHERE c.tenant_id = $1 AND c.deleted_at IS NULL 
             GROUP BY u.first_name
-            "#
-        ).bind(tenant_id).fetch_all(&*p9).await
+            "#,
+        )
+        .bind(tenant_id)
+        .fetch_all(&*p9)
+        .await
     });
 
     let p10 = pool.clone();
@@ -138,7 +149,7 @@ pub async fn get_stats(
         res_conversions_month,
         res_leads_status,
         res_conv_agent,
-        res_conv_month
+        res_conv_month,
     ) = tokio::join!(
         f_total_clients,
         f_total_properties,
@@ -152,15 +163,23 @@ pub async fn get_stats(
         f_conv_month
     );
 
-    let total_clients = res_total_clients.unwrap_or(Err(sqlx::Error::RowNotFound)).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let total_properties = res_total_properties.unwrap_or(Err(sqlx::Error::RowNotFound)).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let new_leads = res_new_leads.unwrap_or(Err(sqlx::Error::RowNotFound)).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let upcoming_appointments = res_upcoming_appointments.unwrap_or(Err(sqlx::Error::RowNotFound)).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    
+    let total_clients = res_total_clients
+        .unwrap_or(Err(sqlx::Error::RowNotFound))
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let total_properties = res_total_properties
+        .unwrap_or(Err(sqlx::Error::RowNotFound))
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let new_leads = res_new_leads
+        .unwrap_or(Err(sqlx::Error::RowNotFound))
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let upcoming_appointments = res_upcoming_appointments
+        .unwrap_or(Err(sqlx::Error::RowNotFound))
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
     let active_whatsapp_conversations = res_active_whatsapp.unwrap_or(Ok((0,))).unwrap_or((0,));
     let leads_this_month = res_leads_month.unwrap_or(Ok((0,))).unwrap_or((0,));
     let conversions_this_month = res_conversions_month.unwrap_or(Ok((0,))).unwrap_or((0,));
-    
+
     let leads_by_status = res_leads_status.unwrap_or(Ok(vec![])).unwrap_or_default();
     let conversations_by_agent = res_conv_agent.unwrap_or(Ok(vec![])).unwrap_or_default();
     let conversions_by_month = res_conv_month.unwrap_or(Ok(vec![])).unwrap_or_default();

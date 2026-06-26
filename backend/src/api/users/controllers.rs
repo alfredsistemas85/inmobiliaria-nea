@@ -113,14 +113,20 @@ pub async fn create_user(
 
     tracing::info!("EMAIL_SENT: to={} token={}", created.email, v_token);
 
-    let frontend_url = std::env::var("FRONTEND_URL").unwrap_or_else(|_| "https://inmonea.agentech.ar".to_string());
+    let frontend_url =
+        std::env::var("FRONTEND_URL").unwrap_or_else(|_| "https://inmonea.agentech.ar".to_string());
     let verify_url = format!("{}/verify-email?token={}", frontend_url, v_token);
     let body = format!(
         "Bienvenido a Inmobiliarias NEA.\n\nPor favor, verifica tu correo y activa tu cuenta haciendo clic en el siguiente enlace:\n{}",
         verify_url
     );
-    
-    let _ = crate::core::utils::email_sender::send_email(&created.email, "Verifica tu cuenta - Inmobiliarias NEA", &body).await;
+
+    let _ = crate::core::utils::email_sender::send_email(
+        &created.email,
+        "Verifica tu cuenta - Inmobiliarias NEA",
+        &body,
+    )
+    .await;
 
     Ok(Json(UserResponseDto::from(created)))
 }
@@ -168,7 +174,7 @@ pub async fn update_user(
 
     let updated = sqlx::query_as::<_, User>(
         r#"UPDATE users SET email = $1, first_name = $2, last_name = $3, role = $4, is_active = $5 
-           WHERE id = $6 RETURNING *"#
+           WHERE id = $6 RETURNING *"#,
     )
     .bind(&user.email)
     .bind(&user.first_name)

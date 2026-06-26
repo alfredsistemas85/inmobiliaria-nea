@@ -144,34 +144,43 @@ export default function Contracts() {
   const handleDownloadPdf = async (contractId: string) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/contracts/${contractId}/pdf`, {
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        }
+      
+      // Intentar V2 (PDF nativo)
+      let response = await fetch(`${API_URL}/api/v2/contracts/${contractId}/pdf`, {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+      });
+
+      if (response.ok) {
+        // Es un PDF real generado por GenPDF en Fase 3
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `contrato_${contractId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        return;
+      }
+
+      // Fallback a V1 (HTML string patch)
+      response = await fetch(`${API_URL}/api/contracts/${contractId}/pdf`, {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
       });
       
-      if (!response.ok) {
-        throw new Error('No se pudo generar el documento');
-      }
+      if (!response.ok) throw new Error('No se pudo generar el documento');
       
-      // El backend actualmente devuelve un HTML (Html<String>), no un archivo binario PDF.
-      // Por ende, lo leemos como texto y lo abrimos en una nueva pestaña para imprimirlo.
       const htmlText = await response.text();
-      
       const newWin = window.open('', '_blank');
       if (newWin) {
         newWin.document.open();
         newWin.document.write(htmlText);
         newWin.document.close();
-        
-        // Esperar un momento a que cargue el contenido para abrir el cuadro de imprimir (Guardar como PDF)
-        setTimeout(() => {
-          newWin.print();
-        }, 250);
+        setTimeout(() => newWin.print(), 250);
       } else {
-        showToast('Por favor permite las ventanas emergentes (pop-ups) para ver el documento', 'error');
+        showToast('Por favor permite pop-ups para ver el documento', 'error');
       }
-
     } catch (err) {
       console.error(err);
       showToast('Error al obtener el documento', 'error');

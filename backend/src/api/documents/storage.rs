@@ -28,7 +28,8 @@ impl SupabaseStorage {
         let supabase_url = env::var("SUPABASE_URL").unwrap_or_default();
         let service_role_key = env::var("SUPABASE_SERVICE_ROLE_KEY").unwrap_or_default();
         // default bucket changed to "certificados" based on Supabase setup
-        let bucket_name = env::var("SUPABASE_DOCUMENTS_BUCKET").unwrap_or_else(|_| "certificados".to_string());
+        let bucket_name =
+            env::var("SUPABASE_DOCUMENTS_BUCKET").unwrap_or_else(|_| "certificados".to_string());
 
         Self {
             client: Client::new(),
@@ -40,9 +41,14 @@ impl SupabaseStorage {
 
     // Creates a signed URL for uploading a file directly from the client
     pub async fn create_upload_url(&self, path: &str) -> Result<String, String> {
-        let url = format!("{}/storage/v1/object/upload/sign/{}/{}", self.supabase_url, self.bucket_name, path);
-        
-        let res = self.client.post(&url)
+        let url = format!(
+            "{}/storage/v1/object/upload/sign/{}/{}",
+            self.supabase_url, self.bucket_name, path
+        );
+
+        let res = self
+            .client
+            .post(&url)
             .bearer_auth(&self.service_role_key)
             .header("apikey", &self.service_role_key)
             .send()
@@ -54,8 +60,8 @@ impl SupabaseStorage {
         }
 
         let data: SignResponse = res.json().await.map_err(|e| e.to_string())?;
-        
-        // Supabase typically returns a relative path like "/storage/v1/object/upload/sign/..." 
+
+        // Supabase typically returns a relative path like "/storage/v1/object/upload/sign/..."
         // or a full URL in 'url'
         if let Some(mut signed) = data.url.or(data.signed_url) {
             if signed.starts_with("/") {
@@ -70,9 +76,14 @@ impl SupabaseStorage {
 
     // Creates a signed URL to download or view a file
     pub async fn create_download_url(&self, path: &str, expires_in: i32) -> Result<String, String> {
-        let url = format!("{}/storage/v1/object/sign/{}/{}", self.supabase_url, self.bucket_name, path);
-        
-        let res = self.client.post(&url)
+        let url = format!(
+            "{}/storage/v1/object/sign/{}/{}",
+            self.supabase_url, self.bucket_name, path
+        );
+
+        let res = self
+            .client
+            .post(&url)
             .bearer_auth(&self.service_role_key)
             .header("apikey", &self.service_role_key)
             .json(&SignRequest { expires_in })
@@ -85,7 +96,7 @@ impl SupabaseStorage {
         }
 
         let data: SignResponse = res.json().await.map_err(|e| e.to_string())?;
-        
+
         if let Some(mut signed) = data.signed_url {
             if signed.starts_with("/") {
                 signed = format!("{}/storage/v1{}", self.supabase_url, signed);

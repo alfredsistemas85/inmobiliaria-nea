@@ -288,7 +288,7 @@ pub async fn run_reminders(State(pool): State<Arc<PgPool>>) -> Result<StatusCode
     // Same as Phase 2
     let rows = sqlx::query!(
         r#"
-        SELECT a.id, a.tenant_id, a.scheduled_at, c.id as client_id, c.phone, c.first_name, p.title as property_title
+        SELECT a.id, a.tenant_id, a.scheduled_at, c.id as client_id, c.phone, c.first_name, COALESCE(p.title, 'la propiedad') as "property_title!"
         FROM appointments a
         JOIN clients c ON a.client_id = c.id
         LEFT JOIN properties p ON a.property_id = p.id

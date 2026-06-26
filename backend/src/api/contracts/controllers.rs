@@ -121,7 +121,8 @@ pub async fn create_contract(
             current_date.day()
         };
         current_date = chrono::NaiveDate::from_ymd_opt(year, month, next_day)
-            .unwrap_or_else(|| chrono::NaiveDate::from_ymd_opt(year, month, 1).unwrap());
+            .or_else(|| chrono::NaiveDate::from_ymd_opt(year, month, 1))
+            .ok_or_else(|| (StatusCode::INTERNAL_SERVER_ERROR, "Invalid date generation".to_string()))?;
     }
 
     tx.commit()
@@ -275,7 +276,7 @@ pub async fn generate_contract_pdf_v2(
             format!("attachment; filename=\"contrato_{}.pdf\"", id),
         )
         .body(Body::from(pdf_bytes))
-        .unwrap();
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Response build error: {}", e)))?;
 
     Ok(response)
 }

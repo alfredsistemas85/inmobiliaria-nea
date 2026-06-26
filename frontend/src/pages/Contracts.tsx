@@ -151,21 +151,30 @@ export default function Contracts() {
       });
       
       if (!response.ok) {
-        throw new Error('No se pudo descargar el PDF');
+        throw new Error('No se pudo generar el documento');
       }
       
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `contrato_${contractId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      a.remove();
+      // El backend actualmente devuelve un HTML (Html<String>), no un archivo binario PDF.
+      // Por ende, lo leemos como texto y lo abrimos en una nueva pestaña para imprimirlo.
+      const htmlText = await response.text();
+      
+      const newWin = window.open('', '_blank');
+      if (newWin) {
+        newWin.document.open();
+        newWin.document.write(htmlText);
+        newWin.document.close();
+        
+        // Esperar un momento a que cargue el contenido para abrir el cuadro de imprimir (Guardar como PDF)
+        setTimeout(() => {
+          newWin.print();
+        }, 250);
+      } else {
+        showToast('Por favor permite las ventanas emergentes (pop-ups) para ver el documento', 'error');
+      }
+
     } catch (err) {
       console.error(err);
-      showToast('Error al descargar el PDF', 'error');
+      showToast('Error al obtener el documento', 'error');
     }
   }
 

@@ -53,50 +53,80 @@ pub async fn get_stats(
 ) -> Result<Json<DashboardStats>, StatusCode> {
     let tenant_id = claims.tenant_id.ok_or(StatusCode::FORBIDDEN)?;
 
-    let f_total_clients = sqlx::query_as::<_, (i64,)>("SELECT COUNT(*) FROM clients WHERE tenant_id = $1 AND deleted_at IS NULL")
-        .bind(tenant_id).fetch_one(&*pool);
+    let p1 = pool.clone();
+    let f_total_clients = tokio::spawn(async move {
+        sqlx::query_as::<_, (i64,)>("SELECT COUNT(*) FROM clients WHERE tenant_id = $1 AND deleted_at IS NULL")
+            .bind(tenant_id).fetch_one(&*p1).await
+    });
 
-    let f_total_properties = sqlx::query_as::<_, (i64,)>("SELECT COUNT(*) FROM properties WHERE tenant_id = $1 AND deleted_at IS NULL")
-        .bind(tenant_id).fetch_one(&*pool);
+    let p2 = pool.clone();
+    let f_total_properties = tokio::spawn(async move {
+        sqlx::query_as::<_, (i64,)>("SELECT COUNT(*) FROM properties WHERE tenant_id = $1 AND deleted_at IS NULL")
+            .bind(tenant_id).fetch_one(&*p2).await
+    });
 
-    let f_new_leads = sqlx::query_as::<_, (i64,)>("SELECT COUNT(*) FROM leads WHERE tenant_id = $1 AND status = 'NUEVO' AND deleted_at IS NULL")
-        .bind(tenant_id).fetch_one(&*pool);
+    let p3 = pool.clone();
+    let f_new_leads = tokio::spawn(async move {
+        sqlx::query_as::<_, (i64,)>("SELECT COUNT(*) FROM leads WHERE tenant_id = $1 AND status = 'NUEVO' AND deleted_at IS NULL")
+            .bind(tenant_id).fetch_one(&*p3).await
+    });
 
-    let f_upcoming_appointments = sqlx::query_as::<_, (i64,)>("SELECT COUNT(*) FROM appointments WHERE tenant_id = $1 AND scheduled_at >= CURRENT_TIMESTAMP AND deleted_at IS NULL")
-        .bind(tenant_id).fetch_one(&*pool);
+    let p4 = pool.clone();
+    let f_upcoming_appointments = tokio::spawn(async move {
+        sqlx::query_as::<_, (i64,)>("SELECT COUNT(*) FROM appointments WHERE tenant_id = $1 AND scheduled_at >= CURRENT_TIMESTAMP AND deleted_at IS NULL")
+            .bind(tenant_id).fetch_one(&*p4).await
+    });
 
-    let f_active_whatsapp = sqlx::query_as::<_, (i64,)>("SELECT COUNT(*) FROM conversations WHERE tenant_id = $1 AND status = 'OPEN' AND deleted_at IS NULL")
-        .bind(tenant_id).fetch_one(&*pool);
+    let p5 = pool.clone();
+    let f_active_whatsapp = tokio::spawn(async move {
+        sqlx::query_as::<_, (i64,)>("SELECT COUNT(*) FROM conversations WHERE tenant_id = $1 AND status = 'OPEN' AND deleted_at IS NULL")
+            .bind(tenant_id).fetch_one(&*p5).await
+    });
 
-    let f_leads_month = sqlx::query_as::<_, (i64,)>("SELECT COUNT(*) FROM leads WHERE tenant_id = $1 AND date_trunc('month', created_at) = date_trunc('month', CURRENT_TIMESTAMP) AND deleted_at IS NULL")
-        .bind(tenant_id).fetch_one(&*pool);
+    let p6 = pool.clone();
+    let f_leads_month = tokio::spawn(async move {
+        sqlx::query_as::<_, (i64,)>("SELECT COUNT(*) FROM leads WHERE tenant_id = $1 AND date_trunc('month', created_at) = date_trunc('month', CURRENT_TIMESTAMP) AND deleted_at IS NULL")
+            .bind(tenant_id).fetch_one(&*p6).await
+    });
 
-    let f_conversions_month = sqlx::query_as::<_, (i64,)>("SELECT COUNT(*) FROM audit_logs WHERE tenant_id = $1 AND entity_type = 'lead' AND action = 'UPDATE_LEAD' AND date_trunc('month', created_at) = date_trunc('month', CURRENT_TIMESTAMP)")
-        .bind(tenant_id).fetch_one(&*pool);
+    let p7 = pool.clone();
+    let f_conversions_month = tokio::spawn(async move {
+        sqlx::query_as::<_, (i64,)>("SELECT COUNT(*) FROM audit_logs WHERE tenant_id = $1 AND entity_type = 'lead' AND action = 'UPDATE_LEAD' AND date_trunc('month', created_at) = date_trunc('month', CURRENT_TIMESTAMP)")
+            .bind(tenant_id).fetch_one(&*p7).await
+    });
 
-    let f_leads_status = sqlx::query_as::<_, LeadStatusCount>("SELECT status, COUNT(*) as count FROM leads WHERE tenant_id = $1 AND deleted_at IS NULL GROUP BY status")
-        .bind(tenant_id).fetch_all(&*pool);
+    let p8 = pool.clone();
+    let f_leads_status = tokio::spawn(async move {
+        sqlx::query_as::<_, LeadStatusCount>("SELECT status, COUNT(*) as count FROM leads WHERE tenant_id = $1 AND deleted_at IS NULL GROUP BY status")
+            .bind(tenant_id).fetch_all(&*p8).await
+    });
 
-    let f_conv_agent = sqlx::query_as::<_, AgentConversationCount>(
-        r#"
-        SELECT COALESCE(u.first_name, 'Sin Asignar') as agent_name, COUNT(c.id) as count 
-        FROM conversations c 
-        LEFT JOIN users u ON c.assigned_user_id = u.id 
-        WHERE c.tenant_id = $1 AND c.deleted_at IS NULL 
-        GROUP BY u.first_name
-        "#
-    ).bind(tenant_id).fetch_all(&*pool);
+    let p9 = pool.clone();
+    let f_conv_agent = tokio::spawn(async move {
+        sqlx::query_as::<_, AgentConversationCount>(
+            r#"
+            SELECT COALESCE(u.first_name, 'Sin Asignar') as agent_name, COUNT(c.id) as count 
+            FROM conversations c 
+            LEFT JOIN users u ON c.assigned_user_id = u.id 
+            WHERE c.tenant_id = $1 AND c.deleted_at IS NULL 
+            GROUP BY u.first_name
+            "#
+        ).bind(tenant_id).fetch_all(&*p9).await
+    });
 
-    let f_conv_month = sqlx::query_as::<_, MonthlyConversion>(
-        r#"
-        SELECT TO_CHAR(created_at, 'YYYY-MM') as month, COUNT(*) as count 
-        FROM audit_logs 
-        WHERE tenant_id = $1 AND entity_type = 'lead' AND action = 'UPDATE_LEAD' AND details->>'status' = 'WON'
-        GROUP BY TO_CHAR(created_at, 'YYYY-MM')
-        ORDER BY month ASC
-        LIMIT 6
-        "#
-    ).bind(tenant_id).fetch_all(&*pool);
+    let p10 = pool.clone();
+    let f_conv_month = tokio::spawn(async move {
+        sqlx::query_as::<_, MonthlyConversion>(
+            r#"
+            SELECT TO_CHAR(created_at, 'YYYY-MM') as month, COUNT(*) as count 
+            FROM audit_logs 
+            WHERE tenant_id = $1 AND entity_type = 'lead' AND action = 'UPDATE_LEAD' AND details->>'status' = 'WON'
+            GROUP BY TO_CHAR(created_at, 'YYYY-MM')
+            ORDER BY month ASC
+            LIMIT 6
+            "#
+        ).bind(tenant_id).fetch_all(&*p10).await
+    });
 
     let (
         res_total_clients,
@@ -122,18 +152,18 @@ pub async fn get_stats(
         f_conv_month
     );
 
-    let total_clients = res_total_clients.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let total_properties = res_total_properties.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let new_leads = res_new_leads.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let upcoming_appointments = res_upcoming_appointments.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let total_clients = res_total_clients.unwrap_or(Err(sqlx::Error::RowNotFound)).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let total_properties = res_total_properties.unwrap_or(Err(sqlx::Error::RowNotFound)).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let new_leads = res_new_leads.unwrap_or(Err(sqlx::Error::RowNotFound)).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let upcoming_appointments = res_upcoming_appointments.unwrap_or(Err(sqlx::Error::RowNotFound)).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     
-    let active_whatsapp_conversations = res_active_whatsapp.unwrap_or((0,));
-    let leads_this_month = res_leads_month.unwrap_or((0,));
-    let conversions_this_month = res_conversions_month.unwrap_or((0,));
+    let active_whatsapp_conversations = res_active_whatsapp.unwrap_or(Ok((0,))).unwrap_or((0,));
+    let leads_this_month = res_leads_month.unwrap_or(Ok((0,))).unwrap_or((0,));
+    let conversions_this_month = res_conversions_month.unwrap_or(Ok((0,))).unwrap_or((0,));
     
-    let leads_by_status = res_leads_status.unwrap_or_default();
-    let conversations_by_agent = res_conv_agent.unwrap_or_default();
-    let conversions_by_month = res_conv_month.unwrap_or_default();
+    let leads_by_status = res_leads_status.unwrap_or(Ok(vec![])).unwrap_or_default();
+    let conversations_by_agent = res_conv_agent.unwrap_or(Ok(vec![])).unwrap_or_default();
+    let conversions_by_month = res_conv_month.unwrap_or(Ok(vec![])).unwrap_or_default();
 
     Ok(Json(DashboardStats {
         total_clients: total_clients.0,

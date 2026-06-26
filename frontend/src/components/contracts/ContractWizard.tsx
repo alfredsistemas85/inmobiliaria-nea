@@ -36,6 +36,22 @@ export default function ContractWizard({ onClose, onSuccess }: ContractWizardPro
 
   const [participants, setParticipants] = useState<any[]>([]);
 
+  const [terms, setTerms] = useState({
+    allows_pets: false,
+    allows_sublease: false,
+    requires_inventory: false,
+    requires_insurance: false,
+    automatic_renewal: false,
+    permitted_activity: '',
+    notice_days: '30',
+    early_termination_penalty: '',
+    observations: ''
+  });
+
+  const [clauses, setClauses] = useState<any[]>([]);
+  const [templateId, setTemplateId] = useState('');
+  const [templates, setTemplates] = useState<any[]>([]);
+
   // Search State
   const [clients, setClients] = useState<Client[]>([]);
   const [properties, setProperties] = useState<any[]>([]);
@@ -43,6 +59,7 @@ export default function ContractWizard({ onClose, onSuccess }: ContractWizardPro
   useEffect(() => {
     propertiesService.getProperties().then(data => setProperties(data || []));
     clientsService.getClients(100).then(res => setClients(res.data || []));
+    fetchApi('/api/v2/contract-templates').then(data => setTemplates(data || []));
   }, []);
 
   const addParticipant = (role: string, is_main: boolean) => {
@@ -76,6 +93,18 @@ export default function ContractWizard({ onClose, onSuccess }: ContractWizardPro
     setParticipants(newP);
   };
 
+  const handleTemplateSelect = async (id: string) => {
+    setTemplateId(id);
+    if (!id) {
+      setClauses([]);
+      return;
+    }
+    const templateData = await fetchApi(`/api/v2/contract-templates/${id}`);
+    if (templateData && templateData.clauses) {
+      setClauses(templateData.clauses);
+    }
+  };
+
   const handleNext = () => {
     if (step === 1 && !basicData.property_id) {
       setError('Debes seleccionar una propiedad.');
@@ -92,18 +121,29 @@ export default function ContractWizard({ onClose, onSuccess }: ContractWizardPro
       
       const payload = {
         ...basicData,
-        original_rent_amount: parseFloat(basicData.original_rent_amount),
-        fixed_percentage: basicData.fixed_percentage ? parseFloat(basicData.fixed_percentage) : null,
-        deposit_amount: parseFloat(basicData.deposit_amount),
-        notification_days_before: parseInt(basicData.notification_days_before),
+        original_rent_amount: Number(basicData.original_rent_amount),
+        fixed_percentage: basicData.fixed_percentage ? Number(basicData.fixed_percentage) : null,
+        notification_days_before: Number(basicData.notification_days_before),
+        deposit_amount: Number(basicData.deposit_amount),
+        commission_amount: 0,
+        fees_amount: 0,
         participants: participants.map(p => ({
           ...p,
-          percentage: parseFloat(p.percentage),
+          percentage: Number(p.percentage),
           guarantees: p.guarantees.map((g: any) => ({
             ...g,
-            income_amount: parseFloat(g.income_amount)
+            income_amount: Number(g.income_amount)
           }))
-        }))
+        })),
+        terms: {
+          ...terms,
+          notice_days: Number(terms.notice_days)
+        },
+        clauses: clauses.map((c, i) => ({
+          ...c,
+          display_order: i + 1
+        })),
+        template_id: templateId || null
       };
 
       await fetchApi('/v2/contracts', {
@@ -306,6 +346,117 @@ export default function ContractWizard({ onClose, onSuccess }: ContractWizardPro
 
             </div>
           )}
+
+          {step === 4 && (
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-white border-b border-zinc-800 pb-2">Condiciones (Términos)</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <label className="flex items-center space-x-2 text-white">
+                  <input type="checkbox" checked={terms.allows_pets} onChange={(e) => setTerms({...terms, allows_pets: e.target.checked})} />
+                  <span>Permite Mascotas</span>
+                </label>
+                <label className="flex items-center space-x-2 text-white">
+                  <input type="checkbox" checked={terms.allows_sublease} onChange={(e) => setTerms({...terms, allows_sublease: e.target.checked})} />
+                  <span>Permite Subalquiler</span>
+                </label>
+                <label className="flex items-center space-x-2 text-white">
+                  <input type="checkbox" checked={terms.requires_inventory} onChange={(e) => setTerms({...terms, requires_inventory: e.target.checked})} />
+                  <span>Inventario Obligatorio</span>
+                </label>
+                <label className="flex items-center space-x-2 text-white">
+                  <input type="checkbox" checked={terms.requires_insurance} onChange={(e) => setTerms({...terms, requires_insurance: e.target.checked})} />
+                  <span>Seguro Obligatorio</span>
+                </label>
+                <label className="flex items-center space-x-2 text-white">
+                  <input type="checkbox" checked={terms.automatic_renewal} onChange={(e) => setTerms({...terms, automatic_renewal: e.target.checked})} />
+                  <span>Renovación Automática</span>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label className="block text-sm text-zinc-400 mb-1">Días Preaviso (Rescisión)</label>
+                  <Input type="number" value={terms.notice_days} onChange={(e) => setTerms({...terms, notice_days: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-sm text-zinc-400 mb-1">Actividad Permitida</label>
+                  <Input value={terms.permitted_activity} onChange={(e) => setTerms({...terms, permitted_activity: e.target.value})} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 5 && (
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-white border-b border-zinc-800 pb-2">Plantilla</h3>
+              <p className="text-sm text-zinc-400 mb-4">Selecciona una plantilla para cargar automáticamente las cláusulas.</p>
+              
+              <select
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white mb-6"
+                value={templateId}
+                onChange={(e) => handleTemplateSelect(e.target.value)}
+              >
+                <option value="">Sin Plantilla (Contrato en Blanco)</option>
+                {templates.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {step === 6 && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center border-b border-zinc-800 pb-2">
+                <h3 className="text-lg font-semibold text-white">Cláusulas del Contrato</h3>
+                <Button size="sm" onClick={() => setClauses([...clauses, { title: '', body: '', is_mandatory: false, is_editable: true, is_system: false }])}>
+                  <Plus size={16} className="mr-1"/> Agregar Cláusula Libre
+                </Button>
+              </div>
+              
+              <div className="space-y-4">
+                {clauses.map((c, idx) => (
+                  <Card key={idx} className="bg-zinc-800 border-zinc-700">
+                    <CardHeader className="p-3 pb-0 flex flex-row justify-between items-center">
+                      <Input 
+                        placeholder="Título de cláusula" 
+                        value={c.title}
+                        disabled={!c.is_editable}
+                        onChange={(e) => {
+                          const newC = [...clauses];
+                          newC[idx].title = e.target.value;
+                          setClauses(newC);
+                        }}
+                        className="font-medium bg-transparent border-none text-white focus-visible:ring-0 max-w-[300px]"
+                      />
+                      {!c.is_mandatory && (
+                        <Button variant="ghost" size="sm" onClick={() => setClauses(clauses.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-300">
+                          <Trash2 size={16} />
+                        </Button>
+                      )}
+                    </CardHeader>
+                    <CardContent className="p-3">
+                      <textarea 
+                        className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-3 text-white text-sm min-h-[100px]"
+                        value={c.body}
+                        disabled={!c.is_editable}
+                        onChange={(e) => {
+                          const newC = [...clauses];
+                          newC[idx].body = e.target.value;
+                          setClauses(newC);
+                        }}
+                        placeholder="Redacta la cláusula aquí..."
+                      />
+                      <div className="mt-2 flex space-x-4 text-xs text-zinc-500">
+                        {c.is_mandatory && <span>🔒 Obligatoria (No se puede eliminar)</span>}
+                        {!c.is_editable && <span>🔒 No editable</span>}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                {clauses.length === 0 && <div className="text-zinc-500 text-sm">No hay cláusulas definidas.</div>}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="p-6 border-t border-zinc-800 flex justify-between">
@@ -313,7 +464,7 @@ export default function ContractWizard({ onClose, onSuccess }: ContractWizardPro
             {step > 1 ? 'Atrás' : 'Cancelar'}
           </Button>
           
-          {step < 3 ? (
+          {step < 6 ? (
             <Button onClick={handleNext}>Siguiente</Button>
           ) : (
             <Button onClick={handleSubmit} disabled={loading}>

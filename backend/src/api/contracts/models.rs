@@ -207,3 +207,60 @@ pub struct ContractInstallment {
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
+
+// Fase 2 Models
+
+#[derive(Serialize, sqlx::FromRow, Clone)]
+pub struct ContractTemplate {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub name: String,
+    pub description: Option<String>,
+    pub c_type: ContractType,
+    pub c_destination: ContractDestination,
+    pub is_active: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Serialize, sqlx::FromRow, Clone)]
+pub struct TemplateClause {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub template_id: Uuid,
+    pub display_order: i32,
+    pub title: String,
+    pub body: String,
+    pub is_mandatory: bool,
+    pub is_editable: bool,
+    pub is_system: bool,
+}
+
+#[derive(Serialize, sqlx::FromRow, Clone)]
+pub struct ContractTerms {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub contract_id: Uuid,
+    pub allows_pets: bool,
+    pub allows_sublease: bool,
+    pub requires_inventory: bool,
+    pub requires_insurance: bool,
+    pub automatic_renewal: bool,
+    pub permitted_activity: Option<String>,
+    pub notice_days: Option<i32>,
+    pub early_termination_penalty: Option<String>,
+    pub observations: Option<String>,
+}
+
+#[derive(Serialize, sqlx::FromRow, Clone)]
+pub struct ContractClause {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub contract_id: Uuid,
+    pub display_order: i32,
+    pub title: String,
+    pub body: String,
+    pub is_mandatory: bool,
+    pub is_editable: bool,
+    pub is_system: bool,
+}

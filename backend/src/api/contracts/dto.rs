@@ -63,7 +63,43 @@ pub struct CreateContractDtoV2 {
     pub services_payer: Option<String>,
     pub observations: Option<String>,
 
+    pub template_id: Option<Uuid>,
+
     pub participants: Vec<ContractParticipantDto>,
+    pub terms: Option<ContractTermsDto>,
+    pub clauses: Option<Vec<ClauseDto>>,
+}
+
+#[derive(Deserialize)]
+pub struct ContractTermsDto {
+    pub allows_pets: Option<bool>,
+    pub allows_sublease: Option<bool>,
+    pub requires_inventory: Option<bool>,
+    pub requires_insurance: Option<bool>,
+    pub automatic_renewal: Option<bool>,
+    pub permitted_activity: Option<String>,
+    pub notice_days: Option<i32>,
+    pub early_termination_penalty: Option<String>,
+    pub observations: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct ClauseDto {
+    pub display_order: i32,
+    pub title: String,
+    pub body: String,
+    pub is_mandatory: Option<bool>,
+    pub is_editable: Option<bool>,
+    pub is_system: Option<bool>,
+}
+
+#[derive(Deserialize)]
+pub struct CreateContractTemplateDto {
+    pub name: String,
+    pub description: Option<String>,
+    pub c_type: ContractType,
+    pub c_destination: ContractDestination,
+    pub clauses: Vec<ClauseDto>,
 }
 
 #[derive(Deserialize)]

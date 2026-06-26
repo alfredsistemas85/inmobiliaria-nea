@@ -31,7 +31,11 @@ pub async fn list_contracts(
     let contracts = sqlx::query_as::<_, Contract>(
         r#"SELECT id, tenant_id, property_id, start_date, end_date, 
            original_rent_amount, current_rent_amount, adjustment_method, adjustment_frequency,
-           automation_mode, fixed_percentage, first_notification_days, second_notification_days, third_notification_days, requires_manual_approval, next_adjustment_date, last_adjustment_date, status
+           automation_mode, fixed_percentage, first_notification_days, second_notification_days, 
+           third_notification_days, requires_manual_approval, next_adjustment_date, 
+           last_adjustment_date, status, contract_number, c_type, c_destination, 
+           jurisdiction, city, province, currency, deposit_amount, commission_amount, 
+           fees_amount, taxes_payer, services_payer, observations
            FROM contracts WHERE tenant_id = $1 AND deleted_at IS NULL
            ORDER BY created_at DESC"#
     )
@@ -59,7 +63,7 @@ pub async fn create_contract(
         r#"
         INSERT INTO contracts (tenant_id, property_id, start_date, end_date, original_rent_amount, current_rent_amount, rent_amount, adjustment_method, adjustment_frequency, automation_mode, fixed_percentage, first_notification_days)
         VALUES ($1, $2, $3, $4, $5, $5, $5, $6, $7, $8, $9, $10)
-        RETURNING id, tenant_id, property_id, start_date, end_date, original_rent_amount, current_rent_amount, adjustment_method, adjustment_frequency, automation_mode, fixed_percentage, first_notification_days, second_notification_days, third_notification_days, requires_manual_approval, next_adjustment_date, last_adjustment_date, status
+        RETURNING id, tenant_id, property_id, start_date, end_date, original_rent_amount, current_rent_amount, adjustment_method, adjustment_frequency, automation_mode, fixed_percentage, first_notification_days, second_notification_days, third_notification_days, requires_manual_approval, next_adjustment_date, last_adjustment_date, status, contract_number, c_type, c_destination, jurisdiction, city, province, currency, deposit_amount, commission_amount, fees_amount, taxes_payer, services_payer, observations
         "#
     )
     .bind(tenant_id)
@@ -122,7 +126,7 @@ pub async fn create_contract(
         };
         current_date = chrono::NaiveDate::from_ymd_opt(year, month, next_day)
             .or_else(|| chrono::NaiveDate::from_ymd_opt(year, month, 1))
-            .ok_or_else(|| (StatusCode::INTERNAL_SERVER_ERROR, "Invalid date generation".to_string()))?;
+            .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
     }
 
     tx.commit()
@@ -276,7 +280,7 @@ pub async fn generate_contract_pdf_v2(
             format!("attachment; filename=\"contrato_{}.pdf\"", id),
         )
         .body(Body::from(pdf_bytes))
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Response build error: {}", e)))?;
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(response)
 }

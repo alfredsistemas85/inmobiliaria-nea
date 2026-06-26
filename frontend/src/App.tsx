@@ -20,6 +20,7 @@ const Settings = lazy(() => import('@/pages/Settings'))
 const Contracts = lazy(() => import('@/pages/Contracts'))
 const Financials = lazy(() => import('@/pages/Financials'))
 const Documents = lazy(() => import('@/pages/Documents'))
+const ContractSignaturePage = lazy(() => import('@/pages/signatures/ContractSignaturePage'))
 
 // SuperAdmin Pages (Lazy loaded)
 const SuperAdminDashboard = lazy(() => import('@/pages/superadmin/Dashboard'))
@@ -79,6 +80,9 @@ function App() {
           <Route path="/login" element={<Login />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/onboarding" element={<Onboarding />} />
+
+        {/* Rutas Públicas de Firma Electrónica */}
+        <Route path="/s/:token" element={<ContractSignaturePage />} />
 
         {/* CRM ADMINISTRATIVO (rutas directas protegidas) */}
         <Route

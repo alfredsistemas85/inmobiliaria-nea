@@ -285,6 +285,7 @@ async fn main() {
             "/api/documents",
             api::documents::router(shared_pool.clone()),
         )
+        .nest("/api/signatures", api::signatures::routes::router(shared_pool.clone()))
         .nest("/api/calendar", api::calendar::router(shared_pool.clone()))
         // INC-008: Removed static file serving for uploads — use authenticated endpoints instead
         // .nest_service("/uploads", ServeDir::new("uploads"))

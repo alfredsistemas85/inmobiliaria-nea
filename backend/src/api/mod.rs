@@ -12,6 +12,7 @@ pub mod payments;
 pub mod properties;
 pub mod reports;
 pub mod roles;
+pub mod signatures;
 pub mod superadmin;
 pub mod system;
 pub mod tenants;

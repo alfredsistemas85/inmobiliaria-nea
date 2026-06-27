@@ -96,6 +96,34 @@ pub async fn list_properties(
                 }
             }
         }
+
+        // Fetch owners for all listed properties
+        let owner_rows = sqlx::query(
+            "SELECT property_id, client_id, percentage FROM property_owners WHERE property_id = ANY($1) AND tenant_id = $2"
+        )
+        .bind(&property_ids)
+        .bind(tenant.0)
+        .fetch_all(&*pool)
+        .await
+        .unwrap_or_default();
+
+        if !owner_rows.is_empty() {
+            use crate::api::properties::dtos::PropertyOwnerDto;
+            for dto in dtos.iter_mut() {
+                let mut owners_dto = Vec::new();
+                for r in &owner_rows {
+                    let r_property_id: Uuid = r.try_get("property_id").unwrap_or_default();
+                    if r_property_id == dto.id {
+                        let client_id: Uuid = r.try_get("client_id").unwrap_or_default();
+                        let percentage: Option<rust_decimal::Decimal> = r.try_get("percentage").ok();
+                        owners_dto.push(PropertyOwnerDto { client_id, percentage });
+                    }
+                }
+                if !owners_dto.is_empty() {
+                    dto.owners = Some(owners_dto);
+                }
+            }
+        }
     }
 
     Ok(Json(PaginatedResponse {

@@ -6,7 +6,8 @@ COPY . .
 
 # Build the binary (release)
 ENV SQLX_OFFLINE=true
-RUN cargo build --release
+ENV CARGO_BUILD_JOBS=1
+RUN cargo build --release --jobs 1
 
 # Run stage
 FROM debian:bookworm-slim

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { fetchApi, API_URL } from '@/services/api'
 import { propertiesService } from '@/services/properties'
+import ContractWizard from '@/components/contracts/ContractWizard'
 
 // ─── Tipos alineados con el backend ───────────────────────────────────────────
 interface Contract {

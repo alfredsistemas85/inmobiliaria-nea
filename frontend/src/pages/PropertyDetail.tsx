@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, MapPin, Bed, Bath, Maximize, Edit, Trash2, CalendarDays, CheckCircle2, Loader2, AlertCircle, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import DocumentManager from '@/components/documents/DocumentManager'
 import { propertiesService } from '@/services/properties'
@@ -57,10 +56,8 @@ export default function PropertyDetail() {
   if (error || !property) {
     return (
       <div className="space-y-4">
-        <Button variant="ghost" size="sm" asChild>
-          <Link to="/properties" className="inline-flex items-center">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Volver
-          </Link>
+        <Button variant="ghost" size="sm" onClick={() => navigate('/properties')}>
+          <ArrowLeft className="h-4 w-4 mr-2" /> Volver
         </Button>
         <div className="p-4 text-red-600 bg-red-50 border border-red-100 rounded-md flex items-center gap-2">
           <AlertCircle className="h-5 w-5" />
@@ -73,10 +70,8 @@ export default function PropertyDetail() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild className="rounded-full">
-          <Link to="/properties">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
+        <Button variant="ghost" size="icon" className="rounded-full" onClick={() => navigate('/properties')}>
+          <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">{property.title}</h1>
@@ -86,11 +81,9 @@ export default function PropertyDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="hidden sm:flex items-center gap-2" asChild>
-            <Link to={`/properties/${property.id}/edit`}>
-              <Edit className="h-4 w-4" />
-              Editar
-            </Link>
+          <Button variant="outline" size="sm" className="hidden sm:flex items-center gap-2" onClick={() => navigate(`/properties/${property.id}/edit`)}>
+            <Edit className="h-4 w-4" />
+            Editar
           </Button>
           <Button variant="destructive" size="sm" className="hidden sm:flex items-center gap-2" onClick={handleDelete}>
             <Trash2 className="h-4 w-4" />

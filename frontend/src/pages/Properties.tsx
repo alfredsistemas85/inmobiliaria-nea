@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Plus, Search, Filter, MapPin, Bed, Bath, Maximize, AlertCircle, Loader2, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,6 +11,7 @@ export default function Properties() {
   const [properties, setProperties] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const navigate = useNavigate()
 
   useEffect(() => {
     loadProperties()
@@ -41,11 +42,9 @@ export default function Properties() {
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Propiedades</h1>
           <p className="text-muted-foreground">Gestiona el inventario de inmuebles.</p>
         </div>
-        <Button className="flex items-center gap-2" asChild>
-          <Link to="/properties/new">
-            <Plus className="h-4 w-4" />
-            Nueva Propiedad
-          </Link>
+        <Button className="flex items-center gap-2" onClick={() => navigate('/properties/new')}>
+          <Plus className="h-4 w-4" />
+          Nueva Propiedad
         </Button>
       </div>
 

@@ -134,11 +134,9 @@ export default function DocumentManager({ entityType, entityId, title = "Documen
             accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
           />
           <label htmlFor={`file-upload-${entityId}`}>
-            <Button variant="outline" size="sm" className="cursor-pointer" asChild disabled={uploading}>
-              <span>
-                {uploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UploadCloud className="h-4 w-4 mr-2" />}
-                Subir Documento
-              </span>
+            <Button variant="outline" size="sm" className="cursor-pointer" disabled={uploading} type="button" onClick={() => document.getElementById(`file-upload-${entityId}`)?.click()}>
+              {uploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UploadCloud className="h-4 w-4 mr-2" />}
+              Subir Documento
             </Button>
           </label>
         </div>

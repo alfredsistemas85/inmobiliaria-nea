@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Plus, Search, Download, CheckCircle, XCircle, FileText, Calendar, DollarSign, X } from 'lucide-react'
+import { Plus, Search, Download, CheckCircle, XCircle, FileText } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Modal } from '@/components/ui/modal'
 import { fetchApi, API_URL } from '@/services/api'
-import { propertiesService } from '@/services/properties'
 import ContractWizard from '@/components/contracts/ContractWizard'
 
 // ─── Tipos alineados con el backend ───────────────────────────────────────────
@@ -24,52 +22,6 @@ interface Contract {
   status: string | null
 }
 
-interface CreateContractForm {
-  property_id: string
-  start_date: string
-  end_date: string
-  original_rent_amount: string
-  adjustment_method: string
-  adjustment_frequency: string
-  automation_mode: string
-  fixed_percentage: string
-  notification_days_before: string
-}
-
-const ADJUSTMENT_METHODS = [
-  { value: 'MANUAL', label: 'Manual' },
-  { value: 'FIXED_PERCENTAGE', label: 'Porcentaje Fijo' },
-  { value: 'IPC', label: 'IPC (Inflación)' },
-  { value: 'ICL', label: 'ICL (Índice Casa Propia)' },
-  { value: 'CASA_PROPIA', label: 'Casa Propia' },
-  { value: 'CUSTOM', label: 'Personalizado' },
-]
-
-const ADJUSTMENT_FREQUENCIES = [
-  { value: 'MONTHLY', label: 'Mensual' },
-  { value: 'BIMONTHLY', label: 'Bimestral' },
-  { value: 'QUARTERLY', label: 'Trimestral' },
-  { value: 'SEMESTER', label: 'Semestral' },
-  { value: 'ANNUAL', label: 'Anual' },
-]
-
-const AUTOMATION_MODES = [
-  { value: 'MANUAL', label: 'Manual (aprobación requerida)' },
-  { value: 'SEMIAUTOMATIC', label: 'Semiautomático (notifica y aplica)' },
-  { value: 'AUTOMATIC', label: 'Automático (sin intervención)' },
-]
-
-const EMPTY_FORM: CreateContractForm = {
-  property_id: '',
-  start_date: '',
-  end_date: '',
-  original_rent_amount: '',
-  adjustment_method: 'IPC',
-  adjustment_frequency: 'QUARTERLY',
-  automation_mode: 'SEMIAUTOMATIC',
-  fixed_percentage: '',
-  notification_days_before: '30',
-}
 
 export default function Contracts() {
   const [activeTab, setActiveTab] = useState<'contracts' | 'pending'>('contracts')
@@ -80,10 +32,6 @@ export default function Contracts() {
 
   // Modal nuevo contrato
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [form, setForm] = useState<CreateContractForm>(EMPTY_FORM)
-  const [properties, setProperties] = useState<any[]>([])
-  const [saving, setSaving] = useState(false)
-  const [formError, setFormError] = useState('')
 
   useEffect(() => {
     if (activeTab === 'contracts') loadContracts()
@@ -122,26 +70,9 @@ export default function Contracts() {
     }
   }
 
-  const openNewContractModal = async () => {
-    setForm(EMPTY_FORM)
-    setFormError('')
+  const openNewContractModal = () => {
     setIsModalOpen(true)
-    // Cargar propiedades disponibles para el select
-    try {
-      const data = await propertiesService.getAll(100, 0)
-      const list = Array.isArray(data) ? data : data?.data || []
-      // Solo propiedades disponibles
-      setProperties(Array.isArray(list) ? list.filter((p: any) => p.status !== 'Alquilada' && p.status !== 'Vendida') : [])
-    } catch {
-      setProperties([])
-    }
   }
-
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
-    setForm(prev => ({ ...prev, [name]: value }))
-  }
-
   const handleDownloadPdf = async (contractId: string) => {
     try {
       const token = localStorage.getItem('token');
@@ -188,46 +119,7 @@ export default function Contracts() {
     }
   }
 
-  const handleSubmitContract = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setFormError('')
 
-    if (!form.property_id) return setFormError('Selecciona una propiedad.')
-    if (!form.start_date || !form.end_date) return setFormError('Las fechas de inicio y fin son obligatorias.')
-    if (!form.original_rent_amount || isNaN(Number(form.original_rent_amount))) return setFormError('Ingresa un monto de alquiler válido.')
-    if (new Date(form.end_date) <= new Date(form.start_date)) return setFormError('La fecha de fin debe ser posterior a la de inicio.')
-
-    setSaving(true)
-    try {
-      const payload: any = {
-        property_id: form.property_id,
-        start_date: form.start_date,
-        end_date: form.end_date,
-        original_rent_amount: parseFloat(form.original_rent_amount),
-        adjustment_method: form.adjustment_method || null,
-        adjustment_frequency: form.adjustment_frequency || null,
-        automation_mode: form.automation_mode || null,
-        notification_days_before: form.notification_days_before ? parseInt(form.notification_days_before) : null,
-      }
-
-      if (form.adjustment_method === 'FIXED_PERCENTAGE' && form.fixed_percentage) {
-        payload.fixed_percentage = parseFloat(form.fixed_percentage)
-      }
-
-      await fetchApi('/contracts', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      })
-
-      setIsModalOpen(false)
-      showToast('Contrato creado correctamente', 'success')
-      loadContracts()
-    } catch (err: any) {
-      setFormError(err.message || 'Error al crear el contrato')
-    } finally {
-      setSaving(false)
-    }
-  }
 
   const handleApprove = async (id: string) => {
     try {

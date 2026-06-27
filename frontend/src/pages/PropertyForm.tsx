@@ -28,7 +28,6 @@ export default function PropertyForm() {
     square_meters: 0,
     bedrooms: 0,
     bathrooms: 0,
-    bathrooms: 0,
     status: 'Disponible',
     owners: [] as { client_id: string; percentage: number }[]
   })
@@ -62,7 +61,6 @@ export default function PropertyForm() {
         province: data.province || '',
         square_meters: data.square_meters || 0,
         bedrooms: data.bedrooms || 0,
-        bathrooms: data.bathrooms || 0,
         bathrooms: data.bathrooms || 0,
         status: data.status || 'Disponible',
         owners: data.owners || []

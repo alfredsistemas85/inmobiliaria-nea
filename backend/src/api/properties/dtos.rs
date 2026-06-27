@@ -3,6 +3,12 @@ use serde_json::Value;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct PropertyOwnerDto {
+    pub client_id: Uuid,
+    pub percentage: Option<rust_decimal::Decimal>,
+}
+
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreatePropertyDto {
     pub title: String,
@@ -19,6 +25,7 @@ pub struct CreatePropertyDto {
     pub bathrooms: Option<i32>,
     pub status: Option<String>,
     pub features: Option<Value>,
+    pub owners: Option<Vec<PropertyOwnerDto>>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -40,6 +47,7 @@ pub struct PropertyResponseDto {
     pub features: Option<Value>,
     pub views: Option<i64>,
     pub images: Option<Vec<Value>>,
+    pub owners: Option<Vec<PropertyOwnerDto>>,
 }
 
 impl From<crate::models::property::Property> for PropertyResponseDto {
@@ -62,6 +70,7 @@ impl From<crate::models::property::Property> for PropertyResponseDto {
             features: prop.features.map(|j| j.0),
             views: None,
             images: None,
+            owners: None,
         }
     }
 }

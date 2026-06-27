@@ -147,7 +147,7 @@ export default function Contracts() {
       const token = localStorage.getItem('token');
       
       // Intentar V2 (PDF nativo)
-      let response = await fetch(`${API_URL}/api/v2/contracts/${contractId}/pdf`, {
+      let response = await fetch(`${API_URL}/api/contracts/v2/${contractId}/pdf`, {
         headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
       });
 

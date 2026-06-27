@@ -59,7 +59,7 @@ export default function ContractWizard({ onClose, onSuccess }: ContractWizardPro
   useEffect(() => {
     propertiesService.getAll(100, 0).then(data => setProperties(Array.isArray(data) ? data : data?.data || []));
     clientsService.getClients(100).then(res => setClients(res.data || []));
-    fetchApi('/api/v2/contract-templates').then(data => setTemplates(data || []));
+    fetchApi('/contracts/v2/contract-templates').then(data => setTemplates(data || []));
   }, []);
 
   const addParticipant = (role: string, is_main: boolean) => {
@@ -99,7 +99,7 @@ export default function ContractWizard({ onClose, onSuccess }: ContractWizardPro
       setClauses([]);
       return;
     }
-    const templateData = await fetchApi(`/api/v2/contract-templates/${id}`);
+    const templateData = await fetchApi(`/contracts/v2/contract-templates/${id}`);
     if (templateData && templateData.clauses) {
       setClauses(templateData.clauses);
     }
@@ -143,10 +143,11 @@ export default function ContractWizard({ onClose, onSuccess }: ContractWizardPro
           ...c,
           display_order: i + 1
         })),
-        template_id: templateId || null
+        template_id: templateId || null,
+        status: 'DRAFT'
       };
 
-      await fetchApi('/v2/contracts', {
+      await fetchApi('/contracts/v2', {
         method: 'POST',
         body: JSON.stringify(payload)
       });
@@ -187,7 +188,25 @@ export default function ContractWizard({ onClose, onSuccess }: ContractWizardPro
                   <select
                     className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white"
                     value={basicData.property_id}
-                    onChange={(e) => setBasicData({...basicData, property_id: e.target.value})}
+                    onChange={(e) => {
+                      const propId = e.target.value;
+                      setBasicData({...basicData, property_id: propId});
+                      
+                      const prop = properties.find(p => p.id === propId);
+                      if (prop && prop.owners && prop.owners.length > 0) {
+                        const newParticipants = [...participants.filter(p => p.p_role !== 'LANDLORD')];
+                        prop.owners.forEach((o: any) => {
+                          newParticipants.push({
+                            client_id: o.client_id,
+                            p_role: 'LANDLORD',
+                            percentage: o.percentage.toString(),
+                            is_main: true,
+                            guarantees: []
+                          });
+                        });
+                        setParticipants(newParticipants);
+                      }
+                    }}
                   >
                     <option value="">Seleccionar...</option>
                     {properties.map(p => (
@@ -252,9 +271,6 @@ export default function ContractWizard({ onClose, onSuccess }: ContractWizardPro
               <div className="flex justify-between items-center">
                 <h3 className="text-lg text-white font-medium">Paso 2: Participantes (Locadores / Locatarios)</h3>
                 <div className="space-x-2">
-                  <Button type="button" onClick={() => addParticipant('LANDLORD', true)} variant="outline" size="sm">
-                    <Plus size={16} className="mr-1"/> Locador
-                  </Button>
                   <Button type="button" onClick={() => addParticipant('TENANT', true)} variant="outline" size="sm">
                     <Plus size={16} className="mr-1"/> Locatario
                   </Button>
@@ -292,31 +308,55 @@ export default function ContractWizard({ onClose, onSuccess }: ContractWizardPro
 
           {step === 3 && (
             <div className="space-y-4">
-              <h3 className="text-lg text-white font-medium">Paso 3: Garantes</h3>
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg text-white font-medium">Paso 3: Garantes</h3>
+                <Button type="button" onClick={() => addParticipant('GUARANTOR', false)} variant="outline" size="sm">
+                  <Plus size={16} className="mr-1"/> Agregar Garante
+                </Button>
+              </div>
               
-              <div className="text-sm text-zinc-400 mb-4">Los garantes se asocian al locatario. Selecciona un inquilino para agregarle garantías.</div>
+              <div className="text-sm text-zinc-400 mb-4">Los garantes son añadidos como clientes con sus respectivos respaldos.</div>
 
-              {participants.filter(p => p.p_role === 'TENANT').map((tenant, tIndex) => {
-                const originalIndex = participants.indexOf(tenant);
+              {participants.map((p, i) => {
+                if (p.p_role !== 'GUARANTOR') return null;
                 return (
-                  <Card key={originalIndex} className="bg-zinc-800 border-zinc-700 mb-4">
+                  <Card key={i} className="bg-zinc-800 border-zinc-700 mb-4">
                     <CardHeader className="p-4 pb-0 flex flex-row justify-between items-center">
-                      <div className="font-medium text-white">Garantías de Locatario #{tIndex + 1}</div>
-                      <Button type="button" onClick={() => addGuarantee(originalIndex)} size="sm" variant="outline">
-                        <Plus size={16} className="mr-1"/> Agregar Garantía
-                      </Button>
+                      <div className="font-medium text-white">Garante</div>
+                      <div className="space-x-2">
+                        <Button type="button" onClick={() => addGuarantee(i)} size="sm" variant="outline">
+                          <Plus size={16} className="mr-1"/> Añadir Respaldo
+                        </Button>
+                        <Button type="button" onClick={() => removeParticipant(i)} size="sm" variant="ghost" className="text-red-400">
+                          <Trash2 size={16} />
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent className="p-4 space-y-4">
-                      {tenant.guarantees.map((g: any, gIndex: number) => (
+                      <div>
+                        <label className="block text-sm text-zinc-400 mb-1">Cliente Garante</label>
+                        <select
+                          className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-2 text-white"
+                          value={p.client_id}
+                          onChange={(e) => updateParticipant(i, 'client_id', e.target.value)}
+                        >
+                          <option value="">Seleccionar garante...</option>
+                          {clients.map(c => (
+                            <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {p.guarantees.map((g: any, gIndex: number) => (
                         <div key={gIndex} className="grid grid-cols-3 gap-4 p-3 bg-zinc-900 rounded-lg border border-zinc-700">
                           <div>
-                            <label className="block text-sm text-zinc-400 mb-1">Tipo</label>
+                            <label className="block text-sm text-zinc-400 mb-1">Tipo de Respaldo</label>
                             <select
                               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white"
                               value={g.guarantee_type}
                               onChange={(e) => {
                                 const newP = [...participants];
-                                newP[originalIndex].guarantees[gIndex].guarantee_type = e.target.value;
+                                newP[i].guarantees[gIndex].guarantee_type = e.target.value;
                                 setParticipants(newP);
                               }}
                             >
@@ -325,25 +365,32 @@ export default function ContractWizard({ onClose, onSuccess }: ContractWizardPro
                               <option value="SURETY_BOND">Seguro de Caución</option>
                             </select>
                           </div>
-                          <div className="col-span-2">
-                            <label className="block text-sm text-zinc-400 mb-1">Detalle / Empleador</label>
-                            <Input 
-                              value={g.employer}
-                              onChange={(e) => {
-                                const newP = [...participants];
-                                newP[originalIndex].guarantees[gIndex].employer = e.target.value;
-                                setParticipants(newP);
-                              }}
-                            />
+                          <div className="col-span-2 flex gap-2 items-end">
+                            <div className="flex-1">
+                              <label className="block text-sm text-zinc-400 mb-1">Detalle / Empleador</label>
+                              <Input 
+                                value={g.employer}
+                                onChange={(e) => {
+                                  const newP = [...participants];
+                                  newP[i].guarantees[gIndex].employer = e.target.value;
+                                  setParticipants(newP);
+                                }}
+                              />
+                            </div>
+                            <Button type="button" variant="ghost" onClick={() => {
+                              const newP = [...participants];
+                              newP[i].guarantees.splice(gIndex, 1);
+                              setParticipants(newP);
+                            }} className="text-red-400">
+                              <Trash2 size={16} />
+                            </Button>
                           </div>
                         </div>
                       ))}
-                      {tenant.guarantees.length === 0 && <div className="text-zinc-500 text-sm">Sin garantías agregadas.</div>}
                     </CardContent>
                   </Card>
                 );
               })}
-
             </div>
           )}
 

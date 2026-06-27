@@ -158,6 +158,26 @@ pub async fn get_property(
                 dto.images = Some(images_json);
             }
 
+            let owner_rows = sqlx::query(
+                "SELECT client_id, percentage FROM property_owners WHERE property_id = $1 AND tenant_id = $2"
+            )
+            .bind(id)
+            .bind(tenant.0)
+            .fetch_all(&*pool)
+            .await
+            .unwrap_or_default();
+            
+            if !owner_rows.is_empty() {
+                let mut owners_dto = Vec::new();
+                for r in owner_rows {
+                    let client_id: Uuid = r.try_get("client_id").unwrap_or_default();
+                    let percentage: Option<rust_decimal::Decimal> = r.try_get("percentage").ok();
+                    use crate::api::properties::dtos::PropertyOwnerDto;
+                    owners_dto.push(PropertyOwnerDto { client_id, percentage });
+                }
+                dto.owners = Some(owners_dto);
+            }
+
             Ok(Json(dto))
         }
         None => Err(StatusCode::NOT_FOUND),
@@ -198,6 +218,20 @@ pub async fn create_property(
         .create(property)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if let Some(owners) = payload.owners {
+        for owner in owners {
+            let _ = sqlx::query(
+                "INSERT INTO property_owners (tenant_id, property_id, client_id, percentage) VALUES ($1, $2, $3, $4)"
+            )
+            .bind(tenant.0)
+            .bind(created.id)
+            .bind(owner.client_id)
+            .bind(owner.percentage.unwrap_or(rust_decimal::Decimal::new(100, 0)))
+            .execute(&*pool)
+            .await;
+        }
+    }
 
     // Log audit
     let _ = audit_repo
@@ -283,6 +317,26 @@ pub async fn update_property(
         .update(property)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if let Some(owners) = payload.owners {
+        let _ = sqlx::query("DELETE FROM property_owners WHERE property_id = $1 AND tenant_id = $2")
+            .bind(id)
+            .bind(tenant.0)
+            .execute(&*pool)
+            .await;
+            
+        for owner in owners {
+            let _ = sqlx::query(
+                "INSERT INTO property_owners (tenant_id, property_id, client_id, percentage) VALUES ($1, $2, $3, $4)"
+            )
+            .bind(tenant.0)
+            .bind(id)
+            .bind(owner.client_id)
+            .bind(owner.percentage.unwrap_or(rust_decimal::Decimal::new(100, 0)))
+            .execute(&*pool)
+            .await;
+        }
+    }
 
     let audit_repo = AuditRepository::new(pool);
     let _ = audit_repo

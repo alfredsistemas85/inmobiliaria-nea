@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { propertiesService } from '@/services/properties'
+import { clientsService, Client } from '@/services/clients'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Loader2, ArrowLeft, Upload } from 'lucide-react'
+import { Loader2, ArrowLeft, Upload, Plus, Trash2 } from 'lucide-react'
 
 export default function PropertyForm() {
   const { id } = useParams()
@@ -27,14 +28,19 @@ export default function PropertyForm() {
     square_meters: 0,
     bedrooms: 0,
     bathrooms: 0,
-    status: 'Disponible'
+    bathrooms: 0,
+    status: 'Disponible',
+    owners: [] as { client_id: string; percentage: number }[]
   })
+
+  const [clients, setClients] = useState<Client[]>([])
 
   // Archivos
   const [images, setImages] = useState<FileList | null>(null)
   const [documents, setDocuments] = useState<FileList | null>(null)
 
   useEffect(() => {
+    clientsService.getClients(100).then(res => setClients(res.data || []))
     if (id) {
       loadProperty()
     }
@@ -57,7 +63,9 @@ export default function PropertyForm() {
         square_meters: data.square_meters || 0,
         bedrooms: data.bedrooms || 0,
         bathrooms: data.bathrooms || 0,
-        status: data.status || 'Disponible'
+        bathrooms: data.bathrooms || 0,
+        status: data.status || 'Disponible',
+        owners: data.owners || []
       })
     } catch (err: any) {
       setError(err.message || 'Error al cargar propiedad')
@@ -233,6 +241,64 @@ export default function PropertyForm() {
                 <Input type="number" min="0" value={formData.bathrooms} onChange={e => setFormData({...formData, bathrooms: Number(e.target.value)})} />
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Propietarios</CardTitle>
+            <Button type="button" size="sm" variant="outline" onClick={() => setFormData({...formData, owners: [...formData.owners, { client_id: '', percentage: 100 }]})}>
+              <Plus className="h-4 w-4 mr-1" /> Añadir Propietario
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {formData.owners.map((owner, i) => (
+              <div key={i} className="flex gap-4 items-end bg-muted p-4 rounded-lg">
+                <div className="flex-1">
+                  <label className="text-sm font-medium">Cliente</label>
+                  <select
+                    required
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={owner.client_id}
+                    onChange={e => {
+                      const newOwners = [...formData.owners]
+                      newOwners[i].client_id = e.target.value
+                      setFormData({...formData, owners: newOwners})
+                    }}
+                  >
+                    <option value="">Seleccionar propietario...</option>
+                    {clients.map(c => (
+                      <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="w-32">
+                  <label className="text-sm font-medium">% Propiedad</label>
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    max="100" 
+                    required 
+                    value={owner.percentage}
+                    onChange={e => {
+                      const newOwners = [...formData.owners]
+                      newOwners[i].percentage = Number(e.target.value)
+                      setFormData({...formData, owners: newOwners})
+                    }}
+                  />
+                </div>
+                <Button type="button" variant="ghost" className="text-red-500" onClick={() => {
+                  const newOwners = [...formData.owners]
+                  newOwners.splice(i, 1)
+                  setFormData({...formData, owners: newOwners})
+                }}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+            {formData.owners.length === 0 && (
+              <p className="text-sm text-muted-foreground">No hay propietarios asignados.</p>
+            )}
           </CardContent>
         </Card>
 

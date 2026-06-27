@@ -28,9 +28,9 @@ impl ContractRepository {
                 tenant_id, property_id, start_date, end_date, original_rent_amount, current_rent_amount, rent_amount, 
                 adjustment_method, adjustment_frequency, automation_mode, fixed_percentage, first_notification_days,
                 c_type, c_destination, jurisdiction, city, province, currency, deposit_amount, commission_amount, fees_amount,
-                taxes_payer, services_payer, observations, template_id, created_by, updated_by
+                taxes_payer, services_payer, observations, status, template_id, created_by, updated_by
             )
-            VALUES ($1, $2, $3, $4, $5, $5, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $24)
+            VALUES ($1, $2, $3, $4, $5, $5, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $25)
             RETURNING *
             "#
         )
@@ -56,6 +56,7 @@ impl ContractRepository {
         .bind(payload.taxes_payer.clone())
         .bind(payload.services_payer.clone())
         .bind(payload.observations.clone())
+        .bind(payload.status.as_deref().unwrap_or("ACTIVE"))
         .bind(payload.template_id)
         .bind(user_id)
         .fetch_one(&mut *tx)
@@ -182,8 +183,9 @@ impl ContractRepository {
             }
         }
 
-        let mut current_date = payload.start_date;
-        while current_date < payload.end_date {
+        if payload.status.as_deref().unwrap_or("ACTIVE") != "DRAFT" {
+            let mut current_date = payload.start_date;
+            while current_date < payload.end_date {
             let mut year = current_date.year();
             let mut month = current_date.month();
 
@@ -222,8 +224,9 @@ impl ContractRepository {
             } else {
                 current_date.day()
             };
-            current_date = chrono::NaiveDate::from_ymd_opt(year, month, next_day)
-                .unwrap_or_else(|| chrono::NaiveDate::from_ymd_opt(year, month, 1).unwrap());
+                current_date = chrono::NaiveDate::from_ymd_opt(year, month, next_day)
+                    .unwrap_or_else(|| chrono::NaiveDate::from_ymd_opt(year, month, 1).unwrap());
+            }
         }
 
         tx.commit()

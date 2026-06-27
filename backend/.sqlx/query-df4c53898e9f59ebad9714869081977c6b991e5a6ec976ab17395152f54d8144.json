@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                UPDATE conversations\n                SET last_message_at = CURRENT_TIMESTAMP, \n                    unread_count = 0,\n                    updated_at = CURRENT_TIMESTAMP\n                WHERE id = $1 AND tenant_id = $2\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "df4c53898e9f59ebad9714869081977c6b991e5a6ec976ab17395152f54d8144"
+}

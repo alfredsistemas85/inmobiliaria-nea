@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::types::Json;
 use utoipa::ToSchema;
 use uuid::Uuid;
 

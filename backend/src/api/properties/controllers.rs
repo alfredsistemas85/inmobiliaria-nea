@@ -212,7 +212,7 @@ pub async fn create_property(
     };
 
     let repo = PropertyRepository::new(pool.clone());
-    let audit_repo = AuditRepository::new(pool);
+    let audit_repo = AuditRepository::new(pool.clone());
 
     let created = repo
         .create(property)

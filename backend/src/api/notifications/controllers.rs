@@ -23,11 +23,17 @@ pub async fn list_notifications(
     let notifications = repo
         .list(tenant_id, user_id, 20)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|e| {
+            tracing::error!("SQL Error in list_notifications: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
     let unread_count = repo
         .count_unread(tenant_id, user_id)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|e| {
+            tracing::error!("SQL Error in count_unread: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     Ok(Json(NotificationListResponse {
         unread_count,

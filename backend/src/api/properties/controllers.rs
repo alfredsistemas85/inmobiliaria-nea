@@ -221,7 +221,7 @@ pub async fn create_property(
 
     if let Some(owners) = payload.owners {
         for owner in owners {
-            let _ = sqlx::query(
+            let res = sqlx::query(
                 "INSERT INTO property_owners (tenant_id, property_id, client_id, percentage) VALUES ($1, $2, $3, $4)"
             )
             .bind(tenant.0)
@@ -230,6 +230,9 @@ pub async fn create_property(
             .bind(owner.percentage.unwrap_or(rust_decimal::Decimal::new(100, 0)))
             .execute(&*pool)
             .await;
+            if let Err(e) = res {
+                tracing::error!("Failed to insert property owner: {:?}", e);
+            }
         }
     }
 
@@ -319,14 +322,17 @@ pub async fn update_property(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     if let Some(owners) = payload.owners {
-        let _ = sqlx::query("DELETE FROM property_owners WHERE property_id = $1 AND tenant_id = $2")
+        let res = sqlx::query("DELETE FROM property_owners WHERE property_id = $1 AND tenant_id = $2")
             .bind(id)
             .bind(tenant.0)
             .execute(&*pool)
             .await;
+        if let Err(e) = res {
+            tracing::error!("Failed to delete existing property owners: {:?}", e);
+        }
             
         for owner in owners {
-            let _ = sqlx::query(
+            let res = sqlx::query(
                 "INSERT INTO property_owners (tenant_id, property_id, client_id, percentage) VALUES ($1, $2, $3, $4)"
             )
             .bind(tenant.0)
@@ -335,6 +341,9 @@ pub async fn update_property(
             .bind(owner.percentage.unwrap_or(rust_decimal::Decimal::new(100, 0)))
             .execute(&*pool)
             .await;
+            if let Err(e) = res {
+                tracing::error!("Failed to insert property owner: {:?}", e);
+            }
         }
     }
 

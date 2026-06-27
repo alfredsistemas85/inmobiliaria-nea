@@ -57,7 +57,7 @@ export default function ContractWizard({ onClose, onSuccess }: ContractWizardPro
   const [properties, setProperties] = useState<any[]>([]);
 
   useEffect(() => {
-    propertiesService.getProperties().then(data => setProperties(data || []));
+    propertiesService.getAll(100, 0).then(data => setProperties(Array.isArray(data) ? data : data?.data || []));
     clientsService.getClients(100).then(res => setClients(res.data || []));
     fetchApi('/api/v2/contract-templates').then(data => setTemplates(data || []));
   }, []);

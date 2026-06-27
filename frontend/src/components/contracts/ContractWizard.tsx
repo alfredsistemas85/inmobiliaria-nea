@@ -190,9 +190,20 @@ export default function ContractWizard({ onClose, onSuccess }: ContractWizardPro
                     value={basicData.property_id}
                     onChange={(e) => {
                       const propId = e.target.value;
-                      setBasicData({...basicData, property_id: propId});
+                      if (!propId) {
+                        setBasicData({...basicData, property_id: ''});
+                        return;
+                      }
                       
                       const prop = properties.find(p => p.id === propId);
+                      if (prop && (!prop.owners || prop.owners.length === 0)) {
+                        alert("Esta propiedad no tiene propietarios asignados. Asigna al menos uno en la ficha de la Propiedad antes de alquilarla.");
+                        setBasicData({...basicData, property_id: ''});
+                        return;
+                      }
+
+                      setBasicData({...basicData, property_id: propId});
+                      
                       if (prop && prop.owners && prop.owners.length > 0) {
                         const newParticipants = [...participants.filter(p => p.p_role !== 'LANDLORD')];
                         prop.owners.forEach((o: any) => {
@@ -277,32 +288,57 @@ export default function ContractWizard({ onClose, onSuccess }: ContractWizardPro
                 </div>
               </div>
               
-              {participants.map((p, i) => (
-                <Card key={i} className="bg-zinc-800 border-zinc-700">
+              {participants.map((p, i) => {
+                const isLandlord = p.p_role === 'LANDLORD';
+                return (
+                <Card key={i} className={`bg-zinc-800 ${isLandlord ? 'border-cyan-700/50' : 'border-zinc-700'}`}>
                   <CardContent className="p-4 flex gap-4 items-end">
                     <div className="flex-1">
-                      <label className="block text-sm text-zinc-400 mb-1">Cliente ({p.p_role})</label>
-                      <select
-                        className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-2 text-white"
-                        value={p.client_id}
-                        onChange={(e) => updateParticipant(i, 'client_id', e.target.value)}
-                      >
-                        <option value="">Seleccionar cliente...</option>
-                        {clients.map(c => (
-                          <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>
-                        ))}
-                      </select>
+                      <label className="block text-sm text-zinc-400 mb-1">
+                        {isLandlord ? 'Propietario / Locador (Automático)' : `Cliente (${p.p_role})`}
+                      </label>
+                      {isLandlord ? (
+                        <div className="w-full bg-zinc-900/50 border border-zinc-700/50 rounded-lg px-4 py-2 text-zinc-300 flex items-center justify-between">
+                          <span>
+                            {(() => {
+                              const c = clients.find(c => c.id === p.client_id);
+                              return c ? `${c.first_name} ${c.last_name}` : 'Cargando...';
+                            })()}
+                          </span>
+                          <span className="text-xs text-cyan-500 font-medium">Desde Propiedad</span>
+                        </div>
+                      ) : (
+                        <select
+                          className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-2 text-white"
+                          value={p.client_id}
+                          onChange={(e) => updateParticipant(i, 'client_id', e.target.value)}
+                        >
+                          <option value="">Seleccionar cliente...</option>
+                          {clients.map(c => (
+                            <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>
+                          ))}
+                        </select>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm text-zinc-400 mb-1">% Part.</label>
-                      <Input type="number" value={p.percentage} onChange={(e) => updateParticipant(i, 'percentage', e.target.value)} className="w-24" />
+                      {isLandlord ? (
+                        <div className="w-24 bg-zinc-900/50 border border-zinc-700/50 rounded-lg px-4 py-2 text-zinc-300 text-center">
+                          {p.percentage}
+                        </div>
+                      ) : (
+                        <Input type="number" value={p.percentage} onChange={(e) => updateParticipant(i, 'percentage', e.target.value)} className="w-24" />
+                      )}
                     </div>
-                    <Button type="button" variant="ghost" onClick={() => removeParticipant(i)} className="text-red-400 hover:text-red-300">
-                      <Trash2 size={20} />
-                    </Button>
+                    {!isLandlord && (
+                      <Button type="button" variant="ghost" onClick={() => removeParticipant(i)} className="text-red-400 hover:text-red-300">
+                        <Trash2 size={20} />
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
-              ))}
+                );
+              })}
             </div>
           )}
 

@@ -49,6 +49,7 @@ sha2 = "0.11.0"
 rand = "0.8.5"
 base64 = "0.22.1"
 hex = "0.4.3"
+rust_decimal_macros = "1.40.0"
 
 [[bin]]
 name = "api"

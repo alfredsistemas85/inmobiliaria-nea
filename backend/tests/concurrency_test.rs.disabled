@@ -1,0 +1,98 @@
+use axum::http::StatusCode;
+use serde_json::json;
+use tokio::task;
+use std::sync::Arc;
+use sqlx::PgPool;
+use backend::api::contracts::dto::{CreateContractDtoV2, ContractParticipantDtoV2, ContractTermsDtoV2, ClauseDtoV2};
+use backend::api::contracts::models::{ParticipantRole, AdjustmentMethod, AdjustmentFrequency, AutomationMode};
+use backend::core::contracts::services::ContractService;
+use uuid::Uuid;
+
+#[tokio::test]
+#[ignore]
+async fn test_contract_creation_concurrency() {
+    // Setup a DB connection or mock
+    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/inmobiliaria".to_string());
+    let pool = PgPool::connect(&database_url).await.unwrap();
+    let pool_arc = Arc::new(pool);
+    
+    let service = Arc::new(ContractService::new(pool_arc));
+    let tenant_id = Uuid::new_v4();
+    let user_id = Uuid::new_v4();
+    let property_id = Uuid::new_v4();
+
+    // Prepare DTO
+    let payload = CreateContractDtoV2 {
+        property_id,
+        start_date: chrono::NaiveDate::from_ymd_opt(2025, 1, 1).unwrap(),
+        end_date: chrono::NaiveDate::from_ymd_opt(2026, 1, 1).unwrap(),
+        original_rent_amount: rust_decimal::Decimal::new(100000, 0),
+        currency: "ARS".to_string(),
+        adjustment_method: AdjustmentMethod::Icl,
+        adjustment_frequency: AdjustmentFrequency::Quarterly,
+        automation_mode: AutomationMode::Automatic,
+        fixed_percentage: None,
+        notification_days_before: 30,
+        c_type: "HOUSING".to_string(),
+        c_destination: "HABITATIONAL".to_string(),
+        deposit_amount: rust_decimal::Decimal::new(100000, 0),
+        template_id: None,
+        participants: vec![
+            ContractParticipantDtoV2 {
+                client_id: Uuid::new_v4(),
+                p_role: ParticipantRole::Landlord,
+                is_main: Some(true),
+                percentage: Some(rust_decimal::Decimal::new(100, 0)),
+                guarantees: None,
+            },
+            ContractParticipantDtoV2 {
+                client_id: Uuid::new_v4(),
+                p_role: ParticipantRole::Tenant,
+                is_main: Some(true),
+                percentage: Some(rust_decimal::Decimal::new(100, 0)),
+                guarantees: None,
+            }
+        ],
+        terms: ContractTermsDtoV2 {
+            allows_pets: true,
+            allows_sublease: false,
+            requires_inventory: true,
+            requires_insurance: true,
+            automatic_renewal: false,
+            permitted_activity: "".to_string(),
+            notice_days: 30,
+            early_termination_penalty: "".to_string(),
+            observations: "".to_string(),
+        },
+        clauses: vec![],
+    };
+
+    let mut handles = vec![];
+
+    // Spawn 20 simultaneous requests
+    for _ in 0..20 {
+        let service_clone = Arc::clone(&service);
+        let payload_clone = payload.clone();
+        
+        let handle = tokio::spawn(async move {
+            service_clone.create_contract(tenant_id, user_id, payload_clone).await
+        });
+        handles.push(handle);
+    }
+
+    let mut successes = 0;
+    let mut conflicts = 0;
+
+    for handle in handles {
+        let result = handle.await.unwrap();
+        match result {
+            Ok(_) => successes += 1,
+            Err(e) if e.contains("HTTP 409") || e.contains("conflict") || e.contains("overlapping") => conflicts += 1,
+            Err(e) => println!("Other error: {}", e),
+        }
+    }
+
+    // Only one should succeed due to GiST constraints
+    assert_eq!(successes, 1, "Only one contract should be created successfully");
+    assert_eq!(conflicts, 19, "The other 19 requests should conflict");
+}

@@ -136,38 +136,54 @@ pub async fn create_contract(
     Ok(Json(contract))
 }
 
+use crate::core::domain::errors::ApiErrorResponse;
+
+#[tracing::instrument(skip(pool, claims, payload))]
 pub async fn create_contract_v2(
     State(pool): State<Arc<PgPool>>,
     Extension(claims): Extension<Claims>,
+    headers: axum::http::HeaderMap,
     Json(payload): Json<CreateContractDtoV2>,
-) -> Result<Json<Contract>, (StatusCode, String)> {
-    let tenant_id = claims
-        .tenant_id
-        .ok_or((StatusCode::BAD_REQUEST, "Missing tenant_id".to_string()))?;
+) -> Result<Json<Contract>, (StatusCode, Json<ApiErrorResponse>)> {
+    let correlation_id = headers
+        .get("x-correlation-id")
+        .and_then(|h| h.to_str().ok())
+        .map(|s| s.to_string());
 
-    // Validations: At least 1 main landlord and 1 main tenant
-    let has_main_landlord = payload
-        .participants
-        .iter()
-        .any(|p| p.p_role == ParticipantRole::Landlord && p.is_main.unwrap_or(false));
-    let has_main_tenant = payload
-        .participants
-        .iter()
-        .any(|p| p.p_role == ParticipantRole::Tenant && p.is_main.unwrap_or(false));
-
-    if !has_main_landlord || !has_main_tenant {
-        return Err((
+    let tenant_id = claims.tenant_id.ok_or_else(|| {
+        tracing::warn!("Missing tenant_id in claims");
+        (
             StatusCode::BAD_REQUEST,
-            "Se requiere al menos un Locador principal y un Locatario principal".to_string(),
-        ));
-    }
+            Json(ApiErrorResponse::new("Missing tenant_id", Some("MISSING_TENANT".to_string()), correlation_id.clone())),
+        )
+    })?;
 
-    let repo = ContractRepository::new(pool);
-    let contract = repo
-        .create_contract_v2(tenant_id, claims.sub, payload)
+    let service = crate::core::contracts::services::ContractService::new(pool);
+    
+    let contract = service
+        .create_contract(tenant_id, claims.sub, payload)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
+        .map_err(|e| {
+            tracing::error!(correlation_id = ?correlation_id, error = %e, "Error creating contract v2");
+            if e.starts_with("HTTP 409") {
+                (
+                    StatusCode::CONFLICT,
+                    Json(ApiErrorResponse::new(e, Some("CONFLICT".to_string()), correlation_id.clone())),
+                )
+            } else if e.starts_with("Se requiere") {
+                (
+                    StatusCode::BAD_REQUEST,
+                    Json(ApiErrorResponse::new(e, Some("VALIDATION_ERROR".to_string()), correlation_id.clone())),
+                )
+            } else {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiErrorResponse::new(e, Some("INTERNAL_ERROR".to_string()), correlation_id.clone())),
+                )
+            }
+        })?;
 
+    tracing::info!(correlation_id = ?correlation_id, contract_id = ?contract.id, "Contract created successfully");
     Ok(Json(contract))
 }
 

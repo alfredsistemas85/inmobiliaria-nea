@@ -14,13 +14,17 @@ impl ContractRepository {
         Self { pool }
     }
 
+    #[tracing::instrument(skip(self, payload), fields(tenant_id = %tenant_id, user_id = %user_id))]
     pub async fn create_contract_v2(
         &self,
         tenant_id: Uuid,
         user_id: Uuid,
         payload: CreateContractDtoV2,
     ) -> Result<Contract, String> {
-        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        let mut tx = self.pool.begin().await.map_err(|e| {
+            tracing::error!("Failed to begin transaction: {}", e);
+            e.to_string()
+        })?;
 
         let contract = sqlx::query_as::<_, Contract>(
             r#"
@@ -28,9 +32,9 @@ impl ContractRepository {
                 tenant_id, property_id, start_date, end_date, original_rent_amount, current_rent_amount, rent_amount, 
                 adjustment_method, adjustment_frequency, automation_mode, fixed_percentage, first_notification_days,
                 c_type, c_destination, jurisdiction, city, province, currency, deposit_amount, commission_amount, fees_amount,
-                taxes_payer, services_payer, observations, status, template_id, created_by, updated_by
+                taxes_payer, services_payer, observations, status, template_id, created_by, updated_by, parent_contract_id
             )
-            VALUES ($1, $2, $3, $4, $5, $5, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $25)
+            VALUES ($1, $2, $3, $4, $5, $5, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $25, $26)
             RETURNING *
             "#
         )
@@ -59,9 +63,15 @@ impl ContractRepository {
         .bind(payload.status.as_deref().unwrap_or("ACTIVE"))
         .bind(payload.template_id)
         .bind(user_id)
+        .bind(payload.parent_contract_id)
         .fetch_one(&mut *tx)
         .await
         .map_err(|e| {
+            if let sqlx::Error::Database(db_err) = &e {
+                if db_err.code().as_deref() == Some("23P01") {
+                    return "HTTP 409: La propiedad ya posee un contrato activo para ese período.".to_string();
+                }
+            }
             tracing::error!("Error insertando contrato V2 en BD: {}", e);
             "Error creando contrato".to_string()
         })?;

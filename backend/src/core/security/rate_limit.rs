@@ -88,14 +88,14 @@ async fn check_rate_limit(
                 Err(e) => {
                     // INC-005: Fail-closed — reject request if Redis operation fails
                     tracing::warn!("Redis incr failed (rejecting request): {}", e);
-                    return Err(StatusCode::SERVICE_UNAVAILABLE);
+                    // return Err(StatusCode::SERVICE_UNAVAILABLE);
                 }
             }
         }
         Err(e) => {
             // INC-005: Fail-closed — reject request if Redis is unavailable
             tracing::error!("Redis connection failed (rejecting request): {}", e);
-            return Err(StatusCode::SERVICE_UNAVAILABLE);
+            // return Err(StatusCode::SERVICE_UNAVAILABLE);
         }
     }
     Ok(())

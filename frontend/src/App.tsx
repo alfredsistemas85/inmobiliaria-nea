@@ -18,6 +18,7 @@ const Reports = lazy(() => import('@/pages/Reports'))
 const Users = lazy(() => import('@/pages/Users'))
 const Settings = lazy(() => import('@/pages/Settings'))
 const Contracts = lazy(() => import('@/pages/Contracts'))
+const NewContract = lazy(() => import('@/pages/NewContract'))
 const Financials = lazy(() => import('@/pages/Financials'))
 const Documents = lazy(() => import('@/pages/Documents'))
 const ContractSignaturePage = lazy(() => import('@/pages/signatures/ContractSignaturePage'))
@@ -106,6 +107,7 @@ function App() {
           <Route path="/users"              element={<Users />} />
           <Route path="/settings"           element={<Settings />} />
           <Route path="/contracts"          element={<Contracts />} />
+          <Route path="/contracts/new"      element={<NewContract />} />
           <Route path="/financials"         element={<Financials />} />
           <Route path="/documents"          element={<Documents />} />
         </Route>

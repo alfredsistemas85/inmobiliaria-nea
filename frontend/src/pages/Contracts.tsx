@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Plus, Search, Download, CheckCircle, XCircle, FileText } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { fetchApi, API_URL } from '@/services/api'
-import ContractWizard from '@/components/contracts/ContractWizard'
 
 // ─── Tipos alineados con el backend ───────────────────────────────────────────
 interface Contract {
@@ -29,9 +29,11 @@ export default function Contracts() {
   const [pendingAdjustments, setPendingAdjustments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
+  
+  const [statusFilter, setStatusFilter] = useState<string>('Todos')
+  const [searchQuery, setSearchQuery] = useState('')
 
-  // Modal nuevo contrato
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (activeTab === 'contracts') loadContracts()
@@ -71,8 +73,9 @@ export default function Contracts() {
   }
 
   const openNewContractModal = () => {
-    setIsModalOpen(true)
+    navigate('/contracts/new')
   }
+  
   const handleDownloadPdf = async (contractId: string) => {
     try {
       const token = localStorage.getItem('token');
@@ -119,8 +122,6 @@ export default function Contracts() {
     }
   }
 
-
-
   const handleApprove = async (id: string) => {
     try {
       await fetchApi(`/contracts/adjustments/${id}/approve`, {
@@ -153,6 +154,31 @@ export default function Contracts() {
     if (val == null) return '-'
     return `$${Number(val).toLocaleString('es-AR')}`
   }
+  
+  const statusFiltersList = ['Todos', 'Draft', 'Pendientes Firma', 'Activos', 'Finalizados', 'Cancelados'];
+  
+  const filteredContracts = contracts.filter(c => {
+    let matchesStatus = true;
+    if (statusFilter !== 'Todos') {
+       const mappedStatus = 
+         statusFilter === 'Draft' ? 'DRAFT' :
+         statusFilter === 'Pendientes Firma' ? 'PENDING_SIGNATURE' :
+         statusFilter === 'Activos' ? 'ACTIVE' :
+         statusFilter === 'Finalizados' ? 'FINISHED' :
+         statusFilter === 'Cancelados' ? 'CANCELLED' : '';
+       
+       matchesStatus = c.status === mappedStatus || (c.status === null && statusFilter === 'Activos');
+    }
+    
+    let matchesSearch = true;
+    if (searchQuery) {
+       const lowerQ = searchQuery.toLowerCase();
+       // Simple search on property_id for now, can be expanded as needed
+       matchesSearch = c.property_id.toLowerCase().includes(lowerQ) || Boolean(c.tenant_id && c.tenant_id.toLowerCase().includes(lowerQ));
+    }
+    
+    return matchesStatus && matchesSearch;
+  });
 
   return (
     <div className="space-y-6 relative">
@@ -195,12 +221,27 @@ export default function Contracts() {
       {/* ── Tab: Listado de Contratos ──────────────────────────────────────── */}
       {activeTab === 'contracts' && (
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Listado de Contratos</CardTitle>
-              <div className="relative w-64">
+          <CardHeader className="pb-3">
+            <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+              <div className="flex flex-wrap gap-2">
+                {statusFiltersList.map(filter => (
+                  <button
+                    key={filter}
+                    onClick={() => setStatusFilter(filter)}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${statusFilter === filter ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
+                  >
+                    {filter}
+                  </button>
+                ))}
+              </div>
+              <div className="relative w-full md:w-64">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Buscar contrato..." className="pl-8" />
+                <Input 
+                  placeholder="Buscar contrato..." 
+                  className="pl-8" 
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                />
               </div>
             </div>
           </CardHeader>
@@ -221,7 +262,7 @@ export default function Contracts() {
                 <tbody>
                   {loading ? (
                     <tr><td colSpan={7} className="px-6 py-8 text-center text-muted-foreground">Cargando...</td></tr>
-                  ) : contracts.length === 0 ? (
+                  ) : filteredContracts.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-6 py-12 text-center">
                         <div className="flex flex-col items-center gap-3 text-muted-foreground">
@@ -234,7 +275,7 @@ export default function Contracts() {
                       </td>
                     </tr>
                   ) : (
-                    contracts.map((c) => (
+                    filteredContracts.map((c) => (
                       <tr key={c.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
                         <td className="px-6 py-4 font-medium text-foreground">{c.property_id}</td>
                         <td className="px-6 py-4 text-muted-foreground">{c.start_date}</td>
@@ -320,17 +361,7 @@ export default function Contracts() {
         </Card>
       )}
 
-      {/* ── Modal: Nuevo Contrato V2 ────────────────────────────────────────────── */}
-      {isModalOpen && (
-        <ContractWizard
-          onClose={() => setIsModalOpen(false)}
-          onSuccess={() => {
-            setIsModalOpen(false)
-            showToast('Contrato creado exitosamente')
-            loadContracts()
-          }}
-        />
-      )}
+      {/* Modal removido - Se usa ruta /contracts/new */}
     </div>
   )
 }

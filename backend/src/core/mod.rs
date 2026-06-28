@@ -6,3 +6,4 @@ pub mod system_errors;
 pub mod tenant;
 pub mod utils;
 pub mod workers;
+pub mod domain;

@@ -81,6 +81,11 @@ export default function PropertyDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {(property?.status === 'AVAILABLE' || property?.status === 'RESERVED') && (
+            <Button size="sm" className="hidden sm:flex items-center gap-2" onClick={() => navigate(`/contracts/new?property_id=${property.id}`)}>
+              Crear Contrato
+            </Button>
+          )}
           <Button variant="outline" size="sm" className="hidden sm:flex items-center gap-2" onClick={() => navigate(`/properties/${property.id}/edit`)}>
             <Edit className="h-4 w-4" />
             Editar

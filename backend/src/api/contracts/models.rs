@@ -152,6 +152,10 @@ pub struct Contract {
     pub taxes_payer: Option<String>,
     pub services_payer: Option<String>,
     pub observations: Option<String>,
+    
+    // Phase 2.1 New Fields
+    pub snapshot_payload: Option<serde_json::Value>,
+    pub parent_contract_id: Option<Uuid>,
 }
 
 #[derive(Serialize, sqlx::FromRow, Clone)]

@@ -65,6 +65,9 @@ pub struct CreateContractDtoV2 {
     pub taxes_payer: Option<String>,
     pub services_payer: Option<String>,
     pub observations: Option<String>,
+    
+    // Phase 2.1
+    pub parent_contract_id: Option<Uuid>,
     pub status: Option<String>,
 
     pub template_id: Option<Uuid>,

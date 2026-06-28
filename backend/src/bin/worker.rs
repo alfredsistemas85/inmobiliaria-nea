@@ -42,6 +42,65 @@ async fn main() {
             adjustment_engine.clone(),
         );
 
+    // ==========================================
+    // 1. WEBHOOKS WORKER (Every 10 seconds)
+    // ==========================================
+    let pool_webhooks = (*shared_pool).clone();
+    tokio::spawn(async move {
+        let webhook_service = backend::modules::financial::webhooks::services::WebhookService::new(pool_webhooks);
+        loop {
+            if let Ok(count) = webhook_service.process_pending().await {
+                if count > 0 {
+                    tracing::info!("Processed {} pending webhooks", count);
+                }
+            }
+            tokio::time::sleep(Duration::from_secs(10)).await;
+        }
+    });
+
+    // ==========================================
+    // 2. REMINDERS WORKER (Every 60 seconds)
+    // ==========================================
+    let pool_reminders = (*shared_pool).clone();
+    tokio::spawn(async move {
+        let reminder_service = backend::modules::financial::reminders::services::ReminderService::new(pool_reminders);
+        loop {
+            if let Ok(count) = reminder_service.process_queue().await {
+                if count > 0 {
+                    tracing::info!("Processed {} pending reminders", count);
+                }
+            }
+            tokio::time::sleep(Duration::from_secs(60)).await;
+        }
+    });
+
+    // ==========================================
+    // 3. DAILY SCHEDULER (Every hour, executes at target hour)
+    // ==========================================
+    // (Notice: We keep the old adjustment_scheduler in the main loop for now, 
+    // but we spawn the new Financial DailyScheduler here).
+    let pool_daily = (*shared_pool).clone();
+    tokio::spawn(async move {
+        let daily_scheduler = backend::modules::financial::scheduler::DailyScheduler::new(pool_daily);
+        loop {
+            let current_hour = chrono::Local::now().time().hour();
+            let target_hour = std::env::var("FINANCIAL_SCHEDULER_HOUR")
+                .unwrap_or_else(|_| "1".to_string())
+                .parse::<u32>()
+                .unwrap_or(1);
+
+            if current_hour == target_hour {
+                tracing::info!("Starting Financial Daily Scheduler...");
+                if let Err(e) = daily_scheduler.process_overdue_installments().await {
+                    tracing::error!("Error in daily scheduler: {}", e);
+                }
+            }
+            // Sleep for 1 hour
+            tokio::time::sleep(Duration::from_secs(3600)).await;
+        }
+    });
+
+
     loop {
         tracing::debug!("Worker tick...");
 

@@ -34,7 +34,7 @@ impl ContractRepository {
                 c_type, c_destination, jurisdiction, city, province, currency, deposit_amount, commission_amount, fees_amount,
                 taxes_payer, services_payer, observations, status, template_id, created_by, updated_by, parent_contract_id
             )
-            VALUES ($1, $2, $3, $4, $5, $5, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $25, $26)
+            VALUES ($1, $2, $3, $4, $5, $5, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23::contract_status, $24, $25, $25, $26)
             RETURNING *
             "#
         )

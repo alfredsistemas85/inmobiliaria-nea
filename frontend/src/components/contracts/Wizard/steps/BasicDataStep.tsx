@@ -137,4 +137,4 @@ export const BasicDataStep = React.memo(function BasicDataStep() {
       </div>
     </div>
   );
-}
+});

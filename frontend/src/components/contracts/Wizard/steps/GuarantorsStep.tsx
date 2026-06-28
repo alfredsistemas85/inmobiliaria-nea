@@ -153,4 +153,4 @@ export const GuarantorsStep = React.memo(function GuarantorsStep() {
       )}
     </div>
   );
-}
+});

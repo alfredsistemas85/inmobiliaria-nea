@@ -85,4 +85,4 @@ export const ParticipantsStep = React.memo(function ParticipantsStep() {
       )}
     </div>
   );
-}
+});

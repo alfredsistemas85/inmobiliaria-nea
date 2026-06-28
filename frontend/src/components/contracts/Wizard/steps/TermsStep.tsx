@@ -44,4 +44,4 @@ export const TermsStep = React.memo(function TermsStep() {
       </div>
     </div>
   );
-}
+});

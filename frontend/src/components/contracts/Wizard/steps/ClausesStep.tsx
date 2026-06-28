@@ -100,4 +100,4 @@ export const ClausesStep = React.memo(function ClausesStep() {
       </div>
     </div>
   );
-}
+});

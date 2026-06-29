@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO receipt_items (\n                id, receipt_id, description, amount\n            )\n            VALUES ($1, $2, $3, $4)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Numeric"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6ff24f7ca760dae862676347cd45be4de8fcfae3407a13cfbc61b0c44599cff6"
+}

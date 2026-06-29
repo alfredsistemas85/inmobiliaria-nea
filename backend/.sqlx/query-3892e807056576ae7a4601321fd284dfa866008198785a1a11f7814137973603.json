@@ -1,0 +1,106 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT \n                id, tenant_id, contract_account_id, number, due_date,\n                original_amount, current_amount, interest_amount, paid_amount,\n                remaining_balance, currency, index_value, status, created_at, updated_at\n            FROM installments\n            WHERE contract_account_id = $1 AND status IN ('PENDING', 'PARTIAL')\n            ORDER BY due_date ASC, number ASC\n            FOR UPDATE\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "tenant_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "contract_account_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "number",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "due_date",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 5,
+        "name": "original_amount",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 6,
+        "name": "current_amount",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 7,
+        "name": "interest_amount",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 8,
+        "name": "paid_amount",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 9,
+        "name": "remaining_balance",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 10,
+        "name": "currency",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 11,
+        "name": "index_value",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 12,
+        "name": "status",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 13,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 14,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "3892e807056576ae7a4601321fd284dfa866008198785a1a11f7814137973603"
+}

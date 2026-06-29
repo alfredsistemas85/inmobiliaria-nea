@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE cash_boxes\n            SET current_balance = current_balance + $1\n            WHERE id = $2\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Numeric",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8ce36cb799fe58d47d27f57f5cbe78cf7ac088a267bb7684007649786f08ccc6"
+}

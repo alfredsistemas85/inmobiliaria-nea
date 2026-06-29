@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE leads SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "dd8ff375baa4036a396f162c812011e5cb7431cf382785ab2321fe0f9fc0f181"
+}

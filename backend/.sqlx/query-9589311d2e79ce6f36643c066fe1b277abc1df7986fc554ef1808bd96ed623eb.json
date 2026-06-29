@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO installments (\n                    id, tenant_id, contract_account_id, number, due_date,\n                    original_amount, current_amount, interest_amount, paid_amount,\n                    remaining_balance, currency, index_value, status, created_at, updated_at\n                )\n                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Int4",
+        "Date",
+        "Numeric",
+        "Numeric",
+        "Numeric",
+        "Numeric",
+        "Numeric",
+        "Varchar",
+        "Numeric",
+        "Varchar",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9589311d2e79ce6f36643c066fe1b277abc1df7986fc554ef1808bd96ed623eb"
+}

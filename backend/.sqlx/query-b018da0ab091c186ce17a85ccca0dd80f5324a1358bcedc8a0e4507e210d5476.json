@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE installments\n            SET paid_amount = $1,\n                remaining_balance = $2,\n                status = $3,\n                updated_at = NOW()\n            WHERE id = $4\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Numeric",
+        "Numeric",
+        "Varchar",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b018da0ab091c186ce17a85ccca0dd80f5324a1358bcedc8a0e4507e210d5476"
+}

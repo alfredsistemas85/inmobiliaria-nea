@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO whatsapp_instances (id, tenant_id, instance_name, status, qr_code, phone_connected)\n                VALUES ($1, $2, $3, $4, $5, $6)\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Text",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6f53bb3f49f418c9e711b1f19e3fff2fbbf8f4bed6eb61d53bac6896b2679466"
+}

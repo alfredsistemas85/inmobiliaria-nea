@@ -206,6 +206,7 @@ async fn main() {
             axum::http::header::AUTHORIZATION,
             axum::http::header::CONTENT_TYPE,
             axum::http::header::ACCEPT,
+            axum::http::HeaderName::from_static("x-correlation-id"),
         ]);
 
     let health_router = Router::new()

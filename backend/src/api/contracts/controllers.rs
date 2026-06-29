@@ -30,7 +30,7 @@ pub async fn list_contracts(
 
     let contracts = sqlx::query_as::<_, Contract>(
         r#"SELECT id, tenant_id, property_id, start_date, end_date, 
-           original_rent_amount, current_rent_amount, adjustment_method, adjustment_frequency,
+           COALESCE(original_rent_amount, rent_amount, 0) as original_rent_amount, current_rent_amount, adjustment_method, adjustment_frequency,
            automation_mode, fixed_percentage, first_notification_days, second_notification_days, 
            third_notification_days, requires_manual_approval, next_adjustment_date, 
            last_adjustment_date, status, contract_number, c_type, c_destination, 
@@ -42,7 +42,10 @@ pub async fn list_contracts(
     .bind(tenant_id)
     .fetch_all(&*pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|e| {
+        tracing::error!("Error fetching contracts list: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     Ok(Json(contracts))
 }

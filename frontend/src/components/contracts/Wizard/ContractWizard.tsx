@@ -60,7 +60,7 @@ export function ContractWizard({ onCancel, onSuccess }: ContractWizardProps) {
       } else if (err.status === 422) {
         setGlobalError('Los datos enviados no son válidos.');
       } else if (err.status >= 500 || err.status === 0) {
-        setGlobalError(err.status === 0 ? 'El servidor no respondió.' : 'Error interno. Contacte al administrador.');
+        setGlobalError(err.status === 0 ? 'El servidor no respondió.' : `Error interno: ${err.message}`);
       } else {
         setGlobalError(err.message || 'Error al crear el contrato');
       }

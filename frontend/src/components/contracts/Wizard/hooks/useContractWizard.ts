@@ -171,7 +171,9 @@ export function useContractWizard(initialPropertyId?: string | null) {
     const isValid = await methods.trigger(fieldsToValidate as any);
     
     if (!isValid) {
-      setGlobalError('Por favor, revisa los campos marcados en rojo antes de continuar.');
+      const errs = methods.formState.errors.participants;
+      const errorDetail = errs ? JSON.stringify(errs) : 'Desconocido';
+      setGlobalError(`Error de validación en participantes: ${errorDetail}`);
       return;
     }
 

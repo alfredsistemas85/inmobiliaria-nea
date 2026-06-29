@@ -72,8 +72,8 @@ impl ContractRepository {
                     return "HTTP 409: La propiedad ya posee un contrato activo para ese período.".to_string();
                 }
             }
-            tracing::error!("Error insertando contrato V2 en BD: {}", e);
-            "Error creando contrato".to_string()
+            tracing::error!("Error insertando contrato V2 en BD: {:?}", e);
+            format!("Error creando contrato: {:?}", e)
         })?;
 
         for participant_dto in payload.participants {
@@ -100,8 +100,8 @@ impl ContractRepository {
             .execute(&mut *tx)
             .await
             .map_err(|e| {
-                tracing::error!("Error insertando participante: {}", e);
-                "Error insertando participante".to_string()
+                tracing::error!("Error insertando participante: {:?}", e);
+                format!("Error insertando participante: {:?}", e)
             })?;
 
             if let Some(guarantees) = participant_dto.guarantees {
@@ -187,8 +187,8 @@ impl ContractRepository {
                 .execute(&mut *tx)
                 .await
                 .map_err(|e| {
-                    tracing::error!("Error insertando contract_clause: {}", e);
-                    "Error insertando clausula".to_string()
+                    tracing::error!("Error insertando contract_clause: {:?}", e);
+                    format!("Error insertando clausula: {:?}", e)
                 })?;
             }
         }

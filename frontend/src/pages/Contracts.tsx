@@ -138,7 +138,7 @@ export default function Contracts() {
           participant_id: p.id,
           signature_order: 1,
           required_signature: true,
-          signature_type: "HANDDRAWN"
+          signature_type: "Handdrawn"
         }))
       }
 

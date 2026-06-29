@@ -35,7 +35,7 @@ pub async fn list_contracts(
            third_notification_days, requires_manual_approval, next_adjustment_date, 
            last_adjustment_date, status, contract_number, c_type, c_destination, 
            jurisdiction, city, province, currency, deposit_amount, commission_amount, 
-           fees_amount, taxes_payer, services_payer, observations
+           fees_amount, taxes_payer, services_payer, observations, snapshot_payload, parent_contract_id
            FROM contracts WHERE tenant_id = $1 AND deleted_at IS NULL
            ORDER BY created_at DESC"#
     )
@@ -63,7 +63,7 @@ pub async fn create_contract(
         r#"
         INSERT INTO contracts (tenant_id, property_id, start_date, end_date, original_rent_amount, current_rent_amount, rent_amount, adjustment_method, adjustment_frequency, automation_mode, fixed_percentage, first_notification_days)
         VALUES ($1, $2, $3, $4, $5, $5, $5, $6, $7, $8, $9, $10)
-        RETURNING id, tenant_id, property_id, start_date, end_date, original_rent_amount, current_rent_amount, adjustment_method, adjustment_frequency, automation_mode, fixed_percentage, first_notification_days, second_notification_days, third_notification_days, requires_manual_approval, next_adjustment_date, last_adjustment_date, status, contract_number, c_type, c_destination, jurisdiction, city, province, currency, deposit_amount, commission_amount, fees_amount, taxes_payer, services_payer, observations
+        RETURNING id, tenant_id, property_id, start_date, end_date, original_rent_amount, current_rent_amount, adjustment_method, adjustment_frequency, automation_mode, fixed_percentage, first_notification_days, second_notification_days, third_notification_days, requires_manual_approval, next_adjustment_date, last_adjustment_date, status, contract_number, c_type, c_destination, jurisdiction, city, province, currency, deposit_amount, commission_amount, fees_amount, taxes_payer, services_payer, observations, snapshot_payload, parent_contract_id
         "#
     )
     .bind(tenant_id)

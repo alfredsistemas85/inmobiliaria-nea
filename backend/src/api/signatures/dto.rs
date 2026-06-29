@@ -25,6 +25,7 @@ pub struct SignatureRequestResponseDto {
     pub signature_order: i32,
     pub required_signature: bool,
     pub expires_at: Option<DateTime<Utc>>,
+    pub link: Option<String>,
 }
 
 #[derive(Debug, Serialize)]

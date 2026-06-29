@@ -156,6 +156,7 @@ impl SignatureService {
                 signature_order: req.signature_order,
                 required_signature: req.required_signature,
                 expires_at: Some(expires_at),
+                link: Some(format!("https://inmonea.agentech.ar/s/{}", token_plain)),
             });
 
             // Send WhatsApp async

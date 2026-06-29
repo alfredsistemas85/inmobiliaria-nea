@@ -11,12 +11,15 @@ use uuid::Uuid;
 
 pub async fn request_signature(
     State(pool): State<Arc<PgPool>>,
+    axum::extract::Extension(claims): axum::extract::Extension<crate::core::security::jwt::Claims>,
     Path(contract_id): Path<Uuid>,
     Json(payload): Json<InitSignaturesDto>,
 ) -> impl IntoResponse {
-    // Dummy tenant and user for now
-    let tenant_id = Uuid::new_v4();
-    let user_id = Uuid::new_v4();
+    let tenant_id = match claims.tenant_id {
+        Some(t) => t,
+        None => return (axum::http::StatusCode::BAD_REQUEST, Json(serde_json::json!({ "success": false, "error": "Missing tenant_id" }))).into_response(),
+    };
+    let user_id = claims.sub;
 
     match SignatureService::create_requests(&pool, tenant_id, contract_id, payload.requests, user_id).await {
         Ok(res) => Json(serde_json::json!({ "success": true, "data": res })).into_response(),

@@ -122,6 +122,48 @@ export default function Contracts() {
     }
   }
 
+  const handleRequestSignatures = async (contractId: string) => {
+    try {
+      setLoading(true)
+      // 1. Fetch contract details to get participants
+      const data = await fetchApi(`/contracts/v2/${contractId}`)
+      if (!data || !data.participants || data.participants.length === 0) {
+        showToast('El contrato no tiene participantes para firmar.', 'error')
+        return
+      }
+
+      // 2. Build the request payload
+      const payload = {
+        requests: data.participants.map((p: any) => ({
+          participant_id: p.id,
+          signature_order: 1,
+          required_signature: true,
+          signature_type: "HANDDRAWN"
+        }))
+      }
+
+      // 3. Send the signature requests
+      const response = await fetchApi(`/signatures/contracts/${contractId}/signatures/request`, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      })
+
+      if (response && response.data) {
+        const links = response.data.map((r: any) => r.link).join('\n');
+        alert('Solicitud de firmas generada correctamente. Links para firmar (solo para pruebas):\n\n' + links);
+      } else {
+        showToast('Solicitud de firmas generada correctamente', 'success')
+      }
+      
+      loadContracts()
+    } catch (err: any) {
+      console.error(err)
+      showToast(err.message || 'Error al solicitar firmas', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleApprove = async (id: string) => {
     try {
       await fetchApi(`/contracts/adjustments/${id}/approve`, {
@@ -300,6 +342,16 @@ export default function Contracts() {
                           >
                             <Download className="h-4 w-4" /> PDF
                           </Button>
+                          { (c.status === 'DRAFT' || c.status === 'PENDING_SIGNATURE') && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-2 border-primary text-primary hover:bg-primary/10"
+                              onClick={() => handleRequestSignatures(c.id)}
+                            >
+                              <FileText className="h-4 w-4" /> Solicitar Firmas
+                            </Button>
+                          )}
                         </td>
                       </tr>
                     ))

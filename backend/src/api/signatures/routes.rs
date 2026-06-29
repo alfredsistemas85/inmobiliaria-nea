@@ -15,8 +15,8 @@ pub fn router(pool: Arc<PgPool>) -> Router {
 
     let admin_routes = Router::new()
         .route("/contracts/:id/signatures/request", post(controllers::request_signature))
-        .with_state(pool.clone());
-        // .layer(axum::middleware::from_fn(require_tenant_admin))
+        .with_state(pool.clone())
+        .layer(axum::middleware::from_fn(crate::core::security::jwt::auth_middleware));
 
     Router::new().merge(public_routes).merge(admin_routes)
 }

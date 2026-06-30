@@ -70,6 +70,9 @@ pub enum ContractStatus {
     Finished,
     Terminated,
     Annulled,
+    ReadyForSignature,
+    Signing,
+    Archived,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, sqlx::Type)]

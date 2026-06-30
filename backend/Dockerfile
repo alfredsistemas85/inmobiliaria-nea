@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/
 WORKDIR /app
 COPY --from=builder /usr/src/app/target/release/api /usr/local/bin/api
 COPY --from=builder /usr/src/app/target/release/worker /usr/local/bin/worker
+COPY --from=builder /usr/src/app/fonts ./fonts
 
 EXPOSE 3000
 

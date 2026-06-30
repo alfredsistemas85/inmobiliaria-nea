@@ -45,6 +45,31 @@ impl SignedPdfGenerator {
         let start_date = c.and_then(|c| c.get("start_date")).and_then(|v| v.as_str()).unwrap_or("...");
         let end_date = c.and_then(|c| c.get("end_date")).and_then(|v| v.as_str()).unwrap_or("...");
         let rent_amount = c.and_then(|c| c.get("original_rent_amount")).and_then(|v| v.as_f64()).unwrap_or(0.0);
+        let property_address = contract_snapshot.get("property_address").and_then(|v| v.as_str()).unwrap_or("...");
+
+        // Render Preamble
+        doc.push(elements::Paragraph::new(format!("Inmueble: {}", property_address)));
+        
+        let mut landlord = "No especificado".to_string();
+        let mut tenant = "No especificado".to_string();
+
+        if let Some(participants) = contract_snapshot.get("participants").and_then(|v| v.as_array()) {
+            for p in participants {
+                if let Some(p_obj) = p.as_object() {
+                    let role = p_obj.get("p_role").and_then(|v| v.as_str()).unwrap_or("");
+                    let name = p_obj.get("client_name").and_then(|v| v.as_str()).unwrap_or("");
+                    if role == "LANDLORD" { landlord = name.to_string(); }
+                    if role == "TENANT" { tenant = name.to_string(); }
+                }
+            }
+        }
+        
+        doc.push(elements::Paragraph::new(format!("Locador: {}", landlord)));
+        doc.push(elements::Paragraph::new(format!("Locatario: {}", tenant)));
+        doc.push(elements::Paragraph::new(format!("Fecha de Inicio: {}", start_date)));
+        doc.push(elements::Paragraph::new(format!("Fecha de Finalización: {}", end_date)));
+        doc.push(elements::Paragraph::new(format!("Monto Inicial del Alquiler: ${:.2}", rent_amount)));
+        doc.push(elements::Break::new(2));
         
         // Render Clauses
         if let Some(clauses) = contract_snapshot.get("clauses").and_then(|v| v.as_array()) {

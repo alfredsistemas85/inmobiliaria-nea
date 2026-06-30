@@ -56,13 +56,18 @@ pub async fn get_public_info(
     let token_hash = hex::encode(hasher.finalize());
 
     if let Ok(Some(req)) = super::repository::SignatureRepository::get_request_by_token_hash(&pool, &token_hash).await {
+        let snapshot = super::repository::SignatureRepository::get_snapshot_by_contract(&pool, req.contract_id)
+            .await
+            .unwrap_or(None);
+
         return Json(serde_json::json!({
             "success": true,
             "data": {
                 "contract_id": req.contract_id,
                 "participant_id": req.participant_id,
                 "status": req.status,
-                "expires_at": req.expires_at
+                "expires_at": req.expires_at,
+                "contract_snapshot": snapshot
             }
         })).into_response();
     }

@@ -109,9 +109,44 @@ export default function ContractSignaturePage() {
                         </p>
                     </div>
 
-                    {/* Placeholder for Contract rendering (We'd normally render the snapshot here) */}
                     <div className="border border-gray-200 rounded p-4 h-64 overflow-y-auto mb-8 bg-gray-50 text-gray-700 text-sm">
-                        [Aquí se visualizará el contenido íntegro del contrato...]
+                        {info?.contract_snapshot ? (
+                            <div>
+                                <h4 className="font-bold text-center mb-4 text-lg">CONTRATO DE LOCACIÓN</h4>
+                                <div className="mb-4">
+                                    <p><strong>Inmueble:</strong> {info.contract_snapshot.property_address || 'No especificado'}</p>
+                                    <p><strong>Locador:</strong> {
+                                        info.contract_snapshot.participants?.find((p: any) => p.p_role === 'LANDLORD')?.client_name || 'No especificado'
+                                    }</p>
+                                    <p><strong>Locatario:</strong> {
+                                        info.contract_snapshot.participants?.find((p: any) => p.p_role === 'TENANT')?.client_name || 'No especificado'
+                                    }</p>
+                                    <p><strong>Fecha de Inicio:</strong> {info.contract_snapshot.contract?.start_date || '...'}</p>
+                                    <p><strong>Fecha de Finalización:</strong> {info.contract_snapshot.contract?.end_date || '...'}</p>
+                                    <p><strong>Monto Inicial del Alquiler:</strong> ${info.contract_snapshot.contract?.original_rent_amount || 0}</p>
+                                </div>
+                                
+                                {info.contract_snapshot.clauses?.length ? (
+                                    info.contract_snapshot.clauses.map((clause: any, index: number) => {
+                                        let body = clause.body || '';
+                                        body = body.replace('[MONTO_ALQUILER]', `$${info.contract_snapshot.contract?.original_rent_amount || 0}`);
+                                        body = body.replace('[FECHA_INICIO]', info.contract_snapshot.contract?.start_date || '...');
+                                        body = body.replace('[FECHA_FIN]', info.contract_snapshot.contract?.end_date || '...');
+                                        
+                                        return (
+                                            <div key={index} className="mb-4">
+                                                <h5 className="font-semibold mb-1">{clause.title}</h5>
+                                                <p className="whitespace-pre-wrap">{body}</p>
+                                            </div>
+                                        );
+                                    })
+                                ) : (
+                                    <p className="text-center italic mt-4">Este contrato no tiene cláusulas registradas.</p>
+                                )}
+                            </div>
+                        ) : (
+                            <p className="text-center italic">Cargando contenido del contrato...</p>
+                        )}
                     </div>
 
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">

@@ -256,12 +256,14 @@ impl ContractRepository {
             r#"
             SELECT json_build_object(
                 'contract', row_to_json(c.*),
+                'property_address', (SELECT COALESCE(street, title) FROM properties p WHERE p.id = c.property_id),
                 'terms', (SELECT row_to_json(ct.*) FROM contract_terms ct WHERE ct.contract_id = c.id LIMIT 1),
                 'participants', (
                     SELECT COALESCE(json_agg(
                         jsonb_build_object(
                             'id', cp.id,
                             'client_id', cp.client_id,
+                            'client_name', (SELECT CONCAT(first_name, ' ', last_name) FROM clients cl WHERE cl.id = cp.client_id),
                             'p_role', cp.p_role,
                             'percentage', cp.percentage,
                             'is_main', cp.is_main,

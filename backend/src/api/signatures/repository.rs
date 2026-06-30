@@ -300,6 +300,46 @@ impl SignatureRepository {
         Ok(())
     }
 
+    pub async fn get_signatures_for_pdf(
+        pool: &PgPool,
+        contract_id: Uuid,
+    ) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+        let rows = sqlx::query!(
+            r#"
+            SELECT 
+                s.signature_sha256,
+                s.browser,
+                s.ip,
+                s.created_at,
+                r.verification_code,
+                c.first_name,
+                c.last_name
+            FROM contract_signatures s
+            JOIN contract_signature_requests r ON s.request_id = r.id
+            JOIN contract_participants p ON s.participant_id = p.id
+            JOIN clients c ON p.client_id = c.id
+            WHERE s.contract_id = $1
+            "#,
+            contract_id
+        )
+        .fetch_all(pool)
+        .await?;
+
+        let mut sigs = vec![];
+        for row in rows {
+            let name = format!("{} {}", row.first_name.unwrap_or_default(), row.last_name.unwrap_or_default()).trim().to_string();
+            sigs.push(serde_json::json!({
+                "name": if name.is_empty() { "Firmante Desconocido".to_string() } else { name },
+                "signed_at": row.created_at.map(|d| d.to_rfc3339()).unwrap_or_default(),
+                "ip": row.ip.unwrap_or_default(),
+                "browser": row.browser.unwrap_or_default(),
+                "signature_sha256": row.signature_sha256.unwrap_or_default(),
+                "verification_code": row.verification_code
+            }));
+        }
+        Ok(sigs)
+    }
+
     pub async fn get_snapshot_by_contract(
         pool: &PgPool,
         contract_id: Uuid,

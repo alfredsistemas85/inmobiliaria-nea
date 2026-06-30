@@ -150,7 +150,8 @@ export default function Contracts() {
 
       if (response && response.data) {
         const links = response.data.map((r: any) => r.link).join('\n');
-        alert('Solicitud de firmas generada correctamente. Links para firmar (solo para pruebas):\n\n' + links);
+        console.log("=========================================\nLINKS PARA FIRMAR (CLICKEABLES):\n" + links + "\n=========================================");
+        alert('Solicitud de firmas generada correctamente. Revisa la Consola (F12) para clickear los links.\n\n' + links);
       } else {
         showToast('Solicitud de firmas generada correctamente', 'success')
       }

@@ -56,7 +56,9 @@ impl SupabaseStorage {
             .map_err(|e| e.to_string())?;
 
         if !res.status().is_success() {
-            return Err(format!("Failed to create upload URL: {}", res.status()));
+            let status = res.status();
+            let body = res.text().await.unwrap_or_default();
+            return Err(format!("Failed to create upload URL: {} - {}", status, body));
         }
 
         let data: SignResponse = res.json().await.map_err(|e| e.to_string())?;

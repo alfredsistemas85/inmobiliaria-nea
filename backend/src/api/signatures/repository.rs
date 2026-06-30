@@ -291,7 +291,7 @@ impl SignatureRepository {
         contract_id: Uuid,
         status: &str,
     ) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE contracts SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2")
+        sqlx::query("UPDATE contracts SET status = $1::contract_status, updated_at = CURRENT_TIMESTAMP WHERE id = $2")
             .bind(status)
             .bind(contract_id)
             .execute(&mut **tx)

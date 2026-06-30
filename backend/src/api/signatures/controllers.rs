@@ -56,9 +56,16 @@ pub async fn get_public_info(
     let token_hash = hex::encode(hasher.finalize());
 
     if let Ok(Some(req)) = super::repository::SignatureRepository::get_request_by_token_hash(&pool, &token_hash).await {
-        let snapshot = super::repository::SignatureRepository::get_snapshot_by_contract(&pool, req.contract_id)
+        let mut snapshot = super::repository::SignatureRepository::get_snapshot_by_contract(&pool, req.contract_id)
             .await
             .unwrap_or(None);
+
+        if snapshot.is_none() {
+            let repo = crate::infrastructure::database::contracts::ContractRepository::new(pool.clone());
+            if let Ok(live_data) = repo.get_contract(req.tenant_id, req.contract_id).await {
+                snapshot = Some(live_data);
+            }
+        }
 
         return Json(serde_json::json!({
             "success": true,

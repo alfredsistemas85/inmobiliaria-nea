@@ -224,14 +224,32 @@ pub async fn generate_contract_pdf(
 ) -> Result<Html<String>, StatusCode> {
     let tenant_id = claims.tenant_id.ok_or(StatusCode::BAD_REQUEST)?;
 
-    let contract = sqlx::query_as::<_, ContractPdfData>(
-        "SELECT c.start_date, c.end_date, c.current_rent_amount, c.adjustment_method, p.title as property_title FROM contracts c JOIN properties p ON c.property_id = p.id WHERE c.id = $1 AND c.tenant_id = $2"
-    )
-    .bind(id)
-    .bind(tenant_id)
-    .fetch_one(&*pool)
-    .await
-    .map_err(|_| StatusCode::NOT_FOUND)?;
+    let repo = ContractRepository::new(pool);
+    let contract_data = repo
+        .get_contract(tenant_id, id)
+        .await
+        .map_err(|_| StatusCode::NOT_FOUND)?;
+
+    let c = contract_data.get("contract").and_then(|v| v.as_object());
+    let start_date = c.and_then(|c| c.get("start_date")).and_then(|v| v.as_str()).unwrap_or("...");
+    let end_date = c.and_then(|c| c.get("end_date")).and_then(|v| v.as_str()).unwrap_or("...");
+    let rent_amount = c.and_then(|c| c.get("original_rent_amount")).and_then(|v| v.as_f64()).unwrap_or(0.0);
+    let adjustment = c.and_then(|c| c.get("adjustment_method")).and_then(|v| v.as_str()).unwrap_or("No especificado");
+    let property_address = contract_data.get("property_address").and_then(|v| v.as_str()).unwrap_or("...");
+    
+    let mut landlord = "No especificado".to_string();
+    let mut tenant = "No especificado".to_string();
+
+    if let Some(participants) = contract_data.get("participants").and_then(|v| v.as_array()) {
+        for p in participants {
+            if let Some(p_obj) = p.as_object() {
+                let role = p_obj.get("p_role").and_then(|v| v.as_str()).unwrap_or("");
+                let name = p_obj.get("client_name").and_then(|v| v.as_str()).unwrap_or("");
+                if role == "LANDLORD" { landlord = name.to_string(); }
+                if role == "TENANT" { tenant = name.to_string(); }
+            }
+        }
+    }
 
     let html = format!(
         r#"
@@ -239,13 +257,13 @@ pub async fn generate_contract_pdf(
             <head><title>Contrato de Alquiler</title></head>
             <body style="font-family: Arial, sans-serif; padding: 40px; line-height: 1.6;">
                 <h1 style="text-align: center;">CONTRATO DE LOCACIÓN</h1>
-                <p>En la ciudad de ..., a los ... días del mes de ..., se celebra el presente contrato de locación entre <strong>[PROPIETARIO]</strong> y <strong>[INQUILINO]</strong>.</p>
+                <p>En la ciudad de ..., a los ... días del mes de ..., se celebra el presente contrato de locación entre <strong>{}</strong> y <strong>{}</strong>.</p>
                 <h3>1. OBJETO</h3>
                 <p>El locador cede en locación el inmueble sito en <strong>{}</strong>.</p>
                 <h3>2. PRECIO Y PLAZO</h3>
-                <p>El plazo de la locación es desde el {} hasta el {}. El canon locativo se fija en la suma de <strong>${}</strong> mensuales.</p>
+                <p>El plazo de la locación es desde el {} hasta el {}. El canon locativo se fija en la suma de <strong>${:.2}</strong> mensuales.</p>
                 <h3>3. AJUSTE</h3>
-                <p>El alquiler se actualizará bajo el método <strong>{:?}</strong>.</p>
+                <p>El alquiler se actualizará bajo el método <strong>{}</strong>.</p>
                 <br><br><br>
                 <div style="display: flex; justify-content: space-around;">
                     <div><hr>Firma Locador</div>
@@ -254,11 +272,13 @@ pub async fn generate_contract_pdf(
             </body>
         </html>
         "#,
-        contract.property_title,
-        contract.start_date,
-        contract.end_date,
-        contract.current_rent_amount.unwrap_or_default(),
-        contract.adjustment_method
+        landlord,
+        tenant,
+        property_address,
+        start_date,
+        end_date,
+        rent_amount,
+        adjustment
     );
 
     Ok(Html(html))

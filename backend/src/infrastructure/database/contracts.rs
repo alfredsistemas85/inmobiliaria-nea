@@ -256,7 +256,7 @@ impl ContractRepository {
             r#"
             SELECT json_build_object(
                 'contract', row_to_json(c.*),
-                'property_address', (SELECT COALESCE(street, title) FROM properties p WHERE p.id = c.property_id),
+                'property_address', (SELECT COALESCE(address, title) FROM properties p WHERE p.id = c.property_id),
                 'terms', (SELECT row_to_json(ct.*) FROM contract_terms ct WHERE ct.contract_id = c.id LIMIT 1),
                 'participants', (
                     SELECT COALESCE(json_agg(

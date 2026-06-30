@@ -1,0 +1,58 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT \n                s.signature_sha256,\n                s.browser,\n                s.ip,\n                s.created_at,\n                r.verification_code,\n                c.first_name,\n                c.last_name\n            FROM contract_signatures s\n            JOIN contract_signature_requests r ON s.request_id = r.id\n            JOIN contract_participants p ON s.participant_id = p.id\n            JOIN clients c ON p.client_id = c.id\n            WHERE s.contract_id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "signature_sha256",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "browser",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "ip",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "verification_code",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "first_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "last_name",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "fbbc5c049743577bf6214a44226a94748c33b4e2e32c5b50a72c8d6723389626"
+}

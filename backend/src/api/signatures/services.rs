@@ -220,7 +220,7 @@ impl SignatureService {
             let snap = SignatureRepository::get_snapshot_by_contract(pool, req.contract_id).await.unwrap().unwrap_or(serde_json::json!({}));
             
             // Gather signatures metadata for PDF
-            let sig_values = SignatureRepository::get_signatures_for_pdf(pool, req.contract_id).await.unwrap_or_default();
+            let sig_values = SignatureRepository::get_signatures_for_pdf(&mut tx, req.contract_id).await.unwrap_or_default();
 
             let font_dir = std::env::var("FONTS_DIR").unwrap_or_else(|_| "fonts".to_string());
             let generator = SignedPdfGenerator::new(&font_dir).map_err(|e| e.to_string())?;

@@ -301,7 +301,7 @@ impl SignatureRepository {
     }
 
     pub async fn get_signatures_for_pdf(
-        pool: &PgPool,
+        tx: &mut Transaction<'_, Postgres>,
         contract_id: Uuid,
     ) -> Result<Vec<serde_json::Value>, sqlx::Error> {
         let rows = sqlx::query!(
@@ -322,7 +322,7 @@ impl SignatureRepository {
             "#,
             contract_id
         )
-        .fetch_all(pool)
+        .fetch_all(&mut **tx)
         .await?;
 
         let mut sigs = vec![];

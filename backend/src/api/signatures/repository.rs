@@ -45,14 +45,15 @@ impl SignatureRepository {
     ) -> Result<Uuid, sqlx::Error> {
         let id = sqlx::query_scalar::<_, Uuid>(
             r#"
-            INSERT INTO contract_documents (tenant_id, contract_id, document_type, storage_path, mime_type, sha256, created_by)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            INSERT INTO contract_documents (tenant_id, contract_id, document_type, storage_path, file_path, mime_type, sha256, created_by)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING id
             "#
         )
         .bind(tenant_id)
         .bind(contract_id)
         .bind(document_type)
+        .bind(storage_path)
         .bind(storage_path)
         .bind(mime_type)
         .bind(sha256)

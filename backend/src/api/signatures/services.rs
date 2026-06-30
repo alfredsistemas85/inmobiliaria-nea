@@ -104,8 +104,9 @@ impl SignatureService {
             SignatureRepository::insert_snapshot(&mut tx, tenant_id, contract_id, snap.clone()).await.map_err(|e| format!("tenant_id: {}, contract_id: {}, error: {}", tenant_id, contract_id, e))?;
             
             // Generate original PDF
-            let generator = SignedPdfGenerator::new("assets/fonts").unwrap();
-            let original_pdf = generator.generate_signed_contract(snap, vec![]).await?;
+            let font_dir = std::env::var("FONTS_DIR").unwrap_or_else(|_| "fonts".to_string());
+            let generator = SignedPdfGenerator::new(&font_dir).map_err(|e| e.to_string())?;
+            let original_pdf = generator.generate_signed_contract(snap.clone(), vec![]).await?;
             let sha256 = Self::hash_content(&original_pdf);
             let path = format!("{}/{}/original.pdf", tenant_id, contract_id);
             Self::upload_pdf_to_storage(original_pdf, &path).await?;

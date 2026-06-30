@@ -15,7 +15,7 @@ export default function ContractSignaturePage() {
         const fetchInfo = async () => {
             try {
                 // We're using standard fetch so we don't have to deal with missing auth tokens for public endpoints
-                const res = await fetch(`http://localhost:3000/api/signatures/s/${token}`);
+                const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/signatures/s/${token}`);
                 const data = await res.json();
                 if (data.success) {
                     setInfo(data.data);
@@ -54,7 +54,7 @@ export default function ContractSignaturePage() {
                 user_agent: navigator.userAgent
             };
 
-            const res = await fetch(`http://localhost:3000/api/signatures/s/${token}`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/signatures/s/${token}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)

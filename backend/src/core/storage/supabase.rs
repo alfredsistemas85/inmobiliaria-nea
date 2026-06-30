@@ -38,6 +38,7 @@ impl StorageProvider for SupabaseStorageProvider {
             .header("apikey", &self.service_key)
             .header("Authorization", format!("Bearer {}", self.service_key))
             .header("Content-Type", content_type)
+            .header("x-upsert", "true")
             .body(content)
             .send()
             .await

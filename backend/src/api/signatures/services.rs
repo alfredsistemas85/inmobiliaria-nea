@@ -246,7 +246,8 @@ impl SignatureService {
                 "verification_code": req.verification_code
             }));
 
-            let generator = SignedPdfGenerator::new("assets/fonts").unwrap();
+            let font_dir = std::env::var("FONTS_DIR").unwrap_or_else(|_| "fonts".to_string());
+            let generator = SignedPdfGenerator::new(&font_dir).map_err(|e| e.to_string())?;
             let final_pdf = generator.generate_signed_contract(snap, sig_values).await?;
             let sha256 = Self::hash_content(&final_pdf);
             

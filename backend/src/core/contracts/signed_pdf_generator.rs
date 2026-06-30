@@ -7,12 +7,13 @@ use std::io::Cursor;
 
 pub struct SignedPdfGenerator {
     base_generator: GenPdfGenerator,
+    font_dir: String,
 }
 
 impl SignedPdfGenerator {
     pub fn new(font_dir: &str) -> Result<Self, String> {
         let base_generator = GenPdfGenerator::new(font_dir)?;
-        Ok(Self { base_generator })
+        Ok(Self { base_generator, font_dir: font_dir.to_string() })
     }
 
     pub async fn generate_signed_contract(
@@ -25,7 +26,7 @@ impl SignedPdfGenerator {
         // We must re-render the whole document with the signatures attached at the end.
         
         let mut doc = Document::new(
-            genpdf::fonts::from_files("assets/fonts", "Roboto", None)
+            genpdf::fonts::from_files(&self.font_dir, "Roboto", None)
                 .map_err(|e| format!("Failed to load fonts: {}", e))?
         );
         doc.set_title("Contrato de Locación Firmado");

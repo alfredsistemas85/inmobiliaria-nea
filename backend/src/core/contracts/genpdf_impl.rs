@@ -132,28 +132,32 @@ impl PdfGenerator for GenPdfGenerator {
         
         // Render Clauses
         if let Some(clauses) = contract_data.get("clauses").and_then(|v| v.as_array()) {
-            for clause in clauses {
-                if let Some(clause_obj) = clause.as_object() {
-                    let clause_title = clause_obj.get("title").and_then(|v| v.as_str()).unwrap_or("");
-                    let mut clause_body = clause_obj.get("body").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            if clauses.is_empty() {
+                doc.push(elements::Paragraph::new("\n[ESPACIO PARA CLÁUSULAS]\n\nEste contrato no tiene cláusulas registradas en la base de datos."));
+            } else {
+                for clause in clauses {
+                    if let Some(clause_obj) = clause.as_object() {
+                        let clause_title = clause_obj.get("title").and_then(|v| v.as_str()).unwrap_or("");
+                        let mut clause_body = clause_obj.get("body").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
-                    // Simple interpolations
-                    clause_body = clause_body.replace("[MONTO_ALQUILER]", &format!("{:.2}", rent_amount));
-                    clause_body = clause_body.replace("[FECHA_INICIO]", start_date);
-                    clause_body = clause_body.replace("[FECHA_FIN]", end_date);
+                        // Simple interpolations
+                        clause_body = clause_body.replace("[MONTO_ALQUILER]", &format!("{:.2}", rent_amount));
+                        clause_body = clause_body.replace("[FECHA_INICIO]", start_date);
+                        clause_body = clause_body.replace("[FECHA_FIN]", end_date);
 
-                    let mut p_title = elements::Paragraph::new(clause_title);
-                    p_title.set_alignment(Alignment::Left);
-                    doc.push(p_title);
+                        let mut p_title = elements::Paragraph::new(clause_title);
+                        p_title.set_alignment(Alignment::Left);
+                        doc.push(p_title);
 
-                    let mut p_body = elements::Paragraph::new(clause_body);
-                    p_body.set_alignment(Alignment::Left);
-                    doc.push(p_body);
-                    doc.push(elements::Break::new(1));
+                        let mut p_body = elements::Paragraph::new(clause_body);
+                        p_body.set_alignment(Alignment::Left);
+                        doc.push(p_body);
+                        doc.push(elements::Break::new(1));
+                    }
                 }
             }
         } else {
-            doc.push(elements::Paragraph::new("No se encontraron cláusulas para este contrato."));
+            doc.push(elements::Paragraph::new("\n[ESPACIO PARA CLÁUSULAS]\n\nEste contrato no tiene cláusulas registradas en la base de datos."));
         }
 
         // Render to buffer

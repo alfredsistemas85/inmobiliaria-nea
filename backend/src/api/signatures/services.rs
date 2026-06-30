@@ -43,21 +43,12 @@ impl SignatureService {
         path: &str,
         mime_type: &str,
     ) -> Result<String, String> {
-        let storage = SupabaseStorage::new();
+        let bucket = std::env::var("SUPABASE_DOCUMENTS_BUCKET").unwrap_or_else(|_| "certificados".to_string());
+        let provider = crate::core::storage::supabase::SupabaseStorageProvider::new();
+        use crate::core::storage::StorageProvider;
         let bytes = base64::decode(base64_data).map_err(|e| e.to_string())?;
         
-        let upload_url = storage.create_upload_url(path).await.map_err(|e| e.to_string())?;
-        let client = reqwest::Client::new();
-        let resp = client.put(&upload_url)
-            .header("Content-Type", mime_type)
-            .body(bytes)
-            .send()
-            .await
-            .map_err(|e| e.to_string())?;
-
-        if !resp.status().is_success() {
-            return Err(format!("Error uploading to Supabase: {}", resp.status()));
-        }
+        provider.upload_document(&bucket, path, bytes, mime_type).await?;
 
         Ok(path.to_string())
     }
@@ -66,19 +57,12 @@ impl SignatureService {
         pdf_bytes: Vec<u8>,
         path: &str,
     ) -> Result<String, String> {
-        let storage = SupabaseStorage::new();
-        let upload_url = storage.create_upload_url(path).await.map_err(|e| e.to_string())?;
-        let client = reqwest::Client::new();
-        let resp = client.put(&upload_url)
-            .header("Content-Type", "application/pdf")
-            .body(pdf_bytes)
-            .send()
-            .await
-            .map_err(|e| e.to_string())?;
+        let bucket = std::env::var("SUPABASE_DOCUMENTS_BUCKET").unwrap_or_else(|_| "certificados".to_string());
+        let provider = crate::core::storage::supabase::SupabaseStorageProvider::new();
+        use crate::core::storage::StorageProvider;
+        
+        provider.upload_document(&bucket, path, pdf_bytes, "application/pdf").await?;
 
-        if !resp.status().is_success() {
-            return Err(format!("Error uploading PDF to Supabase: {}", resp.status()));
-        }
         Ok(path.to_string())
     }
 

@@ -101,7 +101,7 @@ impl SignatureService {
                     { "title": "Objeto", "body": "Se alquila el inmueble..." }
                 ]
             });
-            SignatureRepository::insert_snapshot(&mut tx, tenant_id, contract_id, snap.clone()).await.map_err(|e| e.to_string())?;
+            SignatureRepository::insert_snapshot(&mut tx, tenant_id, contract_id, snap.clone()).await.map_err(|e| format!("tenant_id: {}, contract_id: {}, error: {}", tenant_id, contract_id, e))?;
             
             // Generate original PDF
             let generator = SignedPdfGenerator::new("assets/fonts").unwrap();

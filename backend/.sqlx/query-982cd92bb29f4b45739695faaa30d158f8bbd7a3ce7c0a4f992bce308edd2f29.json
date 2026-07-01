@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT \n            i.amount, \n            i.commission, \n            p.title as property_title, \n            ''::TEXT as owner_name \n        FROM invoices i\n        JOIN contracts ct ON i.contract_id = ct.id\n        JOIN properties p ON ct.property_id = p.id\n        WHERE i.tenant_id = $1 AND i.status = 'PAID'\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "amount",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 1,
+        "name": "commission",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 2,
+        "name": "property_title",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "owner_name",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      null
+    ]
+  },
+  "hash": "982cd92bb29f4b45739695faaa30d158f8bbd7a3ce7c0a4f992bce308edd2f29"
+}

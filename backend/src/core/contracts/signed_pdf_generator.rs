@@ -48,8 +48,6 @@ impl SignedPdfGenerator {
         let property_address = contract_snapshot.get("property_address").and_then(|v| v.as_str()).unwrap_or("...");
 
         // Render Preamble
-        doc.push(elements::Paragraph::new(format!("Inmueble: {}", property_address)));
-        
         let mut landlord = "No especificado".to_string();
         let mut tenant = "No especificado".to_string();
 
@@ -64,11 +62,14 @@ impl SignedPdfGenerator {
             }
         }
         
-        doc.push(elements::Paragraph::new(format!("Locador: {}", landlord)));
-        doc.push(elements::Paragraph::new(format!("Locatario: {}", tenant)));
-        doc.push(elements::Paragraph::new(format!("Fecha de Inicio: {}", start_date)));
-        doc.push(elements::Paragraph::new(format!("Fecha de Finalización: {}", end_date)));
-        doc.push(elements::Paragraph::new(format!("Monto Inicial del Alquiler: ${:.2}", rent_amount)));
+        let preamble_text = format!(
+            "Entre el Sr./Sra. {}, en adelante denominado EL LOCADOR, y el Sr./Sra. {}, en adelante denominado EL LOCATARIO, convienen en celebrar el presente Contrato de Locación respecto del inmueble sito en {}. El mismo tendrá una vigencia desde el {} hasta el {}, pactándose un monto inicial de alquiler de ${:.2}, sujeto a las siguientes cláusulas y condiciones:",
+            landlord, tenant, property_address, start_date, end_date, rent_amount
+        );
+        let mut preamble = elements::Paragraph::new(preamble_text);
+        preamble.set_alignment(Alignment::Left);
+        doc.push(preamble);
+        
         doc.push(elements::Break::new(2));
         
         // Render Clauses
@@ -109,15 +110,24 @@ impl SignedPdfGenerator {
             let hash = sig.get("signature_sha256").and_then(|v| v.as_str()).unwrap_or("");
             let verification_code = sig.get("verification_code").and_then(|v| v.as_str()).unwrap_or("");
             
-            // To be strictly correct, we should embed the image and the QR code, but genpdf has limitations with arbitrary images without the images feature.
-            // Assuming genpdf `images` feature is enabled or we just use text representations.
             doc.push(elements::Paragraph::new(format!("Firmante: {}", name)));
             doc.push(elements::Paragraph::new(format!("Fecha: {}", date)));
             doc.push(elements::Paragraph::new(format!("IP: {}", ip)));
             doc.push(elements::Paragraph::new(format!("Navegador: {}", browser)));
             doc.push(elements::Paragraph::new(format!("Código de Verificación: {}", verification_code)));
             doc.push(elements::Paragraph::new(format!("Hash SHA256: {}", hash)));
-            doc.push(elements::Paragraph::new(format!("QR Verification Link: /api/v2/signatures/verify/{}", verification_code)));
+            
+            let verify_url = format!("https://inmonea.agentech.ar/api/v2/signatures/verify/{}", verification_code);
+            doc.push(elements::Paragraph::new(format!("QR Verification Link: {}", verify_url)));
+            
+            if let Ok(code) = qrcode::QrCode::new(verify_url.as_bytes()) {
+                let image_buffer = code.render::<image::Luma<u8>>().build();
+                let dynamic_image = image::DynamicImage::ImageLuma8(image_buffer);
+                if let Ok(mut genpdf_image) = elements::Image::from_dynamic_image(dynamic_image) {
+                    genpdf_image.set_alignment(Alignment::Center);
+                    doc.push(genpdf_image);
+                }
+            }
             doc.push(elements::Break::new(1));
         }
 

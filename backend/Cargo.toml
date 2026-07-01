@@ -44,7 +44,9 @@ lettre = { version = "0.11.22", default-features = false, features = ["builder",
 oauth2 = { version = "5.0.0", features = ["reqwest"] }
 url = "2.5.8"
 async-trait = "0.1.89"
-genpdf = "0.2.0"
+genpdf = { version = "0.2.0", features = ["images"] }
+image = "0.23"
+qrcode = "0.12"
 sha2 = "0.11.0"
 rand = "0.8.5"
 base64 = "0.22.1"

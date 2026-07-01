@@ -291,25 +291,52 @@ pub async fn generate_contract_pdf_v2(
 ) -> Result<Response, StatusCode> {
     let tenant_id = claims.tenant_id.ok_or(StatusCode::BAD_REQUEST)?;
 
-    let repo = ContractRepository::new(pool);
+    let repo = ContractRepository::new(pool.clone());
     let contract_data = repo
         .get_contract(tenant_id, id)
         .await
         .map_err(|_| StatusCode::NOT_FOUND)?;
 
     let font_dir = std::env::var("FONTS_DIR").unwrap_or_else(|_| "fonts".to_string());
-    let pdf_generator = GenPdfGenerator::new(&font_dir).map_err(|e| {
-        tracing::error!("PDF Generator Error: {}", e);
+    // Fetch signatures using a transaction
+    let mut tx = pool.begin().await.map_err(|e| {
+        tracing::error!("Failed to begin transaction: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    let pdf_bytes = pdf_generator
-        .generate_legal_contract(contract_data)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to generate PDF: {}", e);
+    let sig_values = crate::api::signatures::repository::SignatureRepository::get_signatures_for_pdf(
+        &mut tx, 
+        id
+    ).await.unwrap_or_default();
+    
+    // We don't need to commit since we are just reading
+    let _ = tx.rollback().await;
+
+    let pdf_bytes = if sig_values.is_empty() {
+        let pdf_generator = GenPdfGenerator::new(&font_dir).map_err(|e| {
+            tracing::error!("PDF Generator Error: {}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
+        pdf_generator
+            .generate_legal_contract(contract_data)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to generate PDF: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?
+    } else {
+        let signed_pdf_generator = crate::core::contracts::signed_pdf_generator::SignedPdfGenerator::new(&font_dir).map_err(|e| {
+            tracing::error!("Signed PDF Generator Error: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+        signed_pdf_generator
+            .generate_signed_contract(contract_data, sig_values)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to generate signed PDF: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?
+    };
 
     let response = Response::builder()
         .status(StatusCode::OK)
